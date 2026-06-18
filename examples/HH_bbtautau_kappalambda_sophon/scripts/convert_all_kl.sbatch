@@ -21,15 +21,16 @@
 
 set -euo pipefail
 
+# CPU env by default: the GPU env won't activate on a CPU node (cuda system requirement),
+# and the converter is pure uproot/numpy (no GPU). Build it once: `pixi install -e nsbi-env`.
+ENV=${ENV:-nsbi-env}
 RAW=${RAW:-$SCRATCH/dihiggs/raw}
 OUT=${OUT:-$SCRATCH/dihiggs/clouds}
 REPO=${REPO:-$SCRATCH/nsbi-lhc-toolkit}
 
-echo "RAW=$RAW"
-echo "OUT=$OUT"
-echo "REPO=$REPO"
+echo "ENV=$ENV  RAW=$RAW  OUT=$OUT  REPO=$REPO"
 
 cd "$REPO"
-srun pixi run -e nsbi-env-gpu python \
+srun pixi run -e "$ENV" python \
     examples/HH_bbtautau_kappalambda_sophon/scripts/convert_all_kl.py \
     --raw-dir "$RAW" --out-dir "$OUT"
