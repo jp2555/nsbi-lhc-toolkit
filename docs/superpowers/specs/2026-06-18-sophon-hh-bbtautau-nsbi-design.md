@@ -349,7 +349,8 @@ points exactly determine the quadratic (a, b, c); the extra points over-constrai
 it, improving the morphing fit and giving a closure cross-check. All κ_λ signal
 samples are produced with the `full` TreeWriter (constituents available).
 
-**Work required:**
+**Work required** (much of this is a *port* of the proven NSBI-pheno implementation —
+see "Prior art to reuse" below):
 - Extend `sbi_parametric_model` for κ_λ-quadratic signal morphing (rate + shape),
   with κ_λ as a parameter of interest, backgrounds κ_λ-independent. **This is the
   one place the fit layer itself changes** — Phase 1 leaves it untouched; the
@@ -365,6 +366,61 @@ samples are produced with the `full` TreeWriter (constituents available).
 from-scratch.
 
 ---
+
+## Prior art to reuse — NSBI-pheno `dihiggs_bbtautau`
+
+A prior tabular implementation (jp2555/NSBI-pheno @ `claude/zealous-chaum`, dir
+`dihiggs_bbtautau`) already builds the **full κ_λ NSBI statistical machinery** with a
+clean toy closure (λ̂ = 1.01 ± 0.07), using ~10 hand-engineered event-level features
+(`m_hh, cos_theta_star, pt_hh, m_bb, dr_bb, m_tautau, dphi_hh, dr_tautau, pt_h1,
+pt_h2`). **Reframing of this project:** replace that tabular density-ratio with the
+sophon-ak4 **constituent** density-ratio + Delphes pipeline, and **port (not rebuild)**
+the κ_λ morphing, fit, weight handling, and diagnostics.
+
+### κ_λ morphing — port into the Phase-2 `sbi_parametric_model` extension (§8)
+- Basis **{0, 1, 5}** (matches the production plan), exact 3×3 matrix
+  `M[i] = [λ_i², λ_i, 1]`; coefficients `c(λ) = M⁻¹ᵀ · [λ², λ, 1]`.
+- Per-event reweight: `w_i(λ) = w_i^ref · [Σ_j c_j(λ)·ν_j·r_j(x_i)] / ν_ref`, with
+  `r_j = p_{λ_j}/p_ref` the per-basis-point density ratios.
+- σ(κ_λ) = 62.5·κ_λ² − 44.3·κ_λ + 12.85 fb (triangle/interference/box).
+- Morphing is a **post-eval step in the JAX fit, not in ONNX** — consistent with §3/§8:
+  train per-basis ratios → eval to `r_lam0/r_lam1/r_lam5 .npy` on the shared Asimov
+  ordering → combine with `c_j(λ)` → iminuit profile-scan κ_λ.
+
+### Files to port into `examples/HH_bbtautau_kappalambda_sophon/`
+- `rescale_weights.py` — `norm = lumi·xsec/(gw·nevents)` with **NLO sign
+  preservation**; reuse ~as-is (add Delphes-sample metadata).
+- `histogram_analysis.py` — `BinnedMorphingModel`/`MultiVarBinnedModel`: the **binned
+  m_hh baseline** + morphing + iminuit scan + plots; the histogram candle for the NSBI
+  result.
+- `diagnostic_snapshot.py` — provenance snapshot (git state, per-sample sum_w/n_eff,
+  implied lumi, morphing sanity); reuse for an auditable run record.
+- `config_powheg.yml` — config structure (Samples / NormFactors-with-morphing /
+  Region `m_hh>250` / TrainedModels); adapt to the toolkit schema + constituent inputs.
+- `DiHiggs_Lambda_NSBI_FTS.ipynb` — workflow template: train → overfit → calibration →
+  reweighting closure → Asimov reweight → workspace → profile-NLL scan →
+  **NSBI-vs-histogram** side-by-side.
+- 4-vector helpers (`build_p4/p4_sum/delta_phi/compute_cos_theta_star`) — reusable for
+  composite auxiliary observables if wanted.
+
+### Lessons to carry in (hard-won)
+- **Calibration/overfit (`bad_calibration/` postmortem):** a 5-point basis
+  {−1,0,1,3,5} + collinear features (`m_hh` & `log_m_hh`) overfit and broke isotonic
+  calibration; the cross-section-weighted pooled reference let κ_λ=5 (largest σ)
+  dominate and squash SM sensitivity. → keep the **3-point {0,1,5} exact** basis, avoid
+  collinear features, watch reference design, monitor per-event `r_j` on holdout. The
+  optional +{−1,3} over-determines the quadratic (needs a pseudoinverse) — add only if
+  a closure check justifies it.
+- **NLO negative weights:** rescale preserves `sign(w)`; training uses a **label-flip**
+  for `w<0` (`sample_weight=|w|`, label inverted). The constituent trainer must do the
+  equivalent.
+- **No importance truncation:** importance-mode truncation biased the fit and was
+  reverted; thin heavy-tail backgrounds with **uniform** subsampling only.
+- **Toy-optimism:** λ̂=1.01±0.07 was toy-data; validate diagnostics on real
+  Powheg+Delphes early — expect larger bias/calibration issues.
+- **Asimov sanity & background systematics:** check Asimov yield vs the `m_hh`
+  histogram before scanning; the prior fixed-histogram, no-systematics background
+  treatment is naive — add normalization uncertainties for the real fit.
 
 ## 9. Dependencies, environment, scope of "scaffold"
 
@@ -402,6 +458,12 @@ from-scratch.
   W+jets) have no constituents, so they cannot pass through the sophon-ak4 encoder.
   The likelihood must handle them via jet-level features or data-driven fake
   weights. Decide their treatment when templating the workspace.
+- **Calibration / reference design / NLO weights (R10, from prior art):** carry the
+  `bad_calibration/` lessons — keep the 3-point {0,1,5} exact basis, avoid collinear
+  features, design the reference so κ_λ=5 doesn't dominate, and monitor per-event
+  `r_j` on holdout; implement the **NLO label-flip** for negative weights; use
+  **uniform-only** truncation. Validate closure on real Powheg+Delphes, not toys. See
+  "Prior art to reuse".
 - **MET/lepton tokenization (R7):** exact feature set and type-embedding scheme for
   non-jet tokens.
 - **Confounder control (R8):** PET/sophon uses richer inputs than the high-level
