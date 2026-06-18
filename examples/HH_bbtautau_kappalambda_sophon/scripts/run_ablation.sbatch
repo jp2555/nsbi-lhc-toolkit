@@ -22,8 +22,10 @@
 #SBATCH -q shared
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-task=1
+# GPU "shared" charges max(cores, mem-equiv-cores) and requires exactly 32 cores/GPU.
+# Request 32 cores and let memory auto-allocate proportionally (~60 GB for 1 GPU) --
+# an explicit --mem can push the mem-equivalent above 32 cores and get rejected.
 #SBATCH --cpus-per-task=32
-#SBATCH --mem=64G
 #SBATCH -t 06:00:00
 #SBATCH -o logs/ablation_%j.out
 #SBATCH -e logs/ablation_%j.err
