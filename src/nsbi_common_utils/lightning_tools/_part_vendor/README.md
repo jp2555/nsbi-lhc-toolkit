@@ -16,8 +16,9 @@ attribution header).
 ## How it's used
 
 `sophon_ak4_backbone.py` builds `ParticleTransformer(..., num_classes=None,
-fc_params=[])` so `self.fc is None` and the model yields the **class-token
-embedding**. The embedding is read via `_forward_encoder` → `_forward_aggregator`
+fc_params=None)` so `self.fc is None` and the model yields the **class-token
+embedding** (note: `fc_params=None`, NOT `[]` — `[]` still appends a final
+`nn.Linear(in_dim, num_classes=None)` and crashes). The embedding is read via `_forward_encoder` → `_forward_aggregator`
 (ParT's public `forward` assumes a classifier head — this is the same pattern
 Sophon's own wrapper uses). `trim=False` disables the SequenceTrimmer for
 deterministic, ONNX-clean behavior.

@@ -47,14 +47,18 @@ def _build_part(input_dim, embed_dim=64, num_layers=6, num_cls_layers=2, num_hea
     pair_embed_dims = (list(pair_embed_dims) if pair_embed_dims else [64, 64, 64]) if use_pair else None
     return ParticleTransformer(
         input_dim=input_dim,
-        num_classes=None,                 # + fc_params=[] -> self.fc is None -> embedding
+        num_classes=None,
         pair_input_dim=(pair_input_dim if use_pair else None),
         embed_dims=embed_dims,
         pair_embed_dims=pair_embed_dims,
         num_heads=num_heads,
         num_layers=num_layers,
         num_cls_layers=num_cls_layers,
-        fc_params=[],
+        # fc_params=None (NOT []) -> self.fc is None -> the model yields the embedding.
+        # ParT builds a final nn.Linear(in_dim, num_classes) whenever fc_params is not
+        # None, which would be nn.Linear(.., None) and crash. We read the class-token
+        # embedding via _forward_encoder/_forward_aggregator regardless.
+        fc_params=None,
         trim=False,                       # disable the SequenceTrimmer: deterministic + ONNX-clean
         for_inference=False,
         use_amp=False,
