@@ -82,6 +82,15 @@ def _dphi(a, b):
     return np.arctan2(np.sin(d), np.cos(d))
 
 
+def _scalar(x):
+    """Return a python float whether ``x`` is a bare scalar or a length>=1 array
+    (Delphes per-event collections like Event.Weight/MissingET are length-1)."""
+    try:
+        return float(x[0])
+    except (TypeError, IndexError, KeyError):
+        return float(x)
+
+
 def _get(arr, name, i, default=None):
     """Per-event branch access; returns a numpy array (or `default` if branch absent)."""
     if name not in arr.fields:
