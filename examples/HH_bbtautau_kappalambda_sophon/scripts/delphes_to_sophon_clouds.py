@@ -232,9 +232,12 @@ def _process_chunk(arr):
 
 
 def convert_tree(path, tree_name, out_path, step_size=20000):
+    """``path`` may be a single file/glob string or a list of file paths."""
     keys = ("parts", "part_vectors", "part_mask", "jet_mask", "obj", "obj_mask", "w")
+    source = ({p: tree_name for p in path} if isinstance(path, (list, tuple))
+              else f"{path}:{tree_name}")
     chunks = {k: [] for k in keys}
-    for arr in uproot.iterate(f"{path}:{tree_name}", step_size=step_size, library="ak"):
+    for arr in uproot.iterate(source, step_size=step_size, library="ak"):
         out = _process_chunk(arr)
         for k in keys:
             chunks[k].append(out[k])
