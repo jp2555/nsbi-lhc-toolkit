@@ -123,9 +123,19 @@ Verified by reading the repo at HEAD of `main` (`fc09848`). The stack is
   scikit-learn, uproot/coffea/awkward, iminuit, cabinetry. `image.def` = Apptainer
   recipe for HPC. Python ≥3.12.
 
-**Key compatibility fact:** the JAX fit only ever reads per-event ratio `.npy`
-files. Any model that exports to ONNX and produces a per-event score leaves the fit
-layer untouched.
+**Key compatibility fact (Phase 1 only).** The JAX fit (`sbi_parametric_model`) is
+model-agnostic: it `np.load`s pre-computed per-event **ratio** arrays (one per
+sample, nominal + per-systematic up/dn) plus a per-event **Asimov weight** array,
+all on one fixed shared event ordering. The ONNX model never touches the fit. A
+separate **evaluation step** (`data_nn_eval.py`) runs ONNX inference → score →
+`convert_score_to_ratio` (r = s/(1−s)) → ensemble aggregation → saves
+`ratio_<process>.npy` on the Asimov event set. So for the **binary / signal-strength
+(μ-style)** case, adopting a constituent model means re-implementing only the *eval
+step* (constituent ONNX inference, same Asimov ordering as the weights); the fit is
+untouched. **This does NOT hold for κ_λ:** κ_λ enters quadratically and reshapes the
+signal, while the current unbinned term is linear in normfactors, so
+`sbi_parametric_model` must be extended (§8). κ_λ is the one place the fit layer
+changes.
 
 ---
 
@@ -155,7 +165,8 @@ layer untouched.
                event set-transformer  ──►  pooled event embedding  ──►  density-ratio head
                           │
                           ▼
-               ONNX export  ──►  per-event score .npy  ──►  JAX sbi_parametric_model  ──►  κ_λ fit
+               ONNX export ─► eval step (ONNX score → r=s/(1-s) → ensemble agg) ─► per-event ratio .npy ─► JAX fit
+               (Phase 1: fit unchanged. Phase 2 κ_λ: morphing-basis ratios + sbi_parametric_model extended.)
 ```
 
 - **Per-jet (Level 1):** each selected AK4 jet's constituents → sophon-ak4 →
@@ -183,7 +194,10 @@ layer untouched.
 - ONNX input is the (fixed-max, padded) constituent + object + mask tensors; the
   exported model returns a per-event score. A new constituent-aware
   inference/export path is required (the existing `predict_with_onnx` is tabular
-  2-D); the resulting `.npy` ratio format is unchanged.
+  2-D). The downstream `.npy` **ratio** format is unchanged — but the **eval step**
+  (the constituent analog of `data_nn_eval.py`) must produce ratios on the **same
+  ordered Asimov event set as the weights array**, then score→ratio→aggregate, so
+  the fit's `np.load` contract is met exactly.
 
 ### Input data: Delphes production (confirmed)
 
@@ -274,6 +288,10 @@ Each unit lists *what it does / how it's used / what it depends on*.
   ({0,1,5}(+{-1,3})), full/lite class map.
 - `scripts/delphes_to_clouds.py` — Delphes ROOT → per-jet constituent clouds
   (sophon-ak4 schema) + event-object tokens; the first data-layer step.
+- `scripts/eval_to_ratios.py` — constituent analog of `data_nn_eval.py`: build the
+  ordered Asimov set, run constituent ONNX inference → score → ratio → ensemble
+  aggregate → save `ratio_<process>.npy` + Asimov `weights.npy` (the contract the
+  JAX fit loads).
 - `scripts/` + `N_*.ipynb` mirroring the FAIR example's style; `compare.py` (the
   three-control harness: pretrained-frozen / pretrained-finetuned / from-scratch /
   high-level MLP), `smoke_test.py`, `README.md`.
@@ -333,7 +351,12 @@ samples are produced with the `full` TreeWriter (constituents available).
 
 **Work required:**
 - Extend `sbi_parametric_model` for κ_λ-quadratic signal morphing (rate + shape),
-  with κ_λ as a parameter of interest, backgrounds κ_λ-independent.
+  with κ_λ as a parameter of interest, backgrounds κ_λ-independent. **This is the
+  one place the fit layer itself changes** — Phase 1 leaves it untouched; the
+  current unbinned term is linear in normfactors, so the κ_λ²·a+κ_λ·b+c combination
+  of the basis ratios must be added here.
+- The eval step (`eval_to_ratios.py`) must produce the **per-basis / per-component
+  ratio arrays** on the shared Asimov ordering for the morphing.
 - Build the κ_λ workspace via `workspace_builder`/config; profile κ_λ with
   `inference` (MIGRAD + scan).
 
@@ -402,7 +425,7 @@ src/nsbi_common_utils/models/
     sbi_parametric_model.py          # + kappa_lambda morphing (Phase 2)
 examples/HH_bbtautau_kappalambda_sophon/
     config_train.yml, config_fit_nsbi.yml
-    scripts/delphes_to_clouds.py, scripts/, *.ipynb, compare.py, smoke_test.py, README.md
+    scripts/{delphes_to_clouds.py, eval_to_ratios.py}, scripts/, *.ipynb, compare.py, smoke_test.py, README.md
 docs/basics/sophon_hh_density_ratio.rst
 pixi.toml, image.def                 # + weaver-core, huggingface_hub
 ```
