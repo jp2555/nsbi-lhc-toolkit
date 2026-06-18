@@ -56,3 +56,9 @@ sys.modules["examples_pkg"] = examples_pkg
 
 examples_pkg_delphes = importlib.import_module("delphes_to_clouds")
 sys.modules["examples_pkg_delphes"] = examples_pkg_delphes
+
+# Task 12: compare.py lives in the example root (not scripts/); add root to sys.path
+_EX_ROOT = pathlib.Path(__file__).resolve().parents[1] / "examples" / "HH_bbtautau_kappalambda_sophon"
+sys.path.insert(0, str(_EX_ROOT))
+examples_pkg_compare = importlib.import_module("compare")
+sys.modules["examples_pkg_compare"] = examples_pkg_compare
