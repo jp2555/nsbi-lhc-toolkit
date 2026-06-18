@@ -165,6 +165,22 @@ pixi run -e nsbi-env-gpu pytest -q
 
 For the full suite with GPU acceleration, submit via SLURM with `--gpus-per-node=1`.
 
+### Stats data-efficiency ablation (batch job)
+
+`run_ablation.sbatch` trains all three controls at several per-point event counts on
+one GPU (`shared` QOS) and writes `ablation.json` + `ablation.png` (best val-loss vs N).
+Convert the two points first (`convert_all_kl.py --points kl0 kl5`), then:
+
+```bash
+mkdir -p logs
+CKPT=$SCRATCH/sophon-ak4/PARTAK4.pt \
+  sbatch -A <NERSC_PROJECT>_g \
+    examples/HH_bbtautau_kappalambda_sophon/scripts/run_ablation.sbatch
+```
+
+Override `CLOUDS`, `OUTDIR`, `POINT_A`/`POINT_B`, `SIZES`, `EPOCHS`, `LR` via env (see
+the script header). The default task is `kl0` vs the `kl5` reference at N = 20k/50k/100k.
+
 ---
 
 ## File reference
