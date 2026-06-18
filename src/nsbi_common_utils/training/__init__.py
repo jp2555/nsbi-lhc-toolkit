@@ -5,21 +5,27 @@ from nsbi_common_utils.training.utils import (
     convert_torch_to_onnx,
     convert_logLR_to_score,
     load_trained_model,
-    convert_score_to_ratio
+    convert_score_to_ratio,
+    save_model_constituents,
+    predict_with_onnx_constituents,
 )
 
 from nsbi_common_utils.training.neural_ratio_estimation import density_ratio_trainer
 from nsbi_common_utils.training.preselection_training import preselection_network_trainer
+from nsbi_common_utils.training.particle_ratio_estimation import particle_density_ratio_trainer
 import nsbi_common_utils.training.utils
 
 __all__ = [
     "density_ratio_trainer",
     "preselection_network_trainer",
+    "particle_density_ratio_trainer",
     "save_model",
     "predict_with_onnx",
     "predict_with_model",
     "convert_torch_to_onnx",
     "convert_logLR_to_score",
     "load_trained_model",
-    "convert_score_to_ratio"
+    "convert_score_to_ratio",
+    "save_model_constituents",
+    "predict_with_onnx_constituents",
 ]

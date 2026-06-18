@@ -376,3 +376,63 @@ def convert_score_to_ratio(score):
     """
     return score / (1.0 - score)
 
+
+_CONSTITUENT_INPUTS = ["parts", "part_mask", "jet_mask", "obj", "obj_mask"]
+
+
+class _DictToTupleWrapper(torch.nn.Module):
+    """Wrap a dict-input model so torch.onnx.export can trace positional args."""
+
+    def __init__(self, model, keys):
+        super().__init__()
+        self.model = model
+        self.keys = keys
+
+    def forward(self, parts, part_mask, jet_mask, obj, obj_mask):
+        return self.model({
+            "parts": parts, "part_mask": part_mask, "jet_mask": jet_mask,
+            "obj": obj, "obj_mask": obj_mask,
+        })
+
+
+def save_model_constituents(lightning_model, sample_batch, path_to_save_model, opset=17):
+    """Export a constituent (dict-input) density-ratio model to ONNX.
+
+    sample_batch: a dict of torch tensors (one mini-batch) used to trace shapes.
+    Dynamic axis 0 (batch) is set on every input and the output.
+    """
+    lightning_model.eval()
+    wrapper = _DictToTupleWrapper(lightning_model, _CONSTITUENT_INPUTS).eval()
+    args = tuple(sample_batch[k] for k in _CONSTITUENT_INPUTS)
+    dynamic = {k: {0: "batch"} for k in _CONSTITUENT_INPUTS}
+    dynamic["output"] = {0: "batch"}
+    torch.onnx.export(
+        wrapper, args, str(path_to_save_model), export_params=True, opset_version=opset,
+        input_names=_CONSTITUENT_INPUTS, output_names=["output"], dynamic_axes=dynamic,
+    )
+
+
+def predict_with_onnx_constituents(arrays, model, batch_size=4096):
+    """Batched ONNX inference for constituent models.
+
+    arrays: dict with the 5 constituent inputs as numpy arrays (leading event axis).
+    model: path to .onnx, an onnx.ModelProto, or an onnxruntime.InferenceSession.
+    Returns a (N,) float32 array of per-event scores.
+    """
+    import onnxruntime as rt
+    if isinstance(model, str):
+        sess = rt.InferenceSession(model, providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
+    elif isinstance(model, onnx.ModelProto):
+        sess = rt.InferenceSession(model.SerializeToString(),
+                                   providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
+    else:
+        sess = model
+    n = len(arrays["parts"])
+    out_name = sess.get_outputs()[0].name
+    preds = np.empty((n,), dtype=np.float32)
+    for i in range(0, n, batch_size):
+        sl = slice(i, min(i + batch_size, n))
+        feed = {k: np.asarray(arrays[k][sl], dtype=np.float32) for k in _CONSTITUENT_INPUTS}
+        preds[sl] = sess.run([out_name], feed)[0].reshape(-1)
+    return preds
+
