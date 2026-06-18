@@ -17,8 +17,8 @@ Pipeline (streamed in chunks via ``uproot.iterate`` so memory is bounded):
   6. write a compressed .npz.
 
 Output arrays (leading axis = events):
-  parts        (N, N_JETS_MAX, N_PART_MAX, 17)  standardized pf_features
-  part_vectors (N, N_JETS_MAX, N_PART_MAX, 4)   [px, py, pz, energy] (unstandardized)
+  parts        (N, N_JETS_MAX, N_PART_MAX, 21)  [17 standardized pf_features | 4 pf_vectors
+                                                 (px,py,pz,energy)]; encoder slices 0:17 / 17:21
   part_mask    (N, N_JETS_MAX, N_PART_MAX)      1 = real constituent
   jet_mask     (N, N_JETS_MAX)                  1 = real jet
   obj          (N, N_OBJ_MAX, 6)               [log_pt, eta, sin_phi, cos_phi, val, type_id]
@@ -37,7 +37,8 @@ import uproot
 
 N_JETS_MAX = 8
 N_PART_MAX = 128          # sophon-ak4 trained with 128 constituents
-F_PART = 17
+F_PART = 17              # sophon-ak4 pf_features
+F_TOTAL = F_PART + 4     # parts stores 17 features + 4 pf_vectors (px,py,pz,energy)
 N_OBJ_MAX = 6
 F_OBJ = 6
 JET_DR = 0.4
@@ -173,7 +174,10 @@ def _jet_features(c, idx, jpt, jeta, jphi, jE):
     ], axis=1).astype(np.float32)                       # (n_const, 17)
     px = pt * np.cos(phi); py = pt * np.sin(phi); pz = pt * np.sinh(eta)
     vecs = np.stack([px, py, pz, E], axis=1).astype(np.float32)   # (n_const, 4)
-    return feats, vecs
+    # parts = [17 standardized features | 4 raw pf_vectors]; the encoder slices cols
+    # 0:17 as ParT x and 17:21 as ParT v. Keeping them in one tensor means no separate
+    # part_vectors needs to flow through the dataset/model/ONNX.
+    return np.concatenate([feats, vecs], axis=1)                  # (n_const, 21)
 
 
 def _object_tokens(arr, i):
@@ -207,8 +211,7 @@ def _object_tokens(arr, i):
 
 def _process_chunk(arr):
     n = len(arr["Jet.PT"])
-    parts = np.zeros((n, N_JETS_MAX, N_PART_MAX, F_PART), dtype=np.float32)
-    vecs = np.zeros((n, N_JETS_MAX, N_PART_MAX, 4), dtype=np.float32)
+    parts = np.zeros((n, N_JETS_MAX, N_PART_MAX, F_TOTAL), dtype=np.float32)  # 17 feats + 4 vecs
     part_mask = np.zeros((n, N_JETS_MAX, N_PART_MAX), dtype=np.float32)
     jet_mask = np.zeros((n, N_JETS_MAX), dtype=np.float32)
     obj = np.zeros((n, N_OBJ_MAX, F_OBJ), dtype=np.float32)
@@ -240,10 +243,9 @@ def _process_chunk(arr):
                 if len(sel) == 0:
                     continue
                 sel = sel[np.argsort(-c["pt"][sel])][:N_PART_MAX]   # leading constituents
-                feats, vv = _jet_features(c, sel, jpt[j], jeta[j], jphi[j], jE[j])
+                combined = _jet_features(c, sel, jpt[j], jeta[j], jphi[j], jE[j])  # (nsel, 21)
                 nsel = len(sel)
-                parts[i, j, :nsel] = feats
-                vecs[i, j, :nsel] = vv
+                parts[i, j, :nsel] = combined
                 part_mask[i, j, :nsel] = 1.0
         else:
             jet_mask[i, :len(jpt)] = 1.0
@@ -256,13 +258,13 @@ def _process_chunk(arr):
         w = np.array([_scalar(arr["Event.Weight"][i]) for i in range(n)], dtype=np.float64)
     else:
         w = np.ones(n, dtype=np.float64)
-    return {"parts": parts, "part_vectors": vecs, "part_mask": part_mask,
+    return {"parts": parts, "part_mask": part_mask,
             "jet_mask": jet_mask, "obj": obj, "obj_mask": obj_mask, "w": w}
 
 
 def convert_tree(path, tree_name, out_path, step_size=20000):
     """``path`` may be a single file/glob string or a list of file paths."""
-    keys = ("parts", "part_vectors", "part_mask", "jet_mask", "obj", "obj_mask", "w")
+    keys = ("parts", "part_mask", "jet_mask", "obj", "obj_mask", "w")
     source = ({p: tree_name for p in path} if isinstance(path, (list, tuple))
               else f"{path}:{tree_name}")
     chunks = {k: [] for k in keys}

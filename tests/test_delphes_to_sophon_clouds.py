@@ -1,7 +1,7 @@
 import numpy as np
 import awkward as ak
 import uproot
-from delphes_to_sophon_clouds import convert_tree, N_JETS_MAX, N_PART_MAX
+from delphes_to_sophon_clouds import convert_tree, N_JETS_MAX, N_PART_MAX, F_TOTAL
 
 
 def _write_fake_delphes(path):
@@ -54,9 +54,9 @@ def test_convert_real_delphes_schema(tmp_path):
     convert_tree(str(root), "Delphes", str(out), step_size=10)
     d = np.load(out)
 
-    # shapes match the sophon-ak4 schema (17 features + 4-vectors, 128 constituents)
-    assert d["parts"].shape == (2, N_JETS_MAX, N_PART_MAX, 17)
-    assert d["part_vectors"].shape == (2, N_JETS_MAX, N_PART_MAX, 4)
+    # shapes match the sophon-ak4 schema: parts = 17 features + 4 pf_vectors = 21 cols
+    assert d["parts"].shape == (2, N_JETS_MAX, N_PART_MAX, F_TOTAL)
+    assert F_TOTAL == 21
     assert d["jet_mask"].sum() == 2          # one selected jet per event
 
     # event 0, jet 0: only the near charged track is associated (photon is dR>0.4)
@@ -65,8 +65,8 @@ def test_convert_real_delphes_schema(tmp_path):
     assert feat[6] == 1.0 and feat[9] == 0.0 and feat[8] == 0.0   # is_ch=1, is_e=0, is_ph=0
     # deltaR feature is standardized: (hypot(0.05,0.05) - 0.2) * 4.0
     assert np.isclose(feat[4], (np.hypot(0.05, 0.05) - 0.2) * 4.0, atol=1e-4)
-    # 4-vector px = pt*cos(phi)
-    assert np.isclose(d["part_vectors"][0, 0, 0, 0], 30.0 * np.cos(0.05), atol=1e-3)
+    # 4-vector px lives in parts column 17 (= pt*cos(phi))
+    assert np.isclose(feat[17], 30.0 * np.cos(0.05), atol=1e-3)
 
     # event 1, jet 0: only the near neutral hadron is associated
     assert d["part_mask"][1, 0].sum() == 1

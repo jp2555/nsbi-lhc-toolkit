@@ -24,8 +24,10 @@ inputs MUST match sophon-ak4's training schema (see ``_part_vendor/README.md``):
 part_deltaR, part_charge, part_isChargedHadron, part_isNeutralHadron, part_isPhoton,
 part_isElectron, part_isMuon, part_d0(=tanh(d0val)), part_d0err, part_dz(=tanh(dzval)),
 part_dzerr, part_deta, part_dphi] with the config's manual standardization applied,
-plus 4 ``pf_vectors`` [part_px, part_py, part_pz, part_energy] passed as ``vectors``.
-Aligning the Delphes->cloud converter to this schema is the remaining integration step.
+plus 4 ``pf_vectors`` [part_px, part_py, part_pz, part_energy] appended as ``parts``
+columns 17:21 (the encoder slices x=cols 0:17, v=cols 17:21). The converter
+``delphes_to_sophon_clouds.py`` already emits this 21-column layout, so the encoder keeps
+the plain ``forward(parts, mask)`` interface — no separate vectors tensor is threaded.
 """
 import torch
 import torch.nn as nn
@@ -75,6 +77,8 @@ class SophonAK4Encoder(nn.Module):
                  embed_dims=None, pair_embed_dims=None, checkpoint=None):
         super().__init__()
         self.use_pair = use_pair
+        self.n_feat = input_dim                 # parts cols 0:n_feat are ParT features (x)
+        self.pair_input_dim = pair_input_dim    # parts cols n_feat:n_feat+4 are the 4-vectors (v)
         self.part = _build_part(
             input_dim, embed_dim=embed_dim, num_layers=num_layers,
             num_cls_layers=num_cls_layers, num_heads=num_heads,
@@ -115,11 +119,16 @@ class SophonAK4Encoder(nn.Module):
             _warn_keys(missing, unexpected, shape_mismatch)
         return report
 
-    def forward(self, parts, mask, vectors=None):
-        # parts: (B, P, F) -> x: (B, F, P); mask: (B, P) -> (B, 1, P) (trimmer .bool()s it)
-        x = parts.transpose(1, 2)
-        m = mask.unsqueeze(1)
-        v = vectors.transpose(1, 2) if (self.use_pair and vectors is not None) else None
+    def forward(self, parts, mask):
+        # parts: (B, P, F_total). Slice ParT inputs from the columns:
+        #   x = features [0:n_feat]; v = 4-vectors [n_feat:n_feat+pair_input_dim] (if use_pair).
+        # mask: (B, P) -> (B, 1, P) (the trimmer .bool()s it). Same (parts, mask) signature
+        # as StubJetEncoder, so the hierarchical model needs no change.
+        x = parts[:, :, :self.n_feat].transpose(1, 2)            # (B, n_feat, P)
+        m = mask.unsqueeze(1)                                    # (B, 1, P)
+        v = None
+        if self.use_pair:
+            v = parts[:, :, self.n_feat:self.n_feat + self.pair_input_dim].transpose(1, 2)
         enc, padding_mask = self.part._forward_encoder(x, v=v, mask=m)
         return self.part._forward_aggregator(enc, padding_mask)   # (B, embed_dim)
 

@@ -14,7 +14,7 @@ import numpy as np
 
 from convert_all_kl import KL_POINTS
 
-_KEYS = ("parts", "part_vectors", "part_mask", "jet_mask", "obj", "obj_mask", "w")
+_KEYS = ("parts", "part_mask", "jet_mask", "obj", "obj_mask", "w")
 
 
 def main():

@@ -13,3 +13,8 @@ class CloudSpec:
 
 
 DEFAULT_SPEC = CloudSpec()
+
+# sophon-ak4 layout: 8 AK4 jets x 128 constituents; `parts` columns are the 17 sophon
+# pf_features followed by the 4 pf_vectors (px,py,pz,energy) -> f_part = 21. The
+# SophonAK4Encoder slices cols 0:17 (x) and 17:21 (v).
+SOPHON_SPEC = CloudSpec(n_jets_max=8, n_part_max=128, f_part=21, embed_dim=64)
