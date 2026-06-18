@@ -143,11 +143,15 @@ def _shuffle(d, seed=0):
 
 
 def ablation(clouds_dir, point_a, point_b, sizes, checkpoint, out_dir, epochs,
-             batch_size, controls, learning_rate=2e-4):
+             batch_size, controls, learning_rate=2e-4, repeats=1):
     """Train each control at several per-point event counts -> best val-loss vs N.
 
     This is the foundation-model data-efficiency test: the pretrained controls should
-    beat `scratch` most at small N (and reach below the ln2 random floor sooner)."""
+    beat `scratch` most at small N (and reach below the ln2 random floor sooner).
+
+    Low-N points are noisy (a single train/val split can be lucky), so `repeats>1`
+    retrains each (control, N) with different split+init seeds and records mean +/- std.
+    curve[control][N] = {"vals": [...], "mean": m, "std": s}."""
     os.makedirs(out_dir, exist_ok=True)
     nmax = max(sizes)
     a_full = _shuffle(load_point(os.path.join(clouds_dir, f"{point_a}.npz"), nmax))
@@ -158,23 +162,33 @@ def ablation(clouds_dir, point_a, point_b, sizes, checkpoint, out_dir, epochs,
         a = {k: v[:N] for k, v in a_full.items()}
         b = {k: v[:N] for k, v in b_full.items()}
         task = build_binary_task(a, b)
-        print(f"[ablation] N={N}/point -> {task['y'].shape[0]} events")
+        navail = a["w"].shape[0]
+        tag = f"N={N}/point ({task['y'].shape[0]} events, x{repeats})"
+        if navail < N:
+            tag += f"  [only {navail} available]"
+        print(f"[ablation] {tag}")
         for c in controls:
             kind, freeze, ekw = cmap[c]
             if kind == "sophon-ak4" and not checkpoint:
                 print(f"  [skip] {c}: no checkpoint")
                 continue
             lr = _CONTROL_LR.get(c, learning_rate)
-            tr = particle_density_ratio_trainer(
-                clouds=task, sample_name=[point_b, point_a],
-                output_name=f"{point_b}_vs_{point_a}_{c}_N{N}",
-                path_to_models=os.path.join(out_dir, f"{c}_N{N}") + "/",
-                encoder_kind=kind, spec=SOPHON_SPEC, freeze_backbone=freeze, encoder_kwargs=ekw)
-            hist = tr.train(number_of_epochs=epochs, batch_size=batch_size,
-                            learning_rate=lr, holdout_split=0.3, export_onnx=False)
-            best = min(hist["val_loss"]) if hist.get("val_loss") else float("nan")
-            curve[c][N] = best
-            print(f"    {c}: best val_loss={best:.4f}")
+            vals = []
+            for r in range(repeats):
+                tr = particle_density_ratio_trainer(
+                    clouds=task, sample_name=[point_b, point_a],
+                    output_name=f"{point_b}_vs_{point_a}_{c}_N{N}_r{r}",
+                    path_to_models=os.path.join(out_dir, f"{c}_N{N}_r{r}") + "/",
+                    encoder_kind=kind, spec=SOPHON_SPEC, freeze_backbone=freeze,
+                    encoder_kwargs=ekw)
+                hist = tr.train(number_of_epochs=epochs, batch_size=batch_size,
+                                learning_rate=lr, holdout_split=0.3, export_onnx=False,
+                                ensemble_index=r)
+                vals.append(min(hist["val_loss"]) if hist.get("val_loss") else float("nan"))
+            m, s = float(np.mean(vals)), float(np.std(vals))
+            curve[c][N] = {"vals": vals, "mean": m, "std": s}
+            suffix = f" +/- {s:.4f}" if repeats > 1 else ""
+            print(f"    {c}: best val_loss={m:.4f}{suffix}")
     with open(os.path.join(out_dir, "ablation.json"), "w") as fh:
         json.dump(curve, fh, indent=2)
     _plot_ablation(curve, sorted(sizes), out_dir, f"{point_b} vs {point_a}")
@@ -192,8 +206,15 @@ def _plot_ablation(curve, sizes, out_dir, title):
     fig, ax = plt.subplots(figsize=(6, 4))
     for c, d in curve.items():
         xs = [N for N in sizes if N in d]
-        if xs:
-            ax.plot(xs, [d[N] for N in xs], marker="o", label=c)
+        if not xs:
+            continue
+        means = [d[N]["mean"] for N in xs]
+        stds = [d[N]["std"] for N in xs]
+        ax.plot(xs, means, marker="o", label=c)
+        if any(s > 0 for s in stds):
+            lo = [m - s for m, s in zip(means, stds)]
+            hi = [m + s for m, s in zip(means, stds)]
+            ax.fill_between(xs, lo, hi, alpha=0.2)
     ax.axhline(0.6931, ls="--", color="gray", lw=1, label="random (ln 2)")
     ax.set_xscale("log")
     ax.set_xlabel("events per point (N)")
@@ -213,8 +234,11 @@ def main():
     ap.add_argument("--point-b", default="kl0", help="numerator point label")
     ap.add_argument("--num", type=int, default=100000, help="max events per point (0=all)")
     ap.add_argument("--ablation-sizes", nargs="*", type=int, default=None,
-                    help="if set (e.g. 20000 50000 100000), run the data-efficiency ablation "
-                         "instead of a single fixed-N run")
+                    help="if set (e.g. 2000 5000 10000 20000 50000 100000), run the "
+                         "data-efficiency ablation instead of a single fixed-N run")
+    ap.add_argument("--repeats", type=int, default=1,
+                    help="ablation only: retrain each (control, N) this many times with "
+                         "different seeds -> mean +/- std (recommended >1 for the low-N points)")
     ap.add_argument("--checkpoint", default=os.environ.get("SOPHON_AK4_CKPT", ""))
     ap.add_argument("--out-dir", default="diagnostic_out")
     ap.add_argument("--epochs", type=int, default=30)
@@ -227,7 +251,7 @@ def main():
     if args.ablation_sizes:
         ablation(args.clouds_dir, args.point_a, args.point_b, args.ablation_sizes,
                  args.checkpoint, args.out_dir, args.epochs, args.batch_size,
-                 args.controls, learning_rate=args.learning_rate)
+                 args.controls, learning_rate=args.learning_rate, repeats=args.repeats)
     else:
         run(args.clouds_dir, args.point_a, args.point_b, args.num, args.checkpoint,
             args.out_dir, args.epochs, args.batch_size, args.controls,

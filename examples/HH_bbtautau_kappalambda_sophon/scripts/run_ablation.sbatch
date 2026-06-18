@@ -39,7 +39,10 @@ CLOUDS=${CLOUDS:-$SCRATCH/dihiggs/clouds_subset}
 POINT_A=${POINT_A:-kl5}          # denominator / fixed reference (kappa_lambda=5)
 POINT_B=${POINT_B:-kl0}          # numerator
 OUTDIR=${OUTDIR:-$SCRATCH/dihiggs/ablation_${POINT_B}_vs_${POINT_A}}
-SIZES=${SIZES:-"20000 50000 100000"}
+# default sweep pushes into the low-stats stress regime (where pretraining should
+# help most); REPEATS>1 retrains each point with different seeds for error bars.
+SIZES=${SIZES:-"2000 5000 10000 20000 50000 100000"}
+REPEATS=${REPEATS:-1}
 EPOCHS=${EPOCHS:-30}
 LR=${LR:-2e-4}
 BATCH=${BATCH:-256}
@@ -48,7 +51,7 @@ BATCH=${BATCH:-256}
 export SOPHON_AK4_CKPT=${CKPT:-${SOPHON_AK4_CKPT:-}}
 
 echo "ENV=$ENV REPO=$REPO CLOUDS=$CLOUDS"
-echo "task=$POINT_B vs $POINT_A  SIZES=$SIZES  EPOCHS=$EPOCHS  LR=$LR  BATCH=$BATCH"
+echo "task=$POINT_B vs $POINT_A  SIZES=$SIZES  REPEATS=$REPEATS  EPOCHS=$EPOCHS  LR=$LR  BATCH=$BATCH"
 echo "OUTDIR=$OUTDIR  SOPHON_AK4_CKPT=${SOPHON_AK4_CKPT:-<unset>}"
 
 cd "$REPO"
@@ -57,6 +60,6 @@ srun pixi run -e "$ENV" python \
     examples/HH_bbtautau_kappalambda_sophon/scripts/run_kappa_diagnostic.py \
     --clouds-dir "$CLOUDS" \
     --point-a "$POINT_A" --point-b "$POINT_B" \
-    --ablation-sizes $SIZES \
+    --ablation-sizes $SIZES --repeats "$REPEATS" \
     --epochs "$EPOCHS" --learning-rate "$LR" --batch-size "$BATCH" \
     --out-dir "$OUTDIR"

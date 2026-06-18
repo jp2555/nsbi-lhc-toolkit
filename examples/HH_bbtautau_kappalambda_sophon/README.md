@@ -178,8 +178,21 @@ CKPT=$SCRATCH/sophon-ak4/PARTAK4.pt \
     examples/HH_bbtautau_kappalambda_sophon/scripts/run_ablation.sbatch
 ```
 
-Override `CLOUDS`, `OUTDIR`, `POINT_A`/`POINT_B`, `SIZES`, `EPOCHS`, `LR` via env (see
-the script header). The default task is `kl0` vs the `kl5` reference at N = 20k/50k/100k.
+Override `CLOUDS`, `OUTDIR`, `POINT_A`/`POINT_B`, `SIZES`, `REPEATS`, `EPOCHS`, `LR` via
+env (see the script header). The default task is `kl0` vs the `kl5` reference, swept over
+N = 2k/5k/10k/20k/50k/100k events per point — the low end is the foundation-model stress
+test. Low-N single runs are noisy, so set `REPEATS=3` (retrain each point with different
+seeds → mean ± std error bands) when you want a trustworthy small-N curve:
+
+```bash
+REPEATS=3 CKPT=$SCRATCH/sophon-ak4/PARTAK4.pt \
+  sbatch -A <NERSC_PROJECT>_g \
+    examples/HH_bbtautau_kappalambda_sophon/scripts/run_ablation.sbatch
+```
+
+`REPEATS` multiplies runtime; if the full sweep × repeats overruns the 6 h `shared`
+limit, run the low-N points with repeats separately (e.g. `SIZES="2000 5000 10000"
+REPEATS=5`) from the high-N anchor.
 
 ---
 
