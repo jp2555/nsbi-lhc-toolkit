@@ -40,7 +40,8 @@ class particle_density_ratio_trainer:
         self.model = None
 
     def train(self, number_of_epochs, batch_size, learning_rate,
-              holdout_split=0.3, ensemble_index=0, n_heads=8, n_layers=2):
+              holdout_split=0.3, ensemble_index=0, n_heads=8, n_layers=2,
+              export_onnx=True):
         ds = WeightedParticleCloudDataset(**{k: self.clouds[k] for k in _KEYS})
         n_hold = max(1, int(len(ds) * holdout_split))
         n_train = len(ds) - n_hold
@@ -58,7 +59,9 @@ class particle_density_ratio_trainer:
 
         history = LossHistory()
         trainer = pl.Trainer(
-            max_epochs=number_of_epochs, accelerator="auto", devices="auto",
+            # devices=1: single-process. "auto" grabs all GPUs on the node and spawns
+            # DDP (one training + ONNX-export per rank), which we don't want here.
+            max_epochs=number_of_epochs, accelerator="auto", devices=1,
             logger=False, enable_checkpointing=False,
             # num_sanity_val_steps=0: the pre-training sanity pass otherwise fires
             # the validation callback once before epoch 0, leaving val_loss one entry
@@ -73,8 +76,13 @@ class particle_density_ratio_trainer:
             DataLoader(val_ds, batch_size=batch_size))
 
         self.model.eval()
-        sample = next(iter(DataLoader(ds, batch_size=min(batch_size, len(ds)))))
-        save_model_constituents(self.model, sample, f"{self.path_to_models}model{ensemble_index}.onnx")
+        # ONNX export is only needed for the JAX fit (Phase 2). It is OPTIONAL because
+        # the ParT pairwise embedding uses a data-dependent nonzero that torch.export
+        # (torch 2.10 dynamo exporter) cannot trace. Phase-1 diagnostics skip it and
+        # use torch-native evaluation instead.
+        if export_onnx:
+            sample = next(iter(DataLoader(ds, batch_size=min(batch_size, len(ds)))))
+            save_model_constituents(self.model, sample, f"{self.path_to_models}model{ensemble_index}.onnx")
         # LossHistory stores per-epoch train/val loss lists (callbacks.py)
         return {"train_loss": list(history.train_loss), "val_loss": list(history.val_loss)}
 

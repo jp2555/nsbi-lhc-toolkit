@@ -83,7 +83,7 @@ def run(clouds_dir, point_a, point_b, num, checkpoint, out_dir, epochs, batch_si
             path_to_models=os.path.join(out_dir, c) + "/",
             encoder_kind=kind, spec=SOPHON_SPEC, freeze_backbone=freeze, encoder_kwargs=ekw)
         hist = tr.train(number_of_epochs=epochs, batch_size=batch_size,
-                        learning_rate=1e-3, holdout_split=0.3)
+                        learning_rate=1e-3, holdout_split=0.3, export_onnx=False)
         results[c] = hist
         vl = hist["val_loss"][-1] if hist.get("val_loss") else float("nan")
         print(f"[done] {c}: final val_loss={vl:.4f}")
