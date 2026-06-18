@@ -72,7 +72,7 @@ control can use any feature set, e.g. the current 8.)
   `load_state_dict(strict=False)`. The `(missing, unexpected)` report is stored on
   `encoder.load_report` and warned if non-trivial.
 - **Architecture (confirmed from model.pt key shapes, 2026-06-18):**
-  `embed_dims=[64,256,64]`, `pair_embed_dims=[32,32,32]`, `num_layers=6`,
+  `embed_dims=[64,256,64]`, `pair_embed_dims=[32,32,32]`, `num_layers=8`,
   `num_cls_layers=2`, `num_heads=8`, `input_dim=17`, `pair_input_dim=4` — these are
   the defaults in `sophon_ak4_backbone.py`, so the checkpoint loads with no shape
   mismatches (only the dropped `fc.*` head + any `cls_token`/buffers handled). The

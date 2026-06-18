@@ -6,7 +6,7 @@ with an optional ``vectors`` arg carrying the per-particle 4-vectors used by Par
 pairwise interaction features.
 
 Kinds (via ``build_part_encoder``):
-- ``"scratch"``: a ParT of the sophon-ak4 shape (6 particle + 2 class-attention
+- ``"scratch"``: a ParT of the sophon-ak4 shape (8 particle + 2 class-attention
   blocks, 8 heads, 64-d embedding), random init -> the from-scratch control. By
   default it runs WITHOUT the pairwise term (``use_pair=False``) since the toolkit's
   cloud does not yet carry 4-vectors.
@@ -30,20 +30,20 @@ Aligning the Delphes->cloud converter to this schema is the remaining integratio
 import torch
 import torch.nn as nn
 
-# sophon-ak4 architecture (from the HF repo config / paper): 6 particle-attention +
+# sophon-ak4 architecture (confirmed from model.pt key shapes): 8 particle-attention +
 # 2 class-attention blocks, 8 heads, 64-d class-token embedding, 17 input features,
-# 4-d pairwise (px,py,pz,E). embed_dims/pair_embed_dims below are a best-guess that
-# yields a 64-d embedding; CONFIRM against model.pt key shapes on the cluster (a few
-# mismatched keys from load_state_dict(strict=False) means these need adjusting).
+# 4-d pairwise (px,py,pz,E). The embed_dims/pair_embed_dims/num_layers constants below
+# match model.pt exactly (verified against its key shapes), so the checkpoint loads
+# with no shape mismatch (only the 23-class fc. head is dropped).
 SOPHON_AK4_INPUT_DIM = 17
 SOPHON_AK4_CKPT_FILE = "models/JetClassII_SophonAK4/model.pt"
 # Confirmed from model.pt key shapes (2026-06-18): particle-embed [64,256,64],
-# pair-embed [32,32,32] (final -> num_heads=8), 6 particle blocks + 2 class blocks.
+# pair-embed [32,32,32] (final -> num_heads=8), 8 particle blocks + 2 class blocks.
 SOPHON_AK4_EMBED_DIMS = [64, 256, 64]
 SOPHON_AK4_PAIR_EMBED_DIMS = [32, 32, 32]
 
 
-def _build_part(input_dim, embed_dim=64, num_layers=6, num_cls_layers=2, num_heads=8,
+def _build_part(input_dim, embed_dim=64, num_layers=8, num_cls_layers=2, num_heads=8,
                 pair_input_dim=4, use_pair=True, embed_dims=None, pair_embed_dims=None):
     """Construct a ParT configured as an encoder (fc=None -> embedding output)."""
     from nsbi_common_utils.lightning_tools._part_vendor.ParT import ParticleTransformer
@@ -70,7 +70,7 @@ def _build_part(input_dim, embed_dim=64, num_layers=6, num_cls_layers=2, num_hea
 
 
 class SophonAK4Encoder(nn.Module):
-    def __init__(self, input_dim, embed_dim=64, num_layers=6, num_cls_layers=2,
+    def __init__(self, input_dim, embed_dim=64, num_layers=8, num_cls_layers=2,
                  num_heads=8, pair_input_dim=4, use_pair=True,
                  embed_dims=None, pair_embed_dims=None, checkpoint=None):
         super().__init__()
@@ -137,7 +137,7 @@ def _warn_keys(missing, unexpected, shape_mismatch=()):
 
 
 def build_part_encoder(kind, f_part=8, embed_dim=64, checkpoint=None,
-                       num_layers=6, num_cls_layers=2, num_heads=8, pair_input_dim=4,
+                       num_layers=8, num_cls_layers=2, num_heads=8, pair_input_dim=4,
                        input_dim=None, use_pair=None, embed_dims=None,
                        pair_embed_dims=None, **_):
     """Factory returning a ParT-based jet encoder with the StubJetEncoder interface.
