@@ -37,6 +37,10 @@ import torch.nn as nn
 # mismatched keys from load_state_dict(strict=False) means these need adjusting).
 SOPHON_AK4_INPUT_DIM = 17
 SOPHON_AK4_CKPT_FILE = "models/JetClassII_SophonAK4/model.pt"
+# Confirmed from model.pt key shapes (2026-06-18): particle-embed [64,256,64],
+# pair-embed [32,32,32] (final -> num_heads=8), 6 particle blocks + 2 class blocks.
+SOPHON_AK4_EMBED_DIMS = [64, 256, 64]
+SOPHON_AK4_PAIR_EMBED_DIMS = [32, 32, 32]
 
 
 def _build_part(input_dim, embed_dim=64, num_layers=6, num_cls_layers=2, num_heads=8,
@@ -83,8 +87,10 @@ class SophonAK4Encoder(nn.Module):
 
     def _load_checkpoint(self, checkpoint):
         """Load a sophon-ak4 checkpoint: strip the SophonWrapper 'mod.' prefix and the
-        classifier head ('fc.'), then load non-strictly. Returns (missing, unexpected)
-        so the caller can confirm the architecture config matches the weights."""
+        classifier head ('fc.'), keep only keys whose shape matches this model, then load
+        non-strictly. NOTE: load_state_dict raises on *shape* mismatch even with
+        strict=False (strict only tolerates missing/unexpected keys), so we filter
+        mismatched shapes here. Returns a report so the caller can confirm the config."""
         import os
         path = checkpoint
         if not os.path.exists(path):
@@ -92,16 +98,22 @@ class SophonAK4Encoder(nn.Module):
             path = hf_hub_download(repo_id="jet-universe/sophon-ak4", filename=checkpoint)
         state = torch.load(path, map_location="cpu")
         sd = state.get("model", state.get("state_dict", state)) if isinstance(state, dict) else state
-        cleaned = {}
+        model_sd = self.part.state_dict()
+        cleaned, shape_mismatch = {}, []
         for k, v in sd.items():
             kk = k[4:] if k.startswith("mod.") else k
             if kk.startswith("fc."):           # drop the 23-class classifier head
                 continue
+            if kk in model_sd and tuple(v.shape) != tuple(model_sd[kk].shape):
+                shape_mismatch.append((kk, tuple(v.shape), tuple(model_sd[kk].shape)))
+                continue
             cleaned[kk] = v
         missing, unexpected = self.part.load_state_dict(cleaned, strict=False)
-        if missing or unexpected:
-            _warn_keys(missing, unexpected)
-        return {"missing": list(missing), "unexpected": list(unexpected)}
+        report = {"loaded": len(cleaned), "missing": list(missing),
+                  "unexpected": list(unexpected), "shape_mismatch": shape_mismatch}
+        if missing or unexpected or shape_mismatch:
+            _warn_keys(missing, unexpected, shape_mismatch)
+        return report
 
     def forward(self, parts, mask, vectors=None):
         # parts: (B, P, F) -> x: (B, F, P); mask: (B, P) -> (B, 1, P) (trimmer .bool()s it)
@@ -112,14 +124,16 @@ class SophonAK4Encoder(nn.Module):
         return self.part._forward_aggregator(enc, padding_mask)   # (B, embed_dim)
 
 
-def _warn_keys(missing, unexpected):
+def _warn_keys(missing, unexpected, shape_mismatch=()):
     import logging
     log = logging.getLogger("sophon_ak4")
     log.warning(
-        "sophon-ak4 load_state_dict(strict=False): %d missing, %d unexpected keys. "
-        "If these are numerous, the ParT config (embed_dims/pair_embed_dims/num_layers) "
-        "does not match model.pt — inspect the checkpoint's key shapes and adjust.",
-        len(missing), len(unexpected))
+        "sophon-ak4 checkpoint load: %d missing, %d unexpected, %d shape-mismatch keys. "
+        "Shape-mismatched keys are SKIPPED (left at init); if numerous, the ParT config "
+        "(embed_dims/pair_embed_dims/num_layers) does not match model.pt.",
+        len(missing), len(unexpected), len(shape_mismatch))
+    for kk, got, exp in shape_mismatch:
+        log.warning("  shape-mismatch %s: ckpt %s vs model %s", kk, got, exp)
 
 
 def build_part_encoder(kind, f_part=8, embed_dim=64, checkpoint=None,
@@ -145,6 +159,7 @@ def build_part_encoder(kind, f_part=8, embed_dim=64, checkpoint=None,
             num_layers=num_layers, num_cls_layers=num_cls_layers, num_heads=num_heads,
             pair_input_dim=pair_input_dim,
             use_pair=(True if use_pair is None else use_pair),
-            embed_dims=embed_dims, pair_embed_dims=pair_embed_dims,
+            embed_dims=(embed_dims or SOPHON_AK4_EMBED_DIMS),
+            pair_embed_dims=(pair_embed_dims or SOPHON_AK4_PAIR_EMBED_DIMS),
             checkpoint=(checkpoint or SOPHON_AK4_CKPT_FILE))
     raise ValueError(f"unknown ParT encoder kind: {kind!r}")

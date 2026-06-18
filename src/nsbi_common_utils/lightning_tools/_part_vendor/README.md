@@ -71,9 +71,14 @@ control can use any feature set, e.g. the current 8.)
 - Loading strips the SophonWrapper `mod.` prefix and the `fc.` head, then
   `load_state_dict(strict=False)`. The `(missing, unexpected)` report is stored on
   `encoder.load_report` and warned if non-trivial.
-- **Confirm `embed_dims` / `pair_embed_dims` / `num_layers` against the checkpoint**:
-  the defaults in `sophon_ak4_backbone.py` yield a 64-d embedding but the exact
-  intermediate dims are a best-guess. On the cluster, inspect shapes:
+- **Architecture (confirmed from model.pt key shapes, 2026-06-18):**
+  `embed_dims=[64,256,64]`, `pair_embed_dims=[32,32,32]`, `num_layers=6`,
+  `num_cls_layers=2`, `num_heads=8`, `input_dim=17`, `pair_input_dim=4` — these are
+  the defaults in `sophon_ak4_backbone.py`, so the checkpoint loads with no shape
+  mismatches (only the dropped `fc.*` head + any `cls_token`/buffers handled). The
+  loader is also shape-safe: it filters any mismatched-shape keys (since
+  `load_state_dict(strict=False)` raises on shape mismatch) and records them in
+  `encoder.load_report`. To re-inspect after a checkpoint update:
   ```python
   import torch
   sd = torch.load("model.pt", map_location="cpu")
