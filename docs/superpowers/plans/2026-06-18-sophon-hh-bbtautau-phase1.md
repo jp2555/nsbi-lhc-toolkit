@@ -1225,18 +1225,24 @@ git commit -m "feat: delphes_to_clouds converter (EFlow constituents -> padded c
 
 **Files:**
 - Create: `src/nsbi_common_utils/lightning_tools/sophon_ak4_backbone.py`
-- Modify: `pixi.toml` (add `weaver-core`, `particle_transformer` / vendored ParT)
+- Modify: `src/nsbi_common_utils/lightning_tools/_part_vendor/ParT.py` (vendored, torch-only)
 - Test: `tests/test_sophon_ak4_backbone.py` (marked integration; skipped without the checkpoint)
 
 This is the one task that needs external resources. It provides `build_part_encoder(kind="scratch"|"sophon-ak4", ...)` returning an `nn.Module` with the **same `forward(parts, mask) -> (B, embed_dim)` interface** as `StubJetEncoder`, so everything above is unchanged.
 
-- [ ] **Step 1: Add deps**
+- [ ] **Step 1: Vendor ParT (do NOT add weaver-core as a dependency)**
 
-In `pixi.toml` add (pypi deps):
-```toml
-weaver-core = { git = "https://github.com/hqucms/weaver-core.git", branch = "dev/custom_train_eval" }
+`weaver-core` pins `uproot<5.2`, which conflicts with this toolkit's `uproot 5.7` — it
+will break `pixi install`. We only need the ParT `nn.Module`, which is torch-only.
+Vendor it directly:
+```bash
+git clone https://github.com/hqucms/weaver-core /tmp/weaver-core
+cp /tmp/weaver-core/weaver/nn/model/ParticleTransformer.py \
+   src/nsbi_common_utils/lightning_tools/_part_vendor/ParT.py
+# then replace `from weaver.utils.logger import _logger` with:
+#   import logging; _logger = logging.getLogger("ParT")
 ```
-Vendor the ParT model definition from `github.com/jet-universe/particle_transformer` (the `ParticleTransformer` class) into `src/nsbi_common_utils/lightning_tools/_part_vendor/` (MIT-licensed; keep the license header), or `pip install` it if packaged.
+Keep the MIT license header. No `pixi.toml` change is needed (see `_part_vendor/README.md`).
 
 - [ ] **Step 2: Write the integration test (auto-skips without checkpoint)**
 

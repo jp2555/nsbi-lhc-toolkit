@@ -449,8 +449,11 @@ the κ_λ morphing, fit, weight handling, and diagnostics.
 - **ONNX export of ParT with masks (R4):** ParT/Sophon support ONNX, but the
   masked, padded constituent input + the hierarchical wrapper need a verified
   export + onnxruntime path. Fallback: native-torch inference to produce `.npy`.
-- **weaver-core dependency (R5):** decide depend-vs-vendor for the ParT definition
-  and checkpoint loading; confirm it coexists with the toolkit's pinned torch.
+- **weaver-core dependency (R5, RESOLVED → vendor):** `weaver-core` pins
+  `uproot<5.2` and conflicts with the toolkit's `uproot 5.7` (confirmed at
+  `pixi install` time). Resolution: do NOT depend on `weaver-core`; vendor the
+  torch-only `ParticleTransformer` class into `_part_vendor/` (checkpoint loaded via
+  `huggingface_hub`).
 - **Frozen vs fine-tuned default (R6, RESOLVED):** run **both, frozen-first** —
   frozen is fastest and strongest for the low-stat ablation; fine-tuned is the
   fuller story.
