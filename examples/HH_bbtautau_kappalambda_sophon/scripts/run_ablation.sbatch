@@ -24,7 +24,7 @@
 #SBATCH --gpus-per-task=1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=64G
-#SBATCH -t 08:00:00
+#SBATCH -t 06:00:00
 #SBATCH -o logs/ablation_%j.out
 #SBATCH -e logs/ablation_%j.err
 
