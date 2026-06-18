@@ -6,8 +6,13 @@ tokens (taus/leptons/MET), and writes a compressed .npz with arrays matching
 WeightedParticleCloudDataset. Feature columns follow cloud_spec (F_PART=8, F_OBJ=6);
 the sophon-ak4 integration (Task 11) extends F_PART to the checkpoint's full schema.
 
+Reading is **streamed in chunks** (uproot.iterate) so memory stays bounded on
+multi-GB Delphes files.
+
 This baseline maps EFlow.JetIndex -> jet; for real Delphes without an explicit
-constituent->jet index, replace assign_constituents() with a Delta-R association.
+constituent->jet index, replace the association in _process_chunk() with a Delta-R
+match, and adapt the branch names (EFlowTrack/EFlowPhoton/EFlowNeutralHadron,
+Electron, Muon, Jet.Flavor) to the actual schema.
 """
 import argparse
 import numpy as np
@@ -21,8 +26,18 @@ def _logpt(pt):
     return np.log(np.clip(pt, 1e-3, None)).astype(np.float32)
 
 
-def convert_tree(path, tree_name, out_path):
-    arr = uproot.open(f"{path}:{tree_name}").arrays(library="ak")
+def _scalar(x):
+    """Return a python float from ``x`` whether it is a bare scalar (a flat
+    per-event branch, as in the synthetic tests) or a length>=1 collection (real
+    Delphes ``MissingET`` is a length-1 TClonesArray, indexed ``[0]``)."""
+    try:
+        return float(x[0])
+    except (TypeError, IndexError, KeyError):
+        return float(x)
+
+
+def _process_chunk(arr):
+    """Turn one awkward chunk (n events) into the padded cloud arrays (a dict)."""
     n = len(arr["Jet.PT"])
     parts = np.zeros((n, N_JETS_MAX, N_PART_MAX, F_PART), dtype=np.float32)
     part_mask = np.zeros((n, N_JETS_MAX, N_PART_MAX), dtype=np.float32)
@@ -52,13 +67,28 @@ def convert_tree(path, tree_name, out_path):
                               1.0 if cc[k] != 0 else 0.0]
         # MET object token (type_id=3)
         obj_mask[i, 0] = 1.0
-        met = float(arr["MissingET.MET"][i][0]) if len(arr["MissingET.MET"][i]) else 0.0
-        mphi = float(arr["MissingET.Phi"][i][0]) if len(arr["MissingET.Phi"][i]) else 0.0
+        met = _scalar(arr["MissingET.MET"][i])
+        mphi = _scalar(arr["MissingET.Phi"][i])
         obj[i, 0] = [_logpt(met), 0.0, np.sin(mphi), np.cos(mphi), met, 3.0]
 
     w = ak.to_numpy(arr["Event.Weight"]).astype(np.float64)
-    np.savez_compressed(out_path, parts=parts, part_mask=part_mask, jet_mask=jet_mask,
-                        obj=obj, obj_mask=obj_mask, w=w)
+    return {"parts": parts, "part_mask": part_mask, "jet_mask": jet_mask,
+            "obj": obj, "obj_mask": obj_mask, "w": w}
+
+
+def convert_tree(path, tree_name, out_path, step_size=50000):
+    """Stream the Delphes tree in chunks of ``step_size`` events and write one
+    compressed ``.npz`` with the concatenated padded-cloud arrays. Memory is bounded
+    by ``step_size`` regardless of the input file size."""
+    keys = ("parts", "part_mask", "jet_mask", "obj", "obj_mask", "w")
+    chunks = {k: [] for k in keys}
+    for arr in uproot.iterate(f"{path}:{tree_name}", step_size=step_size, library="ak"):
+        out = _process_chunk(arr)
+        for k in keys:
+            chunks[k].append(out[k])
+    merged = {k: (np.concatenate(v, axis=0) if v else np.empty((0,), dtype=np.float32))
+              for k, v in chunks.items()}
+    np.savez_compressed(out_path, **merged)
     return out_path
 
 
@@ -67,5 +97,6 @@ if __name__ == "__main__":
     ap.add_argument("--input", required=True)
     ap.add_argument("--tree", default="Delphes")
     ap.add_argument("--output", required=True)
+    ap.add_argument("--step-size", type=int, default=50000)
     args = ap.parse_args()
-    convert_tree(args.input, args.tree, args.output)
+    convert_tree(args.input, args.tree, args.output, step_size=args.step_size)

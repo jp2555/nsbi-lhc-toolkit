@@ -395,21 +395,48 @@ class _DictToTupleWrapper(torch.nn.Module):
         })
 
 
-def save_model_constituents(lightning_model, sample_batch, path_to_save_model, opset=17):
+def save_model_constituents(lightning_model, sample_batch, path_to_save_model,
+                            opset=17, validate=True, atol=1e-3):
     """Export a constituent (dict-input) density-ratio model to ONNX.
 
     sample_batch: a dict of torch tensors (one mini-batch) used to trace shapes.
     Dynamic axis 0 (batch) is set on every input and the output.
+
+    If ``validate`` is True (default), the exported graph is reloaded and run with
+    onnxruntime on ``sample_batch``; its output is compared to the torch model's
+    output and a RuntimeError is raised if they differ by more than ``atol``. This
+    turns a silent ONNX-export divergence (e.g. an attention/mask op that did not
+    trace faithfully) into a loud failure at export time rather than at inference.
     """
-    lightning_model.eval()
+    # Export on CPU: after GPU training the model lives on CUDA while the sample
+    # batch (from a DataLoader) is on CPU; tracing/validation on CPU avoids a device
+    # mismatch. This is the model's last use in the trainer, so moving it is safe.
+    lightning_model = lightning_model.eval().cpu()
+    cpu_batch = {k: sample_batch[k].cpu() for k in _CONSTITUENT_INPUTS}
     wrapper = _DictToTupleWrapper(lightning_model, _CONSTITUENT_INPUTS).eval()
-    args = tuple(sample_batch[k] for k in _CONSTITUENT_INPUTS)
+    args = tuple(cpu_batch[k] for k in _CONSTITUENT_INPUTS)
     dynamic = {k: {0: "batch"} for k in _CONSTITUENT_INPUTS}
     dynamic["output"] = {0: "batch"}
     torch.onnx.export(
         wrapper, args, str(path_to_save_model), export_params=True, opset_version=opset,
         input_names=_CONSTITUENT_INPUTS, output_names=["output"], dynamic_axes=dynamic,
     )
+    if validate:
+        with torch.no_grad():
+            ref = lightning_model(
+                {k: cpu_batch[k] for k in _CONSTITUENT_INPUTS}
+            ).cpu().numpy().reshape(-1)
+        got = predict_with_onnx_constituents(
+            {k: np.asarray(cpu_batch[k]) for k in _CONSTITUENT_INPUTS},
+            str(path_to_save_model),
+        )
+        max_dev = float(np.max(np.abs(ref - got))) if ref.size else 0.0
+        if max_dev > atol:
+            raise RuntimeError(
+                f"ONNX export validation failed for {path_to_save_model}: "
+                f"max|torch-onnx| = {max_dev:.3e} > {atol:.1e}. The exported graph "
+                f"diverges from the torch model (check the attention/mask ops)."
+            )
 
 
 def predict_with_onnx_constituents(arrays, model, batch_size=4096):

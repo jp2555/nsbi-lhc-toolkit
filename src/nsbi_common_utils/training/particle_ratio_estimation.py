@@ -60,6 +60,11 @@ class particle_density_ratio_trainer:
         trainer = pl.Trainer(
             max_epochs=number_of_epochs, accelerator="auto", devices="auto",
             logger=False, enable_checkpointing=False,
+            # num_sanity_val_steps=0: the pre-training sanity pass otherwise fires
+            # the validation callback once before epoch 0, leaving val_loss one entry
+            # longer than train_loss (misaligned history). Disabling it makes both
+            # per-epoch lists have length == number_of_epochs.
+            num_sanity_val_steps=0,
             callbacks=[history, EarlyStopping(monitor="val_loss", patience=number_of_epochs)],
             enable_progress_bar=False)
         trainer.fit(
