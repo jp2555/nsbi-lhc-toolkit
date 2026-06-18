@@ -44,6 +44,21 @@ JET_DR = 0.4
 JET_PT_MIN = 20.0
 _EPS = 1e-9
 
+# Read ONLY these leaves. Reading the whole Delphes tree makes uproot choke on TObject
+# members (e.g. `Particle.fBits` -> "wrong number of bytes") and needlessly loads the huge
+# Particle/Track/Tower collections. Optional leaves that are absent are simply ignored.
+_BRANCHES = [
+    "Jet.PT", "Jet.Eta", "Jet.Phi", "Jet.Mass",
+    "EFlowTrack.PT", "EFlowTrack.Eta", "EFlowTrack.Phi", "EFlowTrack.Charge", "EFlowTrack.PID",
+    "EFlowTrack.D0", "EFlowTrack.DZ", "EFlowTrack.ErrorD0", "EFlowTrack.ErrorDZ",
+    "EFlowPhoton.ET", "EFlowPhoton.Eta", "EFlowPhoton.Phi",
+    "EFlowNeutralHadron.ET", "EFlowNeutralHadron.Eta", "EFlowNeutralHadron.Phi",
+    "Electron.PT", "Electron.Eta", "Electron.Phi", "Electron.Charge",
+    "Muon.PT", "Muon.Eta", "Muon.Phi", "Muon.Charge",
+    "MissingET.MET", "MissingET.Phi",
+    "Event.Weight",
+]
+
 # sophon-ak4 manual standardization: name -> (subtract, multiply, clip_min, clip_max).
 # Features not listed use identity with clip [-5, 5] (matches the data config's defaults).
 _STD = {
@@ -226,7 +241,12 @@ def _process_chunk(arr):
 
         obj[i], obj_mask[i] = _object_tokens(arr, i)
 
-    w = ak.to_numpy(arr["Event.Weight"]).astype(np.float64)
+    # Event.Weight may be a length-1 collection (Delphes Event TClonesArray) or flat;
+    # _scalar() handles both. Preserve NLO sign; fall back to 1.0 only if truly absent.
+    if "Event.Weight" in arr.fields:
+        w = np.array([_scalar(arr["Event.Weight"][i]) for i in range(n)], dtype=np.float64)
+    else:
+        w = np.ones(n, dtype=np.float64)
     return {"parts": parts, "part_vectors": vecs, "part_mask": part_mask,
             "jet_mask": jet_mask, "obj": obj, "obj_mask": obj_mask, "w": w}
 
@@ -237,7 +257,14 @@ def convert_tree(path, tree_name, out_path, step_size=20000):
     source = ({p: tree_name for p in path} if isinstance(path, (list, tuple))
               else f"{path}:{tree_name}")
     chunks = {k: [] for k in keys}
-    for arr in uproot.iterate(source, step_size=step_size, library="ak"):
+    _checked = False
+    for arr in uproot.iterate(source, step_size=step_size, library="ak", filter_name=_BRANCHES):
+        if not _checked:
+            if "Jet.PT" not in arr.fields:
+                raise KeyError(
+                    f"'Jet.PT' not found among read branches {list(arr.fields)}. The Delphes "
+                    f"leaf names differ from _BRANCHES — inspect with uproot.open(f)['{tree_name}'].keys().")
+            _checked = True
         out = _process_chunk(arr)
         for k in keys:
             chunks[k].append(out[k])
