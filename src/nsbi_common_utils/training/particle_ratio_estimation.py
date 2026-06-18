@@ -41,7 +41,7 @@ class particle_density_ratio_trainer:
 
     def train(self, number_of_epochs, batch_size, learning_rate,
               holdout_split=0.3, ensemble_index=0, n_heads=8, n_layers=2,
-              export_onnx=True):
+              export_onnx=True, early_stopping_patience=10):
         ds = WeightedParticleCloudDataset(**{k: self.clouds[k] for k in _KEYS})
         n_hold = max(1, int(len(ds) * holdout_split))
         n_train = len(ds) - n_hold
@@ -65,10 +65,13 @@ class particle_density_ratio_trainer:
             logger=False, enable_checkpointing=False,
             # num_sanity_val_steps=0: the pre-training sanity pass otherwise fires
             # the validation callback once before epoch 0, leaving val_loss one entry
-            # longer than train_loss (misaligned history). Disabling it makes both
-            # per-epoch lists have length == number_of_epochs.
+            # longer than train_loss (misaligned history). Disabling it keeps both
+            # per-epoch lists equal in length (== the epochs actually run).
             num_sanity_val_steps=0,
-            callbacks=[history, EarlyStopping(monitor="val_loss", patience=number_of_epochs)],
+            # stop once val_loss stops improving for `early_stopping_patience` epochs;
+            # avoids churning past the optimum (fine-tuning overfits within ~10 epochs).
+            callbacks=[history, EarlyStopping(monitor="val_loss",
+                                              patience=early_stopping_patience)],
             enable_progress_bar=False)
         trainer.fit(
             self.model,

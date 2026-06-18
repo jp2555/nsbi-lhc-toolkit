@@ -41,6 +41,11 @@ def _controls(checkpoint):
     }
 
 
+# per-control learning-rate override (falls back to the global --learning-rate).
+# fine-tuning a pretrained backbone overfits fast -> use a smaller LR than scratch/frozen.
+_CONTROL_LR = {"sophon_finetune": 1e-4}
+
+
 def load_point(npz_path, num=0):
     """Load one point's clouds (optionally capped to `num` events)."""
     d = np.load(npz_path)
@@ -78,14 +83,15 @@ def run(clouds_dir, point_a, point_b, num, checkpoint, out_dir, epochs, batch_si
         if kind == "sophon-ak4" and not checkpoint:
             print(f"[skip] {c}: set SOPHON_AK4_CKPT or --checkpoint")
             continue
-        print(f"[train] {c} (encoder={kind}, freeze={freeze})")
+        lr = _CONTROL_LR.get(c, learning_rate)
+        print(f"[train] {c} (encoder={kind}, freeze={freeze}, lr={lr:g})")
         tr = particle_density_ratio_trainer(
             clouds=task, sample_name=[point_b, point_a],
             output_name=f"{point_b}_vs_{point_a}_{c}",
             path_to_models=os.path.join(out_dir, c) + "/",
             encoder_kind=kind, spec=SOPHON_SPEC, freeze_backbone=freeze, encoder_kwargs=ekw)
         hist = tr.train(number_of_epochs=epochs, batch_size=batch_size,
-                        learning_rate=learning_rate, holdout_split=0.3, export_onnx=False)
+                        learning_rate=lr, holdout_split=0.3, export_onnx=False)
         results[c] = hist
         vls = hist.get("val_loss") or []
         best = min(vls) if vls else float("nan")
@@ -158,13 +164,14 @@ def ablation(clouds_dir, point_a, point_b, sizes, checkpoint, out_dir, epochs,
             if kind == "sophon-ak4" and not checkpoint:
                 print(f"  [skip] {c}: no checkpoint")
                 continue
+            lr = _CONTROL_LR.get(c, learning_rate)
             tr = particle_density_ratio_trainer(
                 clouds=task, sample_name=[point_b, point_a],
                 output_name=f"{point_b}_vs_{point_a}_{c}_N{N}",
                 path_to_models=os.path.join(out_dir, f"{c}_N{N}") + "/",
                 encoder_kind=kind, spec=SOPHON_SPEC, freeze_backbone=freeze, encoder_kwargs=ekw)
             hist = tr.train(number_of_epochs=epochs, batch_size=batch_size,
-                            learning_rate=learning_rate, holdout_split=0.3, export_onnx=False)
+                            learning_rate=lr, holdout_split=0.3, export_onnx=False)
             best = min(hist["val_loss"]) if hist.get("val_loss") else float("nan")
             curve[c][N] = best
             print(f"    {c}: best val_loss={best:.4f}")
