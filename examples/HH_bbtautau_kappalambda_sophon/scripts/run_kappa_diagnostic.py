@@ -1,7 +1,8 @@
 """Phase-1 diagnostic: does sophon-ak4 pretraining help the density-ratio classifier?
 
-Default binary task = kappa_lambda=0 vs kappa_lambda=1 (a signal-shape difference; needs
-NO background sample). Trains the controls and writes loss-vs-epoch curves + results.json:
+Binary task = (numerator point) vs the **kappa_lambda=5 reference (denominator)** — a
+signal-shape difference, no background needed. Default = kl0 vs kl5 (box vs triangle-
+dominated -> well separated). Trains the controls and writes loss curves + results.json:
 
   scratch          : ParT (sophon-ak4 shape) random init      -> isolates the pretraining benefit
   sophon_frozen    : sophon-ak4 backbone frozen, head trained  -> foundation, frozen
@@ -129,12 +130,84 @@ def _plot(results, out_dir, title):
     print(f"[plot] -> {path}")
 
 
+def _shuffle(d, seed=0):
+    n = d["w"].shape[0]
+    idx = np.random.default_rng(seed).permutation(n)
+    return {k: v[idx] for k, v in d.items()}
+
+
+def ablation(clouds_dir, point_a, point_b, sizes, checkpoint, out_dir, epochs,
+             batch_size, controls, learning_rate=2e-4):
+    """Train each control at several per-point event counts -> best val-loss vs N.
+
+    This is the foundation-model data-efficiency test: the pretrained controls should
+    beat `scratch` most at small N (and reach below the ln2 random floor sooner)."""
+    os.makedirs(out_dir, exist_ok=True)
+    nmax = max(sizes)
+    a_full = _shuffle(load_point(os.path.join(clouds_dir, f"{point_a}.npz"), nmax))
+    b_full = _shuffle(load_point(os.path.join(clouds_dir, f"{point_b}.npz"), nmax))
+    cmap = _controls(checkpoint)
+    curve = {c: {} for c in controls}
+    for N in sorted(sizes):
+        a = {k: v[:N] for k, v in a_full.items()}
+        b = {k: v[:N] for k, v in b_full.items()}
+        task = build_binary_task(a, b)
+        print(f"[ablation] N={N}/point -> {task['y'].shape[0]} events")
+        for c in controls:
+            kind, freeze, ekw = cmap[c]
+            if kind == "sophon-ak4" and not checkpoint:
+                print(f"  [skip] {c}: no checkpoint")
+                continue
+            tr = particle_density_ratio_trainer(
+                clouds=task, sample_name=[point_b, point_a],
+                output_name=f"{point_b}_vs_{point_a}_{c}_N{N}",
+                path_to_models=os.path.join(out_dir, f"{c}_N{N}") + "/",
+                encoder_kind=kind, spec=SOPHON_SPEC, freeze_backbone=freeze, encoder_kwargs=ekw)
+            hist = tr.train(number_of_epochs=epochs, batch_size=batch_size,
+                            learning_rate=learning_rate, holdout_split=0.3, export_onnx=False)
+            best = min(hist["val_loss"]) if hist.get("val_loss") else float("nan")
+            curve[c][N] = best
+            print(f"    {c}: best val_loss={best:.4f}")
+    with open(os.path.join(out_dir, "ablation.json"), "w") as fh:
+        json.dump(curve, fh, indent=2)
+    _plot_ablation(curve, sorted(sizes), out_dir, f"{point_b} vs {point_a}")
+    return curve
+
+
+def _plot_ablation(curve, sizes, out_dir, title):
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception as exc:                       # pragma: no cover
+        print(f"[plot] skipped ({exc})")
+        return
+    fig, ax = plt.subplots(figsize=(6, 4))
+    for c, d in curve.items():
+        xs = [N for N in sizes if N in d]
+        if xs:
+            ax.plot(xs, [d[N] for N in xs], marker="o", label=c)
+    ax.axhline(0.6931, ls="--", color="gray", lw=1, label="random (ln 2)")
+    ax.set_xscale("log")
+    ax.set_xlabel("events per point (N)")
+    ax.set_ylabel("best validation weighted-BCE loss")
+    ax.set_title(f"data-efficiency: {title}")
+    ax.legend()
+    fig.tight_layout()
+    path = os.path.join(out_dir, "ablation.png")
+    fig.savefig(path, dpi=120)
+    print(f"[plot] -> {path}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--clouds-dir", required=True)
-    ap.add_argument("--point-a", default="kl0", help="denominator point label")
-    ap.add_argument("--point-b", default="kl1", help="numerator point label (SM)")
-    ap.add_argument("--num", type=int, default=20000, help="max events per point (0=all)")
+    ap.add_argument("--point-a", default="kl5", help="denominator / REFERENCE point label")
+    ap.add_argument("--point-b", default="kl0", help="numerator point label")
+    ap.add_argument("--num", type=int, default=100000, help="max events per point (0=all)")
+    ap.add_argument("--ablation-sizes", nargs="*", type=int, default=None,
+                    help="if set (e.g. 20000 50000 100000), run the data-efficiency ablation "
+                         "instead of a single fixed-N run")
     ap.add_argument("--checkpoint", default=os.environ.get("SOPHON_AK4_CKPT", ""))
     ap.add_argument("--out-dir", default="diagnostic_out")
     ap.add_argument("--epochs", type=int, default=30)
@@ -144,9 +217,14 @@ def main():
     ap.add_argument("--controls", nargs="+",
                     default=["scratch", "sophon_frozen", "sophon_finetune"])
     args = ap.parse_args()
-    run(args.clouds_dir, args.point_a, args.point_b, args.num, args.checkpoint,
-        args.out_dir, args.epochs, args.batch_size, args.controls,
-        learning_rate=args.learning_rate)
+    if args.ablation_sizes:
+        ablation(args.clouds_dir, args.point_a, args.point_b, args.ablation_sizes,
+                 args.checkpoint, args.out_dir, args.epochs, args.batch_size,
+                 args.controls, learning_rate=args.learning_rate)
+    else:
+        run(args.clouds_dir, args.point_a, args.point_b, args.num, args.checkpoint,
+            args.out_dir, args.epochs, args.batch_size, args.controls,
+            learning_rate=args.learning_rate)
 
 
 if __name__ == "__main__":
