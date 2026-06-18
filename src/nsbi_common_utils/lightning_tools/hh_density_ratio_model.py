@@ -23,7 +23,7 @@ class HHDensityRatioLightning(pl.LightningModule):
 
     def __init__(self, encoder_kind="stub", spec=DEFAULT_SPEC,
                  n_heads=8, n_layers=2, learning_rate=1e-3,
-                 use_log_loss=False, freeze_backbone=False,
+                 use_log_loss=False, freeze_backbone=False, weight_decay=1e-4,
                  callback_factor=0.5, callback_patience=20, encoder_kwargs=None):
         super().__init__()
         self.save_hyperparameters(ignore=["spec"])
@@ -90,7 +90,8 @@ class HHDensityRatioLightning(pl.LightningModule):
 
     def configure_optimizers(self):
         opt = torch.optim.NAdam(
-            [p for p in self.parameters() if p.requires_grad], lr=self.lr)
+            [p for p in self.parameters() if p.requires_grad], lr=self.lr,
+            weight_decay=self.hparams.weight_decay)
         sched = torch.optim.lr_scheduler.StepLR(
             opt, step_size=self.hparams.callback_patience, gamma=self.hparams.callback_factor)
         return {"optimizer": opt, "lr_scheduler": {"scheduler": sched, "interval": "epoch"}}

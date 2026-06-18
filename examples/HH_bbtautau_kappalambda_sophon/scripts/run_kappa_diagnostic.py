@@ -61,7 +61,8 @@ def build_binary_task(clouds_a, clouds_b):
     return out
 
 
-def run(clouds_dir, point_a, point_b, num, checkpoint, out_dir, epochs, batch_size, controls):
+def run(clouds_dir, point_a, point_b, num, checkpoint, out_dir, epochs, batch_size,
+        controls, learning_rate=2e-4):
     os.makedirs(out_dir, exist_ok=True)
     a = load_point(os.path.join(clouds_dir, f"{point_a}.npz"), num)
     b = load_point(os.path.join(clouds_dir, f"{point_b}.npz"), num)
@@ -83,11 +84,22 @@ def run(clouds_dir, point_a, point_b, num, checkpoint, out_dir, epochs, batch_si
             path_to_models=os.path.join(out_dir, c) + "/",
             encoder_kind=kind, spec=SOPHON_SPEC, freeze_backbone=freeze, encoder_kwargs=ekw)
         hist = tr.train(number_of_epochs=epochs, batch_size=batch_size,
-                        learning_rate=1e-3, holdout_split=0.3, export_onnx=False)
+                        learning_rate=learning_rate, holdout_split=0.3, export_onnx=False)
         results[c] = hist
-        vl = hist["val_loss"][-1] if hist.get("val_loss") else float("nan")
-        print(f"[done] {c}: final val_loss={vl:.4f}")
+        vls = hist.get("val_loss") or []
+        best = min(vls) if vls else float("nan")
+        best_ep = (int(np.argmin(vls)) + 1) if vls else -1
+        last = vls[-1] if vls else float("nan")
+        print(f"[done] {c}: best val_loss={best:.4f} @ epoch {best_ep} | last={last:.4f}")
 
+    summary = {c: (min(h["val_loss"]) if h.get("val_loss") else float("nan"))
+               for c, h in results.items()}
+    if summary:
+        print("[summary] best (min) val_loss: "
+              + ", ".join(f"{c}={v:.4f}" for c, v in summary.items()))
+        print(f"[summary] lowest best-val -> {min(summary, key=summary.get)} "
+              "(lower = better generalization; the question is sophon_* vs scratch)")
+    results["_best_val"] = summary
     with open(os.path.join(out_dir, "results.json"), "w") as fh:
         json.dump(results, fh, indent=2)
     _plot(results, out_dir, f"{point_b} vs {point_a}")
@@ -127,11 +139,14 @@ def main():
     ap.add_argument("--out-dir", default="diagnostic_out")
     ap.add_argument("--epochs", type=int, default=30)
     ap.add_argument("--batch-size", type=int, default=256)
+    ap.add_argument("--learning-rate", type=float, default=2e-4,
+                    help="LR for all controls; fine-tuning a pretrained backbone wants ~1e-4-5e-4")
     ap.add_argument("--controls", nargs="+",
                     default=["scratch", "sophon_frozen", "sophon_finetune"])
     args = ap.parse_args()
     run(args.clouds_dir, args.point_a, args.point_b, args.num, args.checkpoint,
-        args.out_dir, args.epochs, args.batch_size, args.controls)
+        args.out_dir, args.epochs, args.batch_size, args.controls,
+        learning_rate=args.learning_rate)
 
 
 if __name__ == "__main__":
