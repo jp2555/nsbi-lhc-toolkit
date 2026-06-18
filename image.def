@@ -10,8 +10,11 @@ Stage: build
     ./pixi.toml /app/
     ./pixi.lock /app/
     ./README.md /app/
-    ./src /app/ 
+    ./src /app/
     ./pyproject.toml /app/
+    # Needed for build-time pytest (includes new constituent-cloud and sophon tests)
+    ./tests /app/tests
+    ./examples /app/examples
 
 %post
     #!/bin/bash
@@ -21,7 +24,13 @@ Stage: build
 
     set -e
     cd /app
+    # pixi install picks up huggingface_hub (>=0.24) and pytest (>=8.0) added in Task 1
+    # along with any new pypi-deps for the sophon/weaver-core integration (Task 11)
     pixi install --environment {{ ENVIRONMENT }}
+
+    # Build-time smoke test: validate the container has correct deps installed.
+    # Skips are allowed (e.g. sophon-ak4 checkpoint integration test needs SOPHON_AK4_CKPT).
+    pixi run -e {{ ENVIRONMENT }} pytest -q --tb=short
 
     # Build an entrypoint that activates the env then runs the command
     echo "#!/bin/bash" > /app/entrypoint.sh
