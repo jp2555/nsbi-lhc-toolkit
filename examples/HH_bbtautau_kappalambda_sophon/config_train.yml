@@ -1,0 +1,24 @@
+# Training config for the Sophon HH->bbtautau density-ratio (Phase 1).
+cloud:
+  n_jets_max: 4
+  n_part_max: 64
+  f_part: 8         # extend to the sophon-ak4 schema for the real encoder
+  n_obj_max: 6
+  f_obj: 6
+  embed_dim: 64
+encoder:
+  kind: sophon-ak4          # one of: stub | scratch | sophon-ak4
+  checkpoint: PARTAK4.pt    # HF file in jet-universe/sophon-ak4
+  freeze_backbone: true     # frozen-first; also run false (fine-tune)
+training:
+  number_of_epochs: 100
+  batch_size: 512
+  learning_rate: 0.001
+  holdout_split: 0.3
+data:
+  # produced by scripts/delphes_to_clouds.py; one .npz per process
+  signal:      saved_clouds/hh_lam1.npz   # SM (kappa_lambda=1) for Phase-1 binary task
+  backgrounds:
+    - saved_clouds/ttbar.npz
+controls: [stub_scratch, scratch, sophon_frozen, sophon_finetune]
+low_stat_fractions: [1.0, 0.25, 0.1, 0.05]

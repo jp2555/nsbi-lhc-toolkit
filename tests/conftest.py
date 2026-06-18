@@ -62,3 +62,7 @@ _EX_ROOT = pathlib.Path(__file__).resolve().parents[1] / "examples" / "HH_bbtaut
 sys.path.insert(0, str(_EX_ROOT))
 examples_pkg_compare = importlib.import_module("compare")
 sys.modules["examples_pkg_compare"] = examples_pkg_compare
+
+# Task 13: smoke_test.py also lives in the example root (already on sys.path above)
+examples_pkg_smoke = importlib.import_module("smoke_test")
+sys.modules["examples_pkg_smoke"] = examples_pkg_smoke
