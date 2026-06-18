@@ -26,10 +26,11 @@ ENV=${ENV:-nsbi-env}
 RAW=${RAW:-$SCRATCH/dihiggs/raw}
 OUT=${OUT:-$SCRATCH/dihiggs/clouds}
 REPO=${REPO:-$SCRATCH/nsbi-lhc-toolkit}
+MAXFILES=${MAXFILES:-0}
 
-echo "ENV=$ENV  RAW=$RAW  OUT=$OUT  REPO=$REPO"
+echo "ENV=$ENV  RAW=$RAW  OUT=$OUT  REPO=$REPO  MAXFILES=$MAXFILES"
 
 cd "$REPO"
 srun pixi run -e "$ENV" python \
     examples/HH_bbtautau_kappalambda_sophon/scripts/convert_all_kl.py \
-    --raw-dir "$RAW" --out-dir "$OUT"
+    --raw-dir "$RAW" --out-dir "$OUT" --max-files "$MAXFILES"

@@ -32,12 +32,14 @@ _DSET = "GluGluHHto2B2Tau_Par-c2-0p00-kl-{suf}-kt-1p00_TuneCP5_13p6TeV_powheg-py
 _FILE_GLOB = "delphes-tree-*/delphes-tree_*.root"   # the hash subdir varies per dataset
 
 
-def convert_all(raw_dir, out_dir, tree="Delphes", step_size=20000):
+def convert_all(raw_dir, out_dir, tree="Delphes", step_size=20000, max_files=0):
     os.makedirs(out_dir, exist_ok=True)
     manifest = {}
     for suf, (label, kl) in KL_POINTS.items():
         pattern = os.path.join(raw_dir, _DSET.format(suf=suf), _FILE_GLOB)
         files = sorted(glob.glob(pattern))
+        if max_files:
+            files = files[:max_files]
         if not files:
             print(f"[skip] {label} (kl={kl}): no files match {pattern}")
             continue
@@ -59,8 +61,10 @@ def main():
     ap.add_argument("--out-dir", default="dihiggs/clouds")
     ap.add_argument("--tree", default="Delphes")
     ap.add_argument("--step-size", type=int, default=20000)
+    ap.add_argument("--max-files", type=int, default=0, help="cap files per point (0=all; for quick subset tests)")
     args = ap.parse_args()
-    convert_all(args.raw_dir, args.out_dir, tree=args.tree, step_size=args.step_size)
+    convert_all(args.raw_dir, args.out_dir, tree=args.tree,
+                step_size=args.step_size, max_files=args.max_files)
 
 
 if __name__ == "__main__":
