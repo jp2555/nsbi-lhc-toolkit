@@ -66,6 +66,10 @@ exclude_lines = [
   "if TYPE_CHECKING:",
 ]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
 [tool.pixi.project]
 channels = ["conda-forge"]
 platforms = ["linux-64"]

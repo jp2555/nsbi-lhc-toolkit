@@ -24,6 +24,8 @@ pixi-kernel = ">=0.6.6,<0.7"
 uproot = ">=5.6.4,<6"
 coffea = ">=2025.7.3,<2026"
 awkward-pandas = ">=2023.8.0,<2024"
+pytest = ">=8.0"
+huggingface_hub = ">=0.24"
 
 [pypi-dependencies]
 nsbi-common-utils = { path = ".", editable = true }
