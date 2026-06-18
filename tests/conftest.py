@@ -43,3 +43,16 @@ def synth_batch():
         "obj": np.stack(obj), "obj_mask": np.stack(om),
         "y": np.array(y, dtype=np.float32), "w": np.array(w, dtype=np.float32),
     }
+
+import sys, pathlib
+_EX = pathlib.Path(__file__).resolve().parents[1] / "examples" / "HH_bbtautau_kappalambda_sophon" / "scripts"
+sys.path.insert(0, str(_EX))
+import importlib  # noqa: E402
+# expose as examples_pkg.* for stable test imports
+import types  # noqa: E402
+examples_pkg = types.ModuleType("examples_pkg")
+examples_pkg.eval_to_ratios = importlib.import_module("eval_to_ratios")
+sys.modules["examples_pkg"] = examples_pkg
+
+examples_pkg_delphes = importlib.import_module("delphes_to_clouds")
+sys.modules["examples_pkg_delphes"] = examples_pkg_delphes
