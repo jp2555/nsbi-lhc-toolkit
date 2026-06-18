@@ -185,6 +185,36 @@ layer untouched.
   inference/export path is required (the existing `predict_with_onnx` is tabular
   2-D); the resulting `.npy` ratio format is unchanged.
 
+### Input data: Delphes production (confirmed)
+
+Samples are produced with the CMS HH→bbττ Delphes card
+(`delphes_card_CMS_hhbbtt_v0.tcl`, Delphes 3.5.1pre09): **AK4 (R=0.4)** jets
+(`JetPTMin=15` GeV for headroom under a 20 GeV analysis cut), FatJet (R=0.8) kept
+as a boosted hook, `JetFlavorAssociation` filling `Jet.Flavor` (b-tag truth/WPs),
+gen taus retained, MET from EFlow. The card is written "following the JetClass-II
+dataset configurations" — i.e. **deliberately aligned with sophon-ak4's training
+domain**, which de-risks the input-preprocessing match (R3).
+
+- **Output = complete Delphes tree** (`Particle`, `Track`, `Tower`,
+  `EFlowTrack`, `EFlowPhoton`, `EFlowNeutralHadron`, `GenJet`, `GenMissingET`,
+  `Jet`, `FatJet`, `Electron`, `Photon`, `Muon`, `MissingET`, `ScalarHT`). The
+  EFlow objects are the particle-flow constituents from which we build per-jet
+  clouds; format is adjustable downstream.
+- **New data-layer component — a Delphes→cloud converter** (example script,
+  promotable to the library): cluster/associate EFlow constituents to each AK4 jet
+  and emit sophon-ak4-schema per-particle features — `px,py,pz,energy`, `Δη,Δφ`
+  vs jet axis, `d0/dz(+err)` (from `EFlowTrack`), `charge` and
+  `isElectron/isMuon/isPhoton/isChargedHadron/isNeutralHadron` (from track PID +
+  EFlow type) — plus event-object tokens from `Electron/Muon/MissingET` and the
+  τ_had-candidate jets. Built with the toolkit's existing uproot/awkward stack.
+- **full vs lite samples:** the card offers a `full` TreeWriter (with
+  constituents; signal + shape-critical backgrounds tt→2ℓ2ν, DY, single-H) and a
+  `lite` TreeWriter (no constituents; fake-source bulk — QCD HT slices, W+jets).
+  The hierarchical constituent model applies to **full** classes; **lite/fake**
+  classes must enter the likelihood via jet-level features or data-driven fake
+  weights, not the constituent encoder. This split must be explicit in the data
+  contract and the workspace.
+
 ---
 
 ## 6. New / changed components (isolation-first)
@@ -240,9 +270,13 @@ Each unit lists *what it does / how it's used / what it depends on*.
 
 ### 6.8 Example: `examples/HH_bbtautau_kappalambda_sophon/` (new)
 - `config_train.yml`, `config_fit_nsbi.yml` — data paths, constituent/object
-  schema, model + training hyperparameters, sophon-ak4 checkpoint id, κ_λ points.
+  schema, model + training hyperparameters, sophon-ak4 checkpoint id, κ_λ points
+  ({0,1,5}(+{-1,3})), full/lite class map.
+- `scripts/delphes_to_clouds.py` — Delphes ROOT → per-jet constituent clouds
+  (sophon-ak4 schema) + event-object tokens; the first data-layer step.
 - `scripts/` + `N_*.ipynb` mirroring the FAIR example's style; `compare.py` (the
-  three-control harness), `smoke_test.py`, `README.md`.
+  three-control harness: pretrained-frozen / pretrained-finetuned / from-scratch /
+  high-level MLP), `smoke_test.py`, `README.md`.
 
 ### 6.9 `docs/basics/sophon_hh_density_ratio.rst` (new)
 - Documents the hierarchical model and how to extend it, in the same style as
@@ -286,12 +320,16 @@ than from-scratch, and matches or beats the high-level-object MLP baseline.
 (box + κ_λ·triangle), so the differential rate is
 `dσ/dx (κ_λ) = κ_λ²·a(x) + κ_λ·b(x) + c(x)` (SM = κ_λ=1).
 
-**Approach (recommended): morphing basis.** Obtain HH samples at ≥3 κ_λ values (or
-the three components directly), train density-ratio networks for the basis, and
-combine them quadratically in κ_λ inside the JAX model. Per-component ratios remain
-`.npy` files, matching the toolkit's existing pattern. (Alternative: a
-κ_λ-conditioned network `r(x, κ_λ)` — more ML-elegant but harder to wire into the
-JAX fit; deferred.)
+**Approach (recommended): morphing basis.** Train density-ratio networks for the
+κ_λ basis and combine them quadratically inside the JAX model; per-component ratios
+remain `.npy` files, matching the toolkit's pattern. (Alternative: a κ_λ-conditioned
+network `r(x, κ_λ)` — more ML-elegant but harder to wire into the JAX fit; deferred.)
+
+**Production plan (confirmed):** HH samples at **κ_λ ∈ {0, 1, 5}** as the baseline
+basis, optionally extended with **{−1, 3}**, **≥500k events per value**. Three
+points exactly determine the quadratic (a, b, c); the extra points over-constrain
+it, improving the morphing fit and giving a closure cross-check. All κ_λ signal
+samples are produced with the `full` TreeWriter (constituents available).
 
 **Work required:**
 - Extend `sbi_parametric_model` for κ_λ-quadratic signal morphing (rate + shape),
@@ -318,21 +356,29 @@ from-scratch.
 
 ## 10. Risks and open questions
 
-- **κ_λ samples (R1, blocking Phase 2):** which κ_λ points / morphing components
-  are available, and at what statistics? Phase 1 is unblocked (fixed κ_λ).
-- **Sample format & location (R2):** ROOT-with-constituent-branches vs Parquet vs
-  HDF5; on Perlmutter? The data layer is config-driven; needs the schema confirmed.
-- **sophon-ak4 input preprocessing (R3):** must match the checkpoint's expected
-  per-particle features/normalization exactly, or transfer degrades. Validate
-  against the sophon repo's preprocessing.
+- **κ_λ samples (R1, RESOLVED):** κ_λ ∈ {0,1,5} baseline (+ optional −1,3), ≥500k
+  each, `full` TreeWriter. Sufficient for the quadratic morphing basis. Phase 1 is
+  unblocked (fixed κ_λ).
+- **Sample format & location (R2, RESOLVED):** complete Delphes ROOT output;
+  downstream format adjustable. A Delphes→cloud converter (uproot/awkward) is the
+  first data-layer step. Location (Perlmutter?) still to confirm for the data layer
+  paths.
+- **sophon-ak4 input preprocessing (R3, de-risked):** the Delphes card follows the
+  JetClass-II configurations, so the domain matches sophon-ak4's training. Still
+  must reproduce the checkpoint's exact per-particle feature definitions and
+  normalization; validate against the sophon repo's preprocessing.
 - **ONNX export of ParT with masks (R4):** ParT/Sophon support ONNX, but the
   masked, padded constituent input + the hierarchical wrapper need a verified
   export + onnxruntime path. Fallback: native-torch inference to produce `.npy`.
 - **weaver-core dependency (R5):** decide depend-vs-vendor for the ParT definition
   and checkpoint loading; confirm it coexists with the toolkit's pinned torch.
-- **Frozen vs fine-tuned default (R6):** frozen is fastest and strongest for the
-  low-stat ablation; fine-tuned is the fuller story. Both supported; pick the
-  Phase-1 default.
+- **Frozen vs fine-tuned default (R6, RESOLVED):** run **both, frozen-first** —
+  frozen is fastest and strongest for the low-stat ablation; fine-tuned is the
+  fuller story.
+- **Mixed constituent availability (R9, new):** `lite`/fake-source classes (QCD,
+  W+jets) have no constituents, so they cannot pass through the sophon-ak4 encoder.
+  The likelihood must handle them via jet-level features or data-driven fake
+  weights. Decide their treatment when templating the workspace.
 - **MET/lepton tokenization (R7):** exact feature set and type-embedding scheme for
   non-jet tokens.
 - **Confounder control (R8):** PET/sophon uses richer inputs than the high-level
@@ -356,7 +402,7 @@ src/nsbi_common_utils/models/
     sbi_parametric_model.py          # + kappa_lambda morphing (Phase 2)
 examples/HH_bbtautau_kappalambda_sophon/
     config_train.yml, config_fit_nsbi.yml
-    scripts/, *.ipynb, compare.py, smoke_test.py, README.md
+    scripts/delphes_to_clouds.py, scripts/, *.ipynb, compare.py, smoke_test.py, README.md
 docs/basics/sophon_hh_density_ratio.rst
 pixi.toml, image.def                 # + weaver-core, huggingface_hub
 ```
