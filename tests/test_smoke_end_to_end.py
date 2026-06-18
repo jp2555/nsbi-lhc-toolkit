@@ -1,5 +1,5 @@
 import numpy as np
-from examples_pkg_smoke import run_smoke
+from smoke_test import run_smoke
 
 
 def test_end_to_end(tmp_path, synth_batch):

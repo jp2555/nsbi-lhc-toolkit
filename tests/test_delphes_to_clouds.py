@@ -1,7 +1,7 @@
 import numpy as np
 import awkward as ak
 import uproot
-from examples_pkg_delphes import convert_tree
+from delphes_to_clouds import convert_tree
 
 
 def _write_fake_delphes(path):

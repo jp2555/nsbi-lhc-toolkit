@@ -33,7 +33,7 @@ def test_label_flip_handles_negative_weights(synth_batch):
 
 def test_overfits_tiny_separable_set():
     import numpy as np
-    from tests.conftest import make_event
+    from _synth import make_event
     # Build a tiny set where label correlates with jet count -> learnable signal.
     parts, pm, jm, obj, om, y, w = [], [], [], [], [], [], []
     for i in range(48):

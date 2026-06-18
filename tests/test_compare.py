@@ -1,4 +1,4 @@
-from examples_pkg_compare import run_controls, low_stat_ablation
+from compare import run_controls, low_stat_ablation
 
 
 def test_run_controls_returns_histories(tmp_path, synth_batch):

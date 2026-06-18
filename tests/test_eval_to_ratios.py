@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader
 from nsbi_common_utils.lightning_tools.particle_cloud_dataset import WeightedParticleCloudDataset
 from nsbi_common_utils.lightning_tools.hh_density_ratio_model import HHDensityRatioLightning
 from nsbi_common_utils.training.utils import save_model_constituents
-from examples_pkg.eval_to_ratios import build_asimov, eval_process_ratio
+from eval_to_ratios import build_asimov, eval_process_ratio
 
 
 def test_asimov_ordering_and_ratio(tmp_path, synth_batch):
