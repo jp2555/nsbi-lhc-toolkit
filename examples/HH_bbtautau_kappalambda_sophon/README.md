@@ -218,6 +218,31 @@ pixi run -e nsbi-env python \
 Writes `baseline.json` + `baseline.png` (val weighted-BCE & AUC vs N) — compare the BCE
 directly against `ablation.json`.
 
+### Systematics-robustness study (the FM's actual test)
+
+`run_systematics_robustness.py` is the experiment that tests an FM where it can actually
+help the κ_λ measurement: **robustness under systematics**, which is invisible to
+BCE/AUC. It applies analytic variations to the same events — **JES** (uniform jet energy
+scale), **τES** (leptonic-tau energy scale), **shower** (soft-constituent dropout proxy)
+— and (1) measures how much each discriminant's output *moves* (shape shift; lower = more
+robust), and (2) folds those shifts into a simplified profiled-Asimov fit, reporting
+σ(μ) (μ as a κ_λ proxy) with vs without systematics. Compares the high-level-feature BDT
+against constituent/FM controls:
+
+```bash
+# feature-BDT only (CPU):
+pixi run -e nsbi-env python \
+  examples/HH_bbtautau_kappalambda_sophon/scripts/run_systematics_robustness.py \
+  --clouds-dir $SCRATCH/dihiggs/clouds_subset --num 20000 --out-dir syst_kl0_vs_kl5
+# add constituent/FM controls (GPU env, needs the checkpoint):
+... --with-constituent --controls scratch sophon_finetune \
+    --checkpoint $SCRATCH/sophon-ak4/models/JetClassII_SophonAK4/model.pt
+```
+
+Writes `robustness.json` + `robustness.png` (per-systematic shape shift; σ(μ) stat vs
+stat+syst per discriminant). The JES/τES variations are applied exactly; τ_h-jet ES and
+the full κ_λ morphing fit are documented TODOs (need jet flavour labels / the NSBI fit).
+
 ---
 
 ## File reference
