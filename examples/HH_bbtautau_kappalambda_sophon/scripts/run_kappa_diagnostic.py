@@ -189,9 +189,10 @@ def ablation(clouds_dir, point_a, point_b, sizes, checkpoint, out_dir, epochs,
             curve[c][N] = {"vals": vals, "mean": m, "std": s}
             suffix = f" +/- {s:.4f}" if repeats > 1 else ""
             print(f"    {c}: best val_loss={m:.4f}{suffix}")
-    with open(os.path.join(out_dir, "ablation.json"), "w") as fh:
-        json.dump(curve, fh, indent=2)
-    _plot_ablation(curve, sorted(sizes), out_dir, f"{point_b} vs {point_a}")
+        # persist after every size so an interrupted interactive run keeps finished points
+        with open(os.path.join(out_dir, "ablation.json"), "w") as fh:
+            json.dump(curve, fh, indent=2)
+        _plot_ablation(curve, sorted(sizes), out_dir, f"{point_b} vs {point_a}")
     return curve
 
 
