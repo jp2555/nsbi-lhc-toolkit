@@ -116,26 +116,29 @@ See the companion plan for details.
 
 ## Sophon-ak4 checkpoint
 
-To run the `scratch` or `sophon_*` controls, download the checkpoint from HuggingFace:
+To run the `sophon_*` controls, download the checkpoint from HuggingFace. The weight
+file in `jet-universe/sophon-ak4` is `models/JetClassII_SophonAK4/model.pt` (do this on a
+login node — compute nodes may lack internet):
 
 ```bash
-export SOPHON_AK4_CKPT=PARTAK4.pt
-huggingface-cli download jet-universe/sophon-ak4 PARTAK4.pt --local-dir ./
+huggingface-cli download jet-universe/sophon-ak4 \
+    models/JetClassII_SophonAK4/model.pt --local-dir $SCRATCH/sophon-ak4
+export SOPHON_AK4_CKPT=$SCRATCH/sophon-ak4/models/JetClassII_SophonAK4/model.pt
 ```
 
-Or let `huggingface_hub` fetch it automatically by setting the checkpoint filename in
+Or let `huggingface_hub` fetch it automatically by setting the (repo-relative) filename in
 `config_train.yml`:
 
 ```yaml
 encoder:
   kind: sophon-ak4
-  checkpoint: PARTAK4.pt
+  checkpoint: models/JetClassII_SophonAK4/model.pt
 ```
 
 Set the environment variable so integration tests can find it:
 
 ```bash
-export SOPHON_AK4_CKPT=/path/to/PARTAK4.pt
+export SOPHON_AK4_CKPT=$SCRATCH/sophon-ak4/models/JetClassII_SophonAK4/model.pt
 ```
 
 ---
@@ -173,7 +176,7 @@ Convert the two points first (`convert_all_kl.py --points kl0 kl5`), then:
 
 ```bash
 mkdir -p logs
-CKPT=$SCRATCH/sophon-ak4/PARTAK4.pt \
+CKPT=$SCRATCH/sophon-ak4/models/JetClassII_SophonAK4/model.pt \
   sbatch -A <NERSC_PROJECT>_g \
     examples/HH_bbtautau_kappalambda_sophon/scripts/run_ablation.sbatch
 ```
@@ -185,7 +188,7 @@ test. Low-N single runs are noisy, so set `REPEATS=3` (retrain each point with d
 seeds → mean ± std error bands) when you want a trustworthy small-N curve:
 
 ```bash
-REPEATS=3 CKPT=$SCRATCH/sophon-ak4/PARTAK4.pt \
+REPEATS=3 CKPT=$SCRATCH/sophon-ak4/models/JetClassII_SophonAK4/model.pt \
   sbatch -A <NERSC_PROJECT>_g \
     examples/HH_bbtautau_kappalambda_sophon/scripts/run_ablation.sbatch
 ```

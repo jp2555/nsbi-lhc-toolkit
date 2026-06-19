@@ -104,8 +104,8 @@ class SophonAK4Encoder(nn.Module):
                 raise FileNotFoundError(
                     f"sophon-ak4 checkpoint not found: {checkpoint}\n"
                     "Pre-download it on a login node (compute nodes may lack internet):\n"
-                    "  huggingface-cli download jet-universe/sophon-ak4 PARTAK4.pt "
-                    "--local-dir $SCRATCH/sophon-ak4\n"
+                    "  huggingface-cli download jet-universe/sophon-ak4 "
+                    "models/JetClassII_SophonAK4/model.pt --local-dir $SCRATCH/sophon-ak4\n"
                     "then point CKPT / SOPHON_AK4_CKPT at the downloaded file.")
             # relative filename -> treat as an HF repo file and fetch it
             from huggingface_hub import hf_hub_download

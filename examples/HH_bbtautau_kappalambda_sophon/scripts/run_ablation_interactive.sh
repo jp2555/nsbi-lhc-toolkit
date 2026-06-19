@@ -6,7 +6,7 @@
 # 1) grab an interactive GPU node (interactive QOS, fast turnaround, max 4 h):
 #      salloc -N 1 -C gpu -q interactive -t 02:00:00 -A m5295_g
 # 2) from the repo root, run this (CKPT points at the sophon-ak4 weights):
-#      CKPT=$SCRATCH/sophon-ak4/PARTAK4.pt \
+#      CKPT=$SCRATCH/sophon-ak4/models/JetClassII_SophonAK4/model.pt \
 #        bash examples/HH_bbtautau_kappalambda_sophon/scripts/run_ablation_interactive.sh
 #
 # Smoke-test the small sizes first (~1-2 min each) before committing to 50k/100k:

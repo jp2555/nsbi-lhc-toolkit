@@ -8,7 +8,7 @@ cloud:
   embed_dim: 64
 encoder:
   kind: sophon-ak4          # one of: stub | scratch | sophon-ak4
-  checkpoint: PARTAK4.pt    # HF file in jet-universe/sophon-ak4
+  checkpoint: models/JetClassII_SophonAK4/model.pt   # HF file in jet-universe/sophon-ak4
   freeze_backbone: true     # frozen-first; also run false (fine-tune)
 training:
   number_of_epochs: 100

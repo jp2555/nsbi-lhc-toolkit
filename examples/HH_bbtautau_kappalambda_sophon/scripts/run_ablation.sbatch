@@ -8,7 +8,7 @@
 #
 # Submit (subset clouds must already exist; see convert_all_kl.py --points kl0 kl5):
 #   mkdir -p logs
-#   CKPT=$SCRATCH/sophon-ak4/PARTAK4.pt \
+#   CKPT=$SCRATCH/sophon-ak4/models/JetClassII_SophonAK4/model.pt \
 #     sbatch -A <NERSC_PROJECT>_g \
 #       examples/HH_bbtautau_kappalambda_sophon/scripts/run_ablation.sbatch
 #
