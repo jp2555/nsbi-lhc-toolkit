@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, json
 import argparse
 import logging
 import warnings
@@ -161,8 +161,28 @@ def main():
         )
 
         
+        logger.info(f"\nProfiled CI for {scan_param} (level=1.0 ~ 68%%; t_mu convention)")
+        from ci import ci_from_scan
+        _fmt = lambda v: "open" if v is None else f"{v:.3f}"
+        ci_summary = {}
+        for name, pts, nll, pts_s, nll_s in [
+            ("nsbi", pts_nsbi, nll_nsbi, pts_stat_nsbi, nll_stat_nsbi),
+            ("histogram", pts_hist, nll_hist, pts_stat_hist, nll_stat_hist),
+        ]:
+            lo, hi, half = ci_from_scan(pts, nll, level=1.0)
+            lo_s, hi_s, half_s = ci_from_scan(pts_s, nll_s, level=1.0)
+            infl = (half / half_s) if (half and half_s) else float("nan")
+            ci_summary[name] = {"stat_syst": [lo, hi, half],
+                                "stat_only": [lo_s, hi_s, half_s], "syst_inflation": infl}
+            logger.info("  %-9s stat+syst=[%s,%s] (+/-%s) | stat-only +/-%s | syst inflation %s",
+                        name, _fmt(lo), _fmt(hi), _fmt(half), _fmt(half_s),
+                        ("x%.2f" % infl) if infl == infl else "n/a")
+        with open(os.path.join(plots_dir, "mu_ci.json"), "w") as fh:
+            json.dump(ci_summary, fh, indent=2)
+        logger.info(f"CI summary -> {os.path.join(plots_dir, 'mu_ci.json')}")
+
         logger.info("\nGenerating Plots")
-        
+
         plot_data = [
             {
                 'points': pts_hist, 'nll': nll_hist, 
