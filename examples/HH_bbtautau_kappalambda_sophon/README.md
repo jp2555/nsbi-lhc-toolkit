@@ -200,6 +200,24 @@ REPEATS=3 CKPT=$SCRATCH/sophon-ak4/models/JetClassII_SophonAK4/model.pt \
 limit, run the low-N points with repeats separately (e.g. `SIZES="2000 5000 10000"
 REPEATS=5`) from the high-N anchor.
 
+### Kinematic ceiling baseline (CPU)
+
+`run_kinematic_baseline.py` trains a gradient-boosted tree on ~14 hand-built event
+kinematics (m_HH proxies, HT, jet masses, MET, …) reconstructed from the **same** cloud
+`.npz`, over the same N sweep. It is the *ceiling* for the constituent models: kl0-vs-kl5
+is pure kinematics, so if this simple BDT clearly beats `scratch`/`sophon_*`, the
+constituent models are dropping the kinematic signal. numpy + sklearn only (no GPU):
+
+```bash
+pixi run -e nsbi-env python \
+  examples/HH_bbtautau_kappalambda_sophon/scripts/run_kinematic_baseline.py \
+  --clouds-dir $SCRATCH/dihiggs/clouds_subset --sizes 2000 5000 \
+  --out-dir baseline_kl0_vs_kl5
+```
+
+Writes `baseline.json` + `baseline.png` (val weighted-BCE & AUC vs N) — compare the BCE
+directly against `ablation.json`.
+
 ---
 
 ## File reference
