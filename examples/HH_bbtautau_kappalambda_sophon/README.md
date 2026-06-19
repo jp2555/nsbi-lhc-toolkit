@@ -121,10 +121,13 @@ file in `jet-universe/sophon-ak4` is `models/JetClassII_SophonAK4/model.pt` (do 
 login node — compute nodes may lack internet):
 
 ```bash
-huggingface-cli download jet-universe/sophon-ak4 \
+hf download jet-universe/sophon-ak4 \
     models/JetClassII_SophonAK4/model.pt --local-dir $SCRATCH/sophon-ak4
 export SOPHON_AK4_CKPT=$SCRATCH/sophon-ak4/models/JetClassII_SophonAK4/model.pt
 ```
+
+(`hf` is the current HuggingFace CLI; the old `huggingface-cli download` is deprecated and
+no longer works. In the pixi env it's `pixi run -e nsbi-env-gpu hf download ...`.)
 
 Or let `huggingface_hub` fetch it automatically by setting the (repo-relative) filename in
 `config_train.yml`:
