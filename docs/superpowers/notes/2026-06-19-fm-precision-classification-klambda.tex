@@ -31,7 +31,9 @@ For constraining \kl, the statistically-limited piece is \emph{kinematic shape}
 discrimination of nearly-identical distributions. Both our own tests and the
 literature indicate this piece is \textbf{method-independent and statistics-limited}:
 a foundation model (FM) will \emph{not} out-classify a good high-level-feature NSBI
-on the \kl\ shape. The genuine leverage of an FM is elsewhere ---
+on the \kl\ shape \emph{(though a systematics-robust FM can still help the \kl\
+inference under profiling --- see \S\ref{sec:axes})}. The genuine leverage of an FM is
+elsewhere ---
 \textbf{(i) data efficiency} at low signal stats, \textbf{(ii) signal-vs-background
 acceptance/purity}, and \textbf{(iii) robustness to systematics}. The recommended
 path is a \emph{factorized, calibration-first} strategy: keep the validated
@@ -200,6 +202,86 @@ applying it to the \emph{whole event} ($\sim$300 particles) is out-of-distributi
 Jet-free-whole-event calls for an \emph{event-scale} FM (PECM-style, or a from-scratch
 / SSL event-ParT), not Sophon-ak4 stretched beyond its domain.
 
+\section{Where the FM actually helps: separation vs.\ systematics robustness}
+\label{sec:axes}
+A natural but \emph{over-simplified} reading of the two-job decomposition is ``the FM
+belongs in the $s/b$ ratio, not the \kl\ ratio.'' That holds for one benefit axis and
+fails for the other --- and the one it fails for is precisely the systematics-limited
+regime that constrains this measurement. An NSBI \kl\ fit needs (at least) two learned
+ratios: a signal-vs-background ratio $s(x)/b(x)$ and a \kl-parametrized signal-shape
+ratio $r(x;\kl)$. An FM is a \emph{backbone for a ratio estimator}, so the question is
+always ``which ratio, and helping \emph{what}?''
+
+\begin{itemize}
+\item \textbf{Axis 1 --- separation / central sensitivity.} How well a ratio
+  discriminates (the kl0-vs-kl5 ceiling above). Here the 10 features are at ceiling and
+  data-efficient, so an FM backbone does \emph{not} improve the \kl\ ratio's
+  discrimination; its separation gain accrues only to $s/b$ (acceptance, object ID).
+\item \textbf{Axis 2 --- robustness $+$ estimator stability under limited stats.} A
+  property of the learned \emph{representation}, not of its separation power. It can
+  improve \emph{either} ratio --- including \kl\ --- and it is the axis that matters
+  when, as here, the measurement is systematics- and statistics-limited.
+\end{itemize}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+ & \textbf{Axis 1: separation} & \textbf{Axis 2: robustness / stats stability} \\
+\midrule
+$s/b$ ratio & FM helps (acceptance, object ID) & FM helps (robust $+$ data-efficient) \\
+\kl\ shape ratio & FM does \emph{not} help (at ceiling) & FM \emph{can} help (robust rep
+$\to$ smaller shape syst.) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{How an FM helps the \kl\ ratio on Axis 2:}
+\begin{enumerate}[leftmargin=1.4em]
+\item \emph{Robustness} (e.g.\ RS3L~\cite{rs3l}): a representation invariant to
+  shower/hadronization/detector variations yields a discriminant whose \emph{shape}
+  shifts less under nuisances $\to$ smaller profiled systematics $\to$ tighter CI
+  \emph{even at fixed separation}.
+\item \emph{Data-efficient systematic templates}: building systematic up/down variations
+  needs ratios estimated on stats-starved varied MC; a pretrained, data-efficient
+  estimator gives less noisy templates $\to$ better-behaved profiling. (Largest where
+  the estimator is high-dimensional; smaller for the already-efficient 10-feature ratio.)
+\item \emph{(Advanced) nuisance-parametrized NSBI}: learn $r(x;\kl,\theta_{\rm syst})$
+  directly; an FM backbone makes the higher-dimensional conditional learning more
+  data-efficient.
+\end{enumerate}
+
+\noindent\textbf{Catches (not free):}
+\begin{itemize}
+\item To get the Axis-2 benefit on \kl\ you build the ratio on the FM representation
+  rather than the at-ceiling hand features --- trading interpretability / easy closure
+  for robustness.
+\item You swap \emph{well-calibrated object} systematics (JES, $\tau$ energy scale) for
+  the FM representation's \emph{own} systematics, which must then be established (the
+  calibrate--validate--measure burden); robustness to known systematics can introduce
+  new ones.
+\item Whether it is a \emph{net} win is empirical --- and it \textbf{will not appear in
+  BCE/AUC}, which measure separation. We have so far measured only separation, which by
+  construction cannot reveal a robustness gain.
+\end{itemize}
+
+\begin{takeaway}[Corrected conclusion]
+The FM's \emph{separation} benefit accrues only to $s/b$; its \emph{robustness /
+data-efficiency} benefit can accrue to \emph{either} ratio, including \kl. So an FM will
+not beat the high-level features on \kl\ \emph{separation}, but a systematics-robust /
+data-efficient FM (RS3L-style) can still help the \kl\ \emph{measurement} by making the
+inference more robust under profiling when stats are limited --- the one place an FM
+earns its keep on the kinematic side.
+\end{takeaway}
+
+\paragraph{The diagnostic this implies.} The right test of the FM's value here is
+\emph{not} classifier loss but \emph{robustness}: propagate the dominant nuisances
+(JES, $\tau$ energy scale, parton shower) through each control and measure (i) how much
+the discriminant distribution shifts (nominal vs.\ varied) and (ii) whether the
+\emph{profiled} \kl\ CI shrinks. A feature-based vs.\ FM-based comparison on \emph{those}
+metrics --- not BCE/AUC --- is what would show an FM helping where the analysis is
+actually limited.
+
 \section{Synthesis and recommendation}
 \begin{takeaway}[Key insights]
 \begin{enumerate}[leftmargin=1.4em]
@@ -228,7 +310,9 @@ Jet-free-whole-event calls for an \emph{event-scale} FM (PECM-style, or a from-s
   acceptance, introduced as a \emph{calibratable} added discriminant (not a
   replacement), folded into the NSBI only once its calibration is validated.
 \item \textbf{Distinctive contribution:} RS3L-style re-simulation pretraining for a
-  \emph{systematics-robust} embedding --- aimed squarely at the systematics bottleneck.
+  \emph{systematics-robust} embedding --- aimed squarely at the systematics bottleneck,
+  and evaluated via the robustness diagnostic of \S\ref{sec:axes} (nuisance shape
+  variation + profiled CI), not BCE/AUC.
 \end{itemize}
 
 \section{Open questions}
