@@ -1,0 +1,268 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{enumitem}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black,citecolor=blue!50!black]{hyperref}
+
+\newtcolorbox{takeaway}[1][]{colback=yellow!12,colframe=orange!70!black,
+  title=#1,fonttitle=\bfseries,boxrule=0.6pt,arc=2pt,left=4pt,right=4pt,top=3pt,bottom=3pt}
+
+\newcommand{\kl}{\ensuremath{\kappa_\lambda}}
+\newcommand{\mhh}{\ensuremath{m_{HH}}}
+\newcommand{\bbtt}{\ensuremath{b\bar b\tau\tau}}
+\setlist{itemsep=2pt,topsep=3pt}
+
+\title{\vspace{-2.5em}Foundation Models for Precision Classification in NSBI:\\
+toward a Higgs self-coupling (\kl) measurement in $HH\to\bbtt$}
+\author{Jing Pan \quad\small(working note --- draft for discussion)}
+\date{19 June 2026}
+
+\begin{document}
+\maketitle
+\vspace{-1.5em}
+
+\begin{takeaway}[Bottom line]
+For constraining \kl, the statistically-limited piece is \emph{kinematic shape}
+discrimination of nearly-identical distributions. Both our own tests and the
+literature indicate this piece is \textbf{method-independent and statistics-limited}:
+a foundation model (FM) will \emph{not} out-classify a good high-level-feature NSBI
+on the \kl\ shape. The genuine leverage of an FM is elsewhere ---
+\textbf{(i) data efficiency} at low signal stats, \textbf{(ii) signal-vs-background
+acceptance/purity}, and \textbf{(iii) robustness to systematics}. The recommended
+path is a \emph{factorized, calibration-first} strategy: keep the validated
+signal-extraction machinery and do NSBI on high-level kinematics now; pursue a
+jet-free / event-level FM on the acceptance axis as a staged, calibration-gated
+upgrade.
+\end{takeaway}
+
+\section{Physics goal and current status}
+We aim to constrain the Higgs trilinear self-coupling modifier
+$\kl=\lambda_{HHH}/\lambda_{HHH}^{\mathrm{SM}}$ through non-resonant di-Higgs
+production in the $HH\to\bbtt$ final state, with the dominant sensitivity in the
+\textbf{resolved regime} ($\mhh\in[250,400]\,$GeV). \kl\ enters as a shape
+distortion of \mhh\ (interference between the triangle, $\propto\lambda_{HHH}$, and
+box amplitudes in ggF).
+
+A neutral-simulation-based-inference (NSBI) fit using \textbf{10 event-level features},
+\[
+\mhh,\ \cos\theta^\star,\ p_T^{HH},\ m_{bb},\ \Delta R_{bb},\ m_{\tau\tau},\
+\Delta\phi_{HH},\ \Delta R_{\tau\tau},\ p_T^{H_1},\ p_T^{H_2},
+\]
+already \textbf{tightens the \kl\ 95\% CI by roughly a factor of two} (with $t\bar t$
+background only, so far). The central \emph{challenge} is statistical: very low
+signal yield, made worse once systematic uncertainties are profiled.
+
+\textbf{Hypothesis under test:} a foundation-model + fine-tuning paradigm for the
+density-ratio (precision-classification) tasks inside the NSBI could improve the
+constraint --- primarily via data efficiency and better object use.
+
+\section{The key decomposition: a \kl\ NSBI is two ML jobs}
+The single most clarifying point is that the measurement contains two distinct
+learning problems, which an FM helps very differently:
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}p{0.20\textwidth}p{0.30\textwidth}p{0.42\textwidth}@{}}
+\toprule
+\textbf{Job} & \textbf{Discriminates} & \textbf{Information needed / best tool} \\
+\midrule
+(A) Signal vs.\ background & $HH\to\bbtt$ vs.\ $t\bar t$/QCD/fakes &
+\emph{Object identity}: b-tagging, real-vs-fake $\tau$, substructure ---
+\textbf{flavor FM (Sophon-ak4) territory}. \\
+\addlinespace
+(B) \kl\ shape / inference & $\kl=0$ vs.\ $5$ vs.\ $\dots$ (morphing) &
+\emph{Event kinematics} (\mhh\ shape) --- high-level features / NSBI; a
+``precision classification of nearly-identical distributions'' problem. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent The \kl\ \emph{constraint} comes from job (B). Job (A) sets the effective
+signal purity and is where the analysis is acceptance- and systematics-limited.
+A flavor-pretrained FM is built for (A), not (B) --- which explains the results below.
+
+\section{What we tested, and what we found}
+We adapted the \texttt{nsbi-lhc-toolkit} with a vendored Particle Transformer
+(ParT) backbone and \textbf{Sophon-ak4} (the AK4/resolved-jet ParT foundation model,
+pretrained for jet-flavor tagging on JetClass-II). A hierarchical model encodes each
+jet's constituents and aggregates jets+objects with an event set-transformer.
+Three controls were compared on the \textbf{$\kl{=}0$ vs.\ $\kl{=}5$} task
+(with $\kl{=}5$ as the fixed reference/denominator):
+\texttt{scratch} (random-init ParT), \texttt{sophon\_frozen}, \texttt{sophon\_finetune}.
+
+\begin{table}[h]
+\centering\small
+\caption*{\textbf{Validation weighted-BCE (lower = better; random floor $=\ln 2 = 0.693$).}}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+$N$ / point & \texttt{scratch} & \texttt{sophon\_finetune} & \texttt{sophon\_frozen} \\
+\midrule
+100k (40 ep)$^\dagger$ & 0.6378 & \textbf{0.6351} & 0.6486 \\
+2{,}000          & \textbf{0.6752} & 0.6775 & 0.6798 \\
+5{,}000          & \textbf{0.6387} & 0.6457 & 0.6538 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\vspace{-0.4em}
+{\footnotesize $^\dagger$earlier configuration (before early-stopping and the lowered
+fine-tune LR); single seed at low $N$ (error bars pending).}
+
+\begin{takeaway}[Empirical finding]
+On the \kl\ \emph{shape} task, pretraining does \textbf{not} help --- the ordering is
+consistently \texttt{scratch} $\le$ \texttt{finetune} $<$ \texttt{frozen}. Frozen
+flavor features are the worst; fine-tuning merely relearns toward scratch.
+\end{takeaway}
+
+\noindent\textbf{Interpretation.} (i)~\emph{Pretext mismatch}: Sophon-ak4 is optimized
+for jet flavor, whose per-jet embeddings are lossy about the $p_T$/mass needed to
+reconstruct \mhh\ from cross-jet correlations. (ii)~The task is precisely
+``precision classification of nearly-identical distributions,'' which (next section)
+is statistics-limited and largely architecture-independent.
+
+\section{External evidence and the FM landscape}
+A 2025 review~\cite{fmreview} organizes HEP foundation models into \emph{supervised}
+(OmniLearn, Sophon, RS3L) and \emph{self-supervised} (OmniJet-$\alpha$, MPM) families.
+Points most relevant here:
+
+\begin{itemize}
+\item \textbf{Explicit vs.\ implicit priors are a wash --- and statistics-limited}
+  \cite{wamorkar}. A direct comparison of L-GATr (Lorentz-equivariant) vs.\ OmniLearn
+  (FM pretrained on 100M events) on \emph{precision classification of similar classes}
+  finds ``comparable performance \dots given the statistical precision of the
+  datasets,'' and that the gains from encoding physics are ``method-independent.''
+  This benchmark \emph{is} our \kl-shape task, and predicts our null result. Nuances:
+  on the H1/$ep$ task the FM \emph{beat} the equivariant net, and for small signal
+  injections the implicit (FM) approach was slightly better --- a mild lean toward
+  FMs in the low-statistics corner.
+\item \textbf{Taus are not a blocker.} OmniJet-$\alpha$ fine-tuned for hadronic-$\tau$
+  reconstruction improved momentum resolution by $\sim$50\% vs.\ from-scratch
+  training~\cite{omnijettau} --- so an earlier worry that OmniLearn-style FMs are
+  unsuited to $\tau$ final states was premature.
+\item \textbf{Event-level FMs exist.} PECM~\cite{pecm} is a GNN over event objects
+  (jets, $e$, $\mu$, $\gamma$, MET with four-momenta + type IDs) pretrained on 120M
+  events; it reports $>$5 percentage-point accuracy gains at $10^3$--$10^5$
+  events/class (our regime) and $\sim$12$\times$ faster fine-tuning, transferring
+  across simulators. Closest match to our event-level inputs.
+\item \textbf{Self-supervision retains kinematics; RS3L targets systematics.}
+  MPM~\cite{mpm} learns task-agnostic representations (less biased than supervised
+  flavor labels). RS3L~\cite{rs3l} pretrains on \emph{re-simulation} augmentations
+  (varied shower/hadronization/detector), yielding embeddings \emph{robust to those
+  systematics} --- directly relevant to a systematics-limited measurement.
+\end{itemize}
+
+\section{Two architectural strategies for the measurement}
+\textbf{Strategy A --- jet-free, end-to-end.} Feed \emph{all} particle-flow
+candidates of the event (no jet clustering) into a ParT/event-FM, add the 10
+high-level features, and do NSBI for \kl\ in one model. Motivated by a recent
+\emph{jet-free} HH$\to 4b$ analysis~\cite{jetfree4b}: ingesting all PF candidates
+(\,$\sim$300/event) into a ParT gave $>$5$\times$ search significance and an
+order-of-magnitude more retained signal at high background rejection. Caveats: it is
+\emph{not} an FM (task-specific, trained on $\sim$$10^8$ events --- ``training
+statistics play a critical role''), it is HH$\to 4b$ (a worse case for jet methods
+than \bbtt), and it required a \emph{new} ``calibrate--validate--measure'' scheme
+(calibrate on $ZZ\to4b$, validate on $ZH\to4b$) because object-level scale factors do
+not apply to a jet-free discriminant.
+
+\textbf{Strategy B --- factorized.} Use the current CMS-style signal extractor for
+job (A), then NSBI on the high-level features (or an FM embedding) for job (B). The
+CMS $HH\to\bbtt$ analysis~\cite{cmsbbtt} already uses a sophisticated DNN: a Lorentz
+Boost Network front-end, a $\tau\tau$ neutrino-regression sub-net, and a DenseNet
+classifier, with inputs that are full-system four-momenta \emph{plus}
+ParticleNet/UParT (b-tag, c-vs-b, c-vs-l) and HHbTag scores --- i.e.\ it already uses
+ParT as fixed tagger \emph{scores} on reconstructed objects, with the entire
+validated systematics machinery built around those objects.
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}p{0.21\textwidth}p{0.36\textwidth}p{0.36\textwidth}@{}}
+\toprule
+ & \textbf{A: jet-free FM ($+$10 feats) $\to$ NSBI} & \textbf{B: CMS S/B $\to$ NSBI on feats/FM} \\
+\midrule
+Information ceiling & Highest (soft radiation, no clustering/WP losses) & High, capped by reconstruction \\
+Where it wins & \textbf{Signal acceptance \& purity} & Clean \kl-kinematics (the proven $\sim$2$\times$) \\
+\kl-shape info & Same (kinematic) & Same (kinematic) \\
+Calibration / systematics & \textbf{Hard \& novel} (new scheme) & \textbf{Validated CMS machinery} \\
+NSBI tractability & High-dim, harder closure/morphing & Low-dim, interpretable, easy closure \\
+Data efficiency & Needs huge stats unless pretrained & Already efficient \\
+Risk / time-to-result & High / frontier & Low / near-term \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Important caveat:} ``Sophon-ak4 jet-free'' mixes scales ---
+Sophon-ak4 was pretrained on \emph{single AK4 jets} ($\sim$128 constituents), so
+applying it to the \emph{whole event} ($\sim$300 particles) is out-of-distribution.
+Jet-free-whole-event calls for an \emph{event-scale} FM (PECM-style, or a from-scratch
+/ SSL event-ParT), not Sophon-ak4 stretched beyond its domain.
+
+\section{Synthesis and recommendation}
+\begin{takeaway}[Key insights]
+\begin{enumerate}[leftmargin=1.4em]
+\item The \kl\ constraint is \textbf{kinematic and statistics-limited}; explicit
+  (equivariant) and implicit (FM) priors give comparable shape performance. Do not
+  expect an FM to beat the high-level-feature NSBI on the \kl\ shape.
+\item The FM's real value is \textbf{data efficiency}, \textbf{S/B acceptance/purity},
+  and \textbf{systematics robustness} --- not shape extraction.
+\item For a systematics-limited result, \textbf{calibration of any learned
+  discriminant is the dominant risk}; the jet-free upside can be eaten by a poorly
+  understood systematic.
+\item Use the right FM for the right job: Sophon-ak4 (jet-scale) $\to$ per-jet S/B;
+  event-scale FM $\to$ jet-free acceptance; high-level features / NSBI $\to$ \kl.
+\end{enumerate}
+\end{takeaway}
+
+\noindent\textbf{Recommended staged plan.}
+\begin{itemize}
+\item \textbf{Near-term (low risk):} Strategy B, sharpened. Do NSBI on the high-level
+  features (optionally $+$ the CMS DNN score) within the validated signal regions ---
+  the direct productization of the $\sim$2$\times$ result on real, calibrated data.
+\item \textbf{Test the right task:} a signal-vs-$t\bar t$ diagnostic (3 controls) ---
+  where per-jet Sophon \emph{should} help, unlike the \kl-shape task. Plus a
+  high-level kinematic ceiling baseline (BDT) to bound how much shape headroom exists.
+\item \textbf{Parallel R\&D (high ceiling):} a jet-free / \emph{event-level} FM for
+  acceptance, introduced as a \emph{calibratable} added discriminant (not a
+  replacement), folded into the NSBI only once its calibration is validated.
+\item \textbf{Distinctive contribution:} RS3L-style re-simulation pretraining for a
+  \emph{systematics-robust} embedding --- aimed squarely at the systematics bottleneck.
+\end{itemize}
+
+\section{Open questions}
+\begin{itemize}
+\item Do explicit and implicit priors learn the \emph{same} physics, and does
+  combining them (a Lorentz-equivariant \emph{foundation} model) help in our regime?
+\item How large is the jet-free acceptance gain for \bbtt\ (cleaner than $4b$), and
+  can it be calibrated with $Z\to\tau\tau$/$Z\to b\bar b$ control samples?
+\item Does any S/B or acceptance gain actually translate into a tighter \kl\ CI once
+  systematics are profiled (the figure of merit is the constraint, not BCE/AUC)?
+\end{itemize}
+
+\begin{thebibliography}{9}\small
+\bibitem{fmreview} \emph{Foundation models for high-energy physics} (review),
+  arXiv:2509.21434.
+\bibitem{wamorkar} T.~Wamorkar \emph{et al.}, \emph{Explicit or Implicit? Encoding
+  Physics at the Precision Frontier}, arXiv:2603.08802.
+\bibitem{omnijettau} \emph{Reconstructing hadronically decaying tau leptons with a
+  jet foundation model} (OmniJet-$\alpha$), arXiv:2503.19165, SciPost Phys.\ Core (2025).
+\bibitem{pecm} \emph{Pretrained Event Classification Model for High Energy Physics
+  Analysis}, arXiv:2412.10665.
+\bibitem{mpm} \emph{Masked Particle Modeling on Sets: Towards Self-Supervised HEP
+  Foundation Models}, arXiv:2401.13537.
+\bibitem{rs3l} \emph{Re-Simulation-based Self-Supervised Learning for Pre-Training
+  Foundation Models}, arXiv:2403.07066; Phys.\ Rev.\ D \textbf{111}, 032010 (2025).
+\bibitem{jetfree4b} \emph{A calibratable, jet-free framework for $HH\to4b$ via
+  all-particle multiclass classification}, arXiv:2508.15048.
+\bibitem{cmsbbtt} CMS Collaboration, \emph{Search for non-resonant Higgs boson pair
+  production in the $\bbtt$ final state with Run-3 data}, CMS AN-25-103 (draft, 2026).
+\bibitem{omnilearn} O.~Amram, K.~Mikuni, B.~Nachman \emph{et al.}, \emph{OmniLearn};
+  \emph{OmniJet-$\alpha$}, arXiv:2403.05618.
+\bibitem{lgatr} \emph{A Lorentz-Equivariant Transformer for All of the LHC} (L-GATr),
+  arXiv:2411.00446; \emph{Lorentz-Equivariant Geometric Algebra Transformers},
+  arXiv:2405.14806.
+\end{thebibliography}
+
+\end{document}
