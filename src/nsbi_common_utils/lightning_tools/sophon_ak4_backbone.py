@@ -98,6 +98,16 @@ class SophonAK4Encoder(nn.Module):
         import os
         path = checkpoint
         if not os.path.exists(path):
+            # An explicit (absolute) path that doesn't exist is a user error -- don't
+            # mangle it into an HF filename (that yields a confusing .../resolve/main//abs 404).
+            if os.path.isabs(checkpoint):
+                raise FileNotFoundError(
+                    f"sophon-ak4 checkpoint not found: {checkpoint}\n"
+                    "Pre-download it on a login node (compute nodes may lack internet):\n"
+                    "  huggingface-cli download jet-universe/sophon-ak4 PARTAK4.pt "
+                    "--local-dir $SCRATCH/sophon-ak4\n"
+                    "then point CKPT / SOPHON_AK4_CKPT at the downloaded file.")
+            # relative filename -> treat as an HF repo file and fetch it
             from huggingface_hub import hf_hub_download
             path = hf_hub_download(repo_id="jet-universe/sophon-ak4", filename=checkpoint)
         state = torch.load(path, map_location="cpu")
