@@ -15,6 +15,16 @@
 #      SIZES="2000 5000 10000" REPEATS=4 CKPT=... bash .../run_ablation_interactive.sh
 set -euo pipefail
 
+# Refuse to run on a login node -- training there fights other users for the shared
+# login GPU (OOM) and is against NERSC policy. SLURM_JOB_ID is set only inside an
+# salloc/sbatch allocation. Set ALLOW_NO_SLURM=1 to override (e.g. a local GPU box).
+if [ -z "${SLURM_JOB_ID:-}" ] && [ "${ALLOW_NO_SLURM:-0}" != "1" ]; then
+    echo "ERROR: not inside a Slurm allocation -- don't train on a login node." >&2
+    echo "  salloc -N 1 -C gpu -q interactive -t 02:00:00 -A m5295_g" >&2
+    echo "  (then re-run this script once the prompt shows nidXXXXXX)" >&2
+    exit 1
+fi
+
 ENV=${ENV:-nsbi-env-gpu}
 REPO=${REPO:-$SCRATCH/nsbi-lhc-toolkit}
 CLOUDS=${CLOUDS:-$SCRATCH/dihiggs/clouds_subset}
