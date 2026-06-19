@@ -8,6 +8,10 @@
 #   RAW=/path/raw OUT=/path/clouds REPO=/path/nsbi-lhc-toolkit \
 #     sbatch -A <NERSC_PROJECT> .../convert_all_kl.sbatch
 #
+# Full production = all files (MAXFILES=0, the default) for all six points; this can be
+# long, so bump the walltime at submit: `sbatch --time=24:00:00 ...`. Set POINTS to
+# convert a subset, or to fan the points out into parallel per-point jobs (see README).
+#
 #SBATCH -J dihiggs_convert
 #SBATCH -C cpu
 #SBATCH -q shared
@@ -27,10 +31,13 @@ RAW=${RAW:-$SCRATCH/dihiggs/raw}
 OUT=${OUT:-$SCRATCH/dihiggs/clouds}
 REPO=${REPO:-$SCRATCH/nsbi-lhc-toolkit}
 MAXFILES=${MAXFILES:-0}
+POINTS=${POINTS:-}            # e.g. "kl0 kl5"; empty = all six points
 
-echo "ENV=$ENV  RAW=$RAW  OUT=$OUT  REPO=$REPO  MAXFILES=$MAXFILES"
+echo "ENV=$ENV  RAW=$RAW  OUT=$OUT  REPO=$REPO  MAXFILES=$MAXFILES  POINTS=${POINTS:-<all>}"
 
 cd "$REPO"
+# ${POINTS:+...} expands to nothing when POINTS is empty (all points), else word-splits.
 srun pixi run -e "$ENV" python \
     examples/HH_bbtautau_kappalambda_sophon/scripts/convert_all_kl.py \
-    --raw-dir "$RAW" --out-dir "$OUT" --max-files "$MAXFILES"
+    --raw-dir "$RAW" --out-dir "$OUT" --max-files "$MAXFILES" \
+    ${POINTS:+--points $POINTS}
