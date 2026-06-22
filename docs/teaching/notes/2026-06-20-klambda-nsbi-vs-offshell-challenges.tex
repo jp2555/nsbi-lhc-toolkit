@@ -6,6 +6,7 @@
 \usepackage{xcolor}
 \usepackage[most]{tcolorbox}
 \usepackage{enumitem}
+\usepackage{multicol}
 \usepackage[colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black,citecolor=blue!50!black]{hyperref}
 
 \newtcolorbox{takeaway}[1][]{colback=yellow!12,colframe=orange!70!black,
@@ -55,7 +56,8 @@ Page references to both notes are given inline.
 \section*{Studies to do}
 \noindent{\small Concrete studies to de-risk and execute this measurement, grouped by theme. Priority:
 \priZ\ blocking / do-first, \priO\ important, \priT\ nice-to-have; effort \eff{S $<$1\,wk, M weeks, L months}.
-Trailing \sref{\S n} point to the relevant numbered section below.}
+Trailing \sref{\S n} point to the relevant numbered section below. All abbreviations are defined in the
+\textbf{Glossary} at the end.}
 
 \begin{keybox}[Critical path]
 {\small Statistics-first: port the \textsc{jax}+\textsc{iminuit} fit (\#11) and fix $P_{\rm ref}$ (\#17), then build
@@ -488,6 +490,235 @@ constraint} (shape directions), \emph{not} the SM-HH observation significance (r
 and the genuine per-event edge is on \emph{shape/correlated-operator} directions, not the rate-broken
 $\kappa_t\!\leftrightarrow\!\kl$ / $k_V\!\leftrightarrow\!k_{2V}$ ones.
 \end{takeaway}
+
+\section*{Glossary of abbreviations \& jargon}
+\noindent\small Every acronym and piece of jargon used in this note, in plain language. Symbols/couplings first,
+then abbreviations alphabetically.\normalsize
+
+\subsection*{Symbols \& couplings}
+{\footnotesize\setlength{\parindent}{0pt}\setlength{\parskip}{2.5pt}
+\begin{multicols}{2}
+$\kappa_\lambda$ (\kl) --- Higgs trilinear self-coupling strength relative to the SM ($=1$ in the SM); the
+parameter of interest. Enters gg$\to$HH through the \emph{triangle} diagram and interferes with the \emph{box}.
+
+$k_{2V}$ --- strength of the quartic $VVHH$ contact coupling ($=1$ in SM); accessed in the high-\mhh\ VBF tail.
+
+$k_V$ --- single Higgs--vector-boson coupling strength ($VVH$, $=1$ in SM).
+
+$\kappa_t$ --- top-quark Yukawa coupling strength ($=1$ in SM); enters HH via the box and triangle.
+
+\mhh\ --- invariant mass of the di-Higgs system; the observable carrying the \kl\ interference shape.
+
+$\cos\theta^*$ --- production angle of the Higgs in the HH rest frame; the second variable in CMS's 2D \kl\ reweighting.
+
+$H_T$ --- scalar sum of jet transverse momenta.
+
+$M_{jj}$ --- invariant mass of the two VBF ``tagging'' jets.
+
+$N_j,\,N_b$ --- number of jets / number of $b$-tagged jets (the ABCD(nn) conditioning variables).
+
+$p_{\mathrm T}$ --- transverse momentum (momentum in the plane transverse to the beam).
+
+$P_{\rm ref}$ --- reference hypothesis: the single fixed model all NSBI classifiers estimate density ratios \emph{relative to}.
+
+$r(x)$ --- per-event likelihood (density) ratio --- the quantity NSBI learns and the fit consumes.
+
+$\rho$ --- (Pearson/Spearman) correlation coefficient; here between \kl\ and a systematic.
+
+$\sigma$ --- standard deviation / Gaussian width (``$\pm1\sigma$'' $=$ a one-standard-deviation systematic variation); also denotes a cross-section.
+
+triangle / box --- the two gg$\to$HH amplitudes: the \kl-sensitive \emph{triangle} (via an $s$-channel Higgs) and the \kl-independent \emph{box}; their interference shapes \mhh.
+
+GeV, TeV --- giga-/tera-electronvolt (energy/mass units).
+\end{multicols}}
+
+\subsection*{Abbreviations \& jargon}
+{\footnotesize\setlength{\parindent}{0pt}\setlength{\parskip}{2.5pt}
+\begin{multicols}{2}
+\textbf{ABCD} --- data-driven background estimate from four regions defined by two (assumed-independent) variables; the signal region $D=(B\times C)/A$.
+
+\textbf{ABCDnn} --- a normalizing-flow generalization of ABCD that morphs simulated background into the data-driven background \emph{shape}, conditioned on extra variables.
+
+\textbf{AN} --- (CMS) Analysis Note: internal documentation (e.g.\ AN-18-121).
+
+\textbf{anchors} --- the fixed reference points (a \kl\ grid, or the $\pm1\sigma$ systematic variations) between which a smooth morphing is interpolated.
+
+\textbf{Asimov dataset} --- a single artificial ``data $=$ expectation'' dataset used to compute \emph{expected} sensitivity without generating toys.
+
+\textbf{ATLAS, CMS} --- the two general-purpose LHC experiments.
+
+\textbf{AUC} --- area under the ROC curve; a classifier separation metric ($0.5=$ no separation).
+
+\textbf{Barlow--Beeston} --- standard treatment of finite-MC-statistics uncertainty via per-bin nuisance parameters.
+
+\textbf{BDT} --- boosted decision tree.
+
+\textbf{binned / unbinned} --- a fit that histograms an observable into template bins vs.\ one that uses each event's per-event likelihood directly (no binning). The CMS baseline is binned; NSBI is unbinned.
+
+\textbf{bootstrap} --- resampling with replacement to estimate a statistical uncertainty (e.g.\ of a trained network).
+
+\textbf{CARL / DCTR} --- the classifier-reweighting family: train a classifier to learn a per-event reweighting between two models. CARL $=$ Calibrated Approximate Ratio of Likelihoods; DCTR $=$ Deep Classifier-based ReweighTing.
+
+\textbf{closure (test)} --- a check that a method reproduces a known truth (e.g.\ predicted $=$ true background in a validation region).
+
+\textbf{C2ST} --- Classifier Two-Sample Test: train a classifier to distinguish two samples; AUC $\approx0.5$ means they are indistinguishable (good closure).
+
+\textbf{Combine} --- CMS's standard binned maximum-likelihood fitting framework (HistFactory-style; asymptotic formulae plus toys, with Barlow--Beeston MC-stat handling).
+
+\textbf{CR / SR / VR} --- Control / Signal / Validation Region.
+
+\textbf{decay mode} --- the specific hadronic $\tau$ decay channel (e.g.\ 1-prong, 3-prong, with/without $\pi^0$); $\tau$ES has per-decay-mode components.
+
+\textbf{DeepTau} --- CMS deep-learning hadronic-$\tau$ identification discriminant.
+
+\textbf{Delphes} --- a fast, parametrised detector simulation used for quick studies before full simulation.
+
+\textbf{DNN} --- deep neural network.
+
+\textbf{DY} --- Drell--Yan ($Z/\gamma^*\to\ell\ell$) background.
+
+\textbf{EFT / SMEFT} --- (Standard-Model) Effective Field Theory: parametrize new physics as higher-dimensional operators.
+
+\textbf{ES} --- energy scale (as in JES, $\tau$ES).
+
+\textbf{EW} --- electroweak.
+
+\textbf{ensemble (spread)} --- training several networks (different seeds/folds); their spread estimates the MC-statistical uncertainty, propagated as one nuisance.
+
+\textbf{ExtendedABCD} --- ABCD augmented with extra sidebands to correct residual correlation between the two defining variables (a more accurate yield).
+
+\textbf{extrapolation (CR$\to$SR)} --- applying a transfer/calibration learned in a control region to the signal region; its validity is the key data-driven-background caveat.
+
+\textbf{fake-factor} --- data-driven estimate of jet$\to\tau_h$ misidentification: a transfer factor measured in a $\tau$-anti-isolated CR and applied to the SR.
+
+\textbf{Fisher information} --- quantifies how sharply an observable constrains a parameter; here used to show that added dimensions shrink the \kl--systematic degeneracy.
+
+\textbf{flavour-tagging} --- identifying a jet's originating quark ($b$/$c$/light) with an ML discriminant ($b$-tagging is the $b$-jet case).
+
+\textbf{F-score} --- harmonic mean of precision and recall; here a separation proxy.
+
+\textbf{ggF / VBF} --- gluon--gluon fusion / vector-boson fusion (the two HH production modes).
+
+\textbf{ggH, VBF\,H, VH, $t\bar tH$ (single Higgs)} --- the single-Higgs production modes (gluon fusion / vector-boson fusion / associated with a vector boson / with a top pair); the irreducible same-final-state background (distinct from ggF/VBF for HH).
+
+\textbf{GP} --- Gaussian Process: a non-parametric model giving predictions with calibrated uncertainty bands.
+
+\textbf{HH} --- di-Higgs (Higgs-pair) production; \textbf{HHVV} $=$ the quartic $VVHH$ contact vertex (set by $k_{2V}$).
+
+\textbf{Hesse / Hessian} --- matrix of second derivatives of the NLL; its inverse gives parameter covariances (\textsc{minuit}'s \textsc{hesse}).
+
+\textbf{HL-LHC} --- High-Luminosity LHC.
+
+\textbf{ID} --- identification (e.g.\ $\tau$-ID, $b$-ID).
+
+\textbf{iminuit} --- Python interface to the \textsc{minuit} minimizer used for the profile fit.
+
+\textbf{interference} --- the quantum cross-term between two amplitudes (here triangle$\times$box in HH); it carries the \kl\ shape information.
+
+\textbf{ISR / FSR} --- initial-/final-state radiation (a parton-shower systematic).
+
+\textbf{JAX} --- an autodiff / accelerated-array library used to build the differentiable likelihood.
+
+\textbf{JER / JES} --- jet energy resolution / jet energy scale (systematics).
+
+\textbf{KL divergence} --- Kullback--Leibler divergence: a measure of difference between two probability distributions.
+
+\textbf{KS test} --- Kolmogorov--Smirnov goodness-of-fit test (a $p$-value for ``same distribution'').
+
+\textbf{LHC} --- Large Hadron Collider.
+
+\textbf{lnN} --- log-normal: the usual constraint shape for a \emph{normalization} nuisance parameter.
+
+\textbf{LO / NLO} --- leading / next-to-leading order in perturbative QCD.
+
+\textbf{MAE} --- mean absolute error.
+
+\textbf{MC} --- Monte Carlo (simulated events).
+
+\textbf{ME} --- matrix element.
+
+\textbf{MET} --- missing transverse energy (momentum imbalance, here mainly from neutrinos).
+
+\textbf{ML} --- machine learning.
+
+\textbf{mixture model} --- writing the total per-event density as a weighted sum of signal/interference/background components (the NSBI fit model).
+
+\textbf{MMD} --- Maximum Mean Discrepancy: a distribution-matching loss (used to train ABCDnn).
+
+\textbf{morphing} --- smoothly deforming a per-event density or weight as a function of a parameter (\kl\ or a nuisance), built by interpolating between anchors.
+
+\textbf{NAF} --- Neural Autoregressive Flow: a flexible normalizing-flow density model (ABCDnn's network).
+
+\textbf{Neyman construction} --- the frequentist procedure for building confidence intervals with correct coverage.
+
+\textbf{NLL} --- negative log-likelihood.
+
+\textbf{NN} --- neural network.
+
+\textbf{NP} --- nuisance parameter: a non-POI (systematic) parameter that is profiled in the fit.
+
+\textbf{NSBI / SBI} --- (Neural) Simulation-Based Inference: inference from learned per-event likelihood ratios instead of binned templates.
+
+\textbf{PAS} --- (CMS) Physics Analysis Summary, a short public document.
+
+\textbf{PDF} --- parton distribution function (separately, also ``probability density function'').
+
+\textbf{Perlmutter} --- the NERSC GPU supercomputer used for training.
+
+\textbf{pivoting / decorrelation} --- training a classifier to be \emph{insensitive} to a nuisance (statistically independent of it).
+
+\textbf{POG} --- (CMS) Physics Object Group; provides standard object calibrations / scale factors.
+
+\textbf{POI} --- parameter of interest (here \kl).
+
+\textbf{poly-exp} --- polynomial$\times$exponential interpolation used between systematic ($\pm1\sigma$) anchors.
+
+\textbf{Powheg} --- an NLO matrix-element event generator.
+
+\textbf{profile (likelihood)} --- maximizing the likelihood over the nuisance parameters at each value of the POI.
+
+\textbf{PS / PU} --- parton shower / pile-up (additional simultaneous $pp$ collisions).
+
+\textbf{Pythia, Herwig} --- two parton-shower/hadronization generators; their difference gauges shower-modeling systematics.
+
+\textbf{QCD} --- quantum chromodynamics; ``QCD multijet'' $=$ the data-driven multijet background.
+
+\textbf{RealNVP} --- a specific (identity-initializable) normalizing-flow architecture.
+
+\textbf{resolution} --- the smearing/precision of a measured quantity (cf.\ JER for jets); ``resolution handles'' $=$ input features encoding it.
+
+\textbf{RMS} --- root-mean-square.
+
+\textbf{RS3L} --- Re-Simulation-based Self-Supervised Learning (a representation-robustness method).
+
+\textbf{Run-2 / Run-3} --- LHC data-taking periods (Run-2: 2016--18; Run-3: 2022--25).
+
+\textbf{SF} --- scale factor: a data/MC correction applied to reconstructed objects ($b$-tag, $\tau$-ID, \ldots).
+
+\textbf{sideband} --- a region adjacent to (but outside) the signal region, used to estimate backgrounds; the extra regions in ExtendedABCD are sidebands.
+
+\textbf{SM} --- Standard Model.
+
+\textbf{Sophon} --- the (Sophon-AK4) jet ``foundation model'' backbone fine-tuned in the ML-pipeline studies.
+
+\textbf{SVfit} --- algorithm that reconstructs the $\tau\tau$ invariant mass from the visible decay products $+$ MET.
+
+\textbf{THU$_{HH}$} --- theory uncertainty on the HH cross-section/shape; \kl-dependent ($+4/-18\%$ at the SM point).
+
+\textbf{$\tau$ES (tauES)} --- $\tau$ energy scale (a systematic).
+
+\textbf{toy / toy MC} --- synthetic pseudo-datasets drawn from the model, used for coverage and sensitivity tests.
+
+\textbf{trigger} --- the online selection deciding which collision events to record; carries its own efficiency scale factor.
+
+\textbf{VH / VZ} --- associated production of a Higgs / $Z$ with a vector boson.
+
+\textbf{VIF} --- variance inflation factor: how much a parameter's variance grows due to correlation with others (a degeneracy metric).
+
+\textbf{WG} --- working group (e.g.\ the LHC HH WG).
+
+\textbf{ZZ, 4$\ell$} --- a $Z$-boson pair / four charged leptons (the ATLAS off-shell final state).
+\end{multicols}}
 
 \begin{thebibliography}{9}\small
 \bibitem{atlas} ATLAS Collaboration (J.~Sandesara \emph{et al.}), \emph{Measurement of the Off-Shell Higgs Boson in
