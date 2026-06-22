@@ -30,6 +30,8 @@
 \newcommand{\eff}[1]{{\footnotesize\textcolor{gray!65!black}{(#1)}}}
 \newcommand{\sref}[1]{ {\footnotesize\textcolor{gray!60!black}{[#1]}}}
 \newcommand{\dw}{\textcolor{green!30!black}{\textbf{Done:}}~}
+\newcommand{\stDone}{\textcolor{green!50!black}{\textbf{[\checkmark\,done]}}}
+\newcommand{\stPart}{\textcolor{orange!90!black}{\textbf{[partial]}}}
 
 \title{\vspace{-2.5em}New challenges for an NSBI measurement of \kl\ in HH$\to\bbtt$,\\
 relative to the first NSBI measurement (ATLAS off-shell $H\to ZZ\to4\ell$)}
@@ -57,7 +59,23 @@ Page references to both notes are given inline.
 \noindent{\small Concrete studies to de-risk and execute this measurement, grouped by theme. Priority:
 \priZ\ blocking / do-first, \priO\ important, \priT\ nice-to-have; effort \eff{S $<$1\,wk, M weeks, L months}.
 Trailing \sref{\S n} point to the relevant numbered section below. All abbreviations are defined in the
-\textbf{Glossary} at the end.}
+\textbf{Glossary} at the end. Status tags: \stDone\ $=$ completed and \stPart\ $=$ partially completed in the
+preliminary phenomenological study (see the Progress box).}
+
+\begin{keybox}[Progress --- preliminary phenomenological result (Ghosh, Klute \& Pan, 22 Jun 2026)]
+{\small A first \bbtt\ NSBI study (code in \texttt{NSBI-pheno/dihiggs\_bbtautau}) has completed several items
+below. \emph{It is explicitly phenomenological --- \textsc{powheg}$+$\textsc{delphes}, no experimental
+systematics, fast-sim --- so the statistics and physics-method items are largely done, while the systematics,
+in-situ-CR and data-driven-background items remain open.} \textbf{Headline:} an unbinned 10-feature NSBI likelihood
+lifts the binned-\mhh\ secondary minimum near \kl$\,\sim\,$3--4 and \textbf{narrows the 68\% interval by
+$\sim$an order of magnitude}, raising the \kl$=0$ rejection from $1.1\sigma$ (binned \mhh) to $\mathbf{2.75\sigma}$
+at $450\,\mathrm{fb}^{-1}$ and to $\mathbf{7.1\sigma}$ at the HL-LHC ($3000\,\mathrm{fb}^{-1}$, vs $2.8\sigma$
+binned); 500-toy pulls $\sim\mathcal N(0,1)$ for both fits (Figs.\,1--2, Table\,I). A focused test statistic (FTS)
+further tightens the 95\% interval near the SM by 10--20\% at no extra training cost (Fig.\,3, Table\,II).
+\textbf{Completed:} \stDone\ \#11, \#14, \#17. \textbf{Partial} (done without systematics, or by an alternative
+route): \stPart\ \#1, \#4, \#7, \#13, \#15, \#16, \#18, \#20, \#24, \#25. Remaining items are systematics-,
+CR-, and data-driven-background-related.}
+\end{keybox}
 
 \begin{keybox}[Critical path]
 {\small Statistics-first: port the \textsc{jax}+\textsc{iminuit} fit (\#11) and fix $P_{\rm ref}$ (\#17), then build
@@ -71,12 +89,14 @@ pipeline/pretraining (\#25,\#26) proceed as P1/P2 follow-ups.}
 
 \subsection*{Data-driven backgrounds}
 \begin{enumerate}[leftmargin=2.6em]\small
-\item \priZ\,\eff{L} \textbf{Canonical ABCDnn flow for QCD \& jet$\to\tau$ fakes} (yield/shape split, three-piece
+\item \stPart\ \priZ\,\eff{L} \textbf{Canonical ABCDnn flow for QCD \& jet$\to\tau$ fakes} (yield/shape split, three-piece
 uncertainty). MMD-trained NAF (continuous $(N_j,N_b)$ conditioning, identity warm-up) morphs MC $\to$ the
 data-driven CR target; yield from ExtendedABCD/fake-factors, flow $\to$ per-event ratio $r_{\rm QCD}(x)$ via a
 flow-vs-reference classifier; port the three four-top nuisances as per-event morphing; sweep target dim
 2D$\to$5D$\to$10D. \dw VR closure $|1-\langle f\rangle|<0.05$, RMS $<0.15$; $r(x)\ge0$ integrating to the ABCD
-yield; max stable dimension documented. \sref{\S4}
+yield; max stable dimension documented. \textcolor{orange!75!black}{\emph{\small(Prelim.: fake-$\tau$ and QCD are
+already given a per-event density via parametrised mis-ID \emph{weights} on \textsc{powheg}/MG5 MC; the ABCDnn flow
+$+$ closure on real data remains.)}} \sref{\S4}
 \item \priZ\,\eff{M} \textbf{ExtendedABCD vs standard-ABCD yield closure for \bbtt\ QCD.} Standard ABCD failed
 $\sim$18--19\% at high $N_j$ in the four-top analysis and the QCD-norm NP is already large; test the extended
 estimator's closure across 6--8 orthogonal SRs binned in $(N_j,N_b)$. \dw bias $<7\%$, RMS $<12\%$ per
@@ -85,7 +105,7 @@ multiplicity bin; a safe-vs-extended region map. \sref{\S4}
 template for both up/down; test mirrored / one-sided-exponential / half-Gaussian encodings so the poly-exp
 morphing of $r_{\rm QCD}(x)$ does not oscillate. \dw matches the CMS shape-impact rank $\pm2$, no oscillation,
 $<2\%$ \kl\ bias. \sref{\S4}
-\item \priO\,\eff{L} \textbf{Quantify the binned-QCD/fakes vs fully-unbinned cost.} Asimov (\kl$=0,1,5$): full
+\item \stPart\ \priO\,\eff{L} \textbf{Quantify the binned-QCD/fakes vs fully-unbinned cost.} Asimov (\kl$=0,1,5$): full
 unbinned vs MC-only NSBI with QCD/fakes as a fixed binned template; also bin the NSBI score at 5/10/20/50 to check
 convergence. \dw width inflation $<15\%$, bias $<0.3\sigma$, monotonic convergence; a bin-vs-unbin fallback
 decision tree. \sref{\S4,\,\S7}
@@ -100,7 +120,7 @@ Asimov. \dw factorisation residual $0.98$--$1.02$, KL $<0.02$; add a correction-
 \item \priZ\,\eff{S} \textbf{Validate the coherent $\tau$ES$\to$MET$\to$SVfit$\to$\mhh\ recompute.} The
 weight-builder must shift $\tau$ energy at object level and recompute MET$+$SVfit$+$\mhh\ end-to-end, not shift
 \mhh\ directly. \dw matches the coherent truth to $<2\%$ per-event MAE; the shortcut bias quantified. \sref{\S3,\,\S5}
-\item \priO\,\eff{M} \textbf{Validate poly-exp interpolation (\kl\ scan $+$ $\pm1\sigma$ anchors) under limited MC.}
+\item \stPart\ \priO\,\eff{M} \textbf{Validate poly-exp interpolation (\kl\ scan $+$ $\pm1\sigma$ anchors) under limited MC.}
 Intermediate \kl\ (0.5, 1.5) vs reweighted truth; downsample $\pm1\sigma$ samples 100$\to$10\%. \dw MAE $<5\%$ down
 to $\sim$50\% of MC, no gradient oscillation; minimum $\pm1\sigma$ sample size to request from generators. \sref{\S1,\,\S5}
 \item \priO\,\eff{M} \textbf{Build \& profile a CARL/DCTR per-event parton-shower/generator nuisance} (the NSBI
@@ -117,26 +137,30 @@ the POG prior, \kl\ not degraded, $|\Delta\text{pull}(0\text{ vs }5)|<0.5\sigma$
 
 \subsection*{Statistics, fit \& coverage}
 \begin{enumerate}[resume,leftmargin=2.6em]\small
-\item \priZ\,\eff{M} \textbf{Port the \textsc{jax}+\textsc{iminuit} profile fit with the
+\item \stDone\ \priZ\,\eff{M} \textbf{Port the \textsc{jax}+\textsc{iminuit} profile fit with the
 $\{$\kl$^2,$\kl$,1\}$ basis} (root dependency). Replicate ATLAS Sec.\,5: $P_{\rm ref}$, the
 signal/interference/background mixture with \kl-dependent rate, $\pm1\sigma$ ratio classifiers $+$ poly-exp, profile
 fit with Gaussian-constrained NPs; cross-check vs a binned Asimov. \dw converges, Hesse invertible, parabolic NLL;
-unbinned-vs-binned width $<5\%$. \sref{\S1,\,\S6}
+unbinned-vs-binned width $<5\%$. \textcolor{green!45!black}{\emph{\small(Prelim.: unbinned extended likelihood
+[Eq.\,3] with cached density ratios $+$ profile-NLL scan [Fig.\,1]; binned \mhh\ cross-check via \texttt{iminuit}.
+The NP-profiling framework for the $\sim$100 experimental systematics is the remaining piece.)}} \sref{\S1,\,\S6}
 \item \priZ\,\eff{M} \textbf{Represent the in-situ control regions (18 DY SFs, $t\bar t$-SF, QCD B/D) inside the
 unbinned likelihood.} Add Poisson CR auxiliary terms sharing the same NPs; compare SR-only-free-NP vs SR$+$explicit
 CRs. \dw reproduce the CMS in-situ SFs within 10--20\%, no double-counting, corr(SF,\kl)$<0.3$. \sref{\S4,\,\S6}
-\item \priZ\,\eff{M} \textbf{Asimov \& closure: morphing bias under injected shifts and generator/Delphes
+\item \stPart\ \priZ\,\eff{M} \textbf{Asimov \& closure: morphing bias under injected shifts and generator/Delphes
 mismatch.} Inject known $\pm1\sigma$ on JES/$\tau$ES/QCD/MC-stat and re-fit; fit data from chain $X$ with a model
 trained on $Y$ (Pythia$\leftrightarrow$Herwig; Delphes$\leftrightarrow$full-sim). \dw recover \kl\ to $<0.05$, pulls
 $\sim N(0,1)$, sim-closure bias $<0.1$ (flag full-sim retraining if $>10\%$). \sref{\S5,\,\S6}
-\item \priZ\,\eff{M} \textbf{Neyman construction \& coverage validation on MC-truth toys.} 1000$+$ toys; build the
+\item \stDone\ \priZ\,\eff{M} \textbf{Neyman construction \& coverage validation on MC-truth toys.} 1000$+$ toys; build the
 belt at \kl$\in\{-1,0,1,3,5\}$. \dw empirical coverage $\ge67\%$, $|$bias$|<0.1$ at SM; any failure traced to a
-specific NP/component. \sref{\S6}
-\item \priO\,\eff{M} \textbf{MC-stat ensemble-spread nuisance: design, size, coverage, Barlow--Beeston
+specific NP/component. \textcolor{green!45!black}{\emph{\small(Prelim.: 500 toys at \kl$=1$ give pulls
+$\sim\mathcal N(0,1)$ and calibrated 68\% intervals for both NSBI and binned [Fig.\,2]; extend to the full
+\kl\ grid and re-run with systematics.)}} \sref{\S6}
+\item \stPart\ \priO\,\eff{M} \textbf{MC-stat ensemble-spread nuisance: design, size, coverage, Barlow--Beeston
 orthogonality.} Compare ensemble strategies (seeds / $k$-fold / bootstrap / \mhh-stratified) for the per-event
 ratio. \dw C2ST $p>0.1$ on holdout, NP width $\approx1$ (BB-valid), \kl\ widens 5--15\% when unfrozen, corr $<0.3$
 with physics NPs. \sref{\S5,\,\S6}
-\item \priO\,\eff{S} \textbf{Interference-aware impact definition $+$ binned-NSBI fallback.}
+\item \stPart\ \priO\,\eff{S} \textbf{Interference-aware impact definition $+$ binned-NSBI fallback.}
 Implicit-function-theorem impact at the minimum vs finite-difference and the CMS rank; histogram the per-event
 log-ratio (5/10/20 bins) as an exact, learning-free cross-check. \dw matches the CMS rank $\pm2$; binned constraint
 $\ge80\%$ of unbinned, monotonic convergence. \sref{\S6,\,\S7}
@@ -144,20 +168,30 @@ $\ge80\%$ of unbinned, monotonic convergence. \sref{\S6,\,\S7}
 
 \subsection*{Physics \& POI}
 \begin{enumerate}[resume,leftmargin=2.6em]\small
-\item \priZ\,\eff{S} \textbf{Define \& validate the reference hypothesis $P_{\rm ref}$.} Compare SM /
+\item \stDone\ \priZ\,\eff{S} \textbf{Define \& validate the reference hypothesis $P_{\rm ref}$.} Compare SM /
 \kl-flat-mixture / pure-background / dedicated references; measure C2ST closure and how the
 $\{$\kl$^2,$\kl$,1\}$ reconstruction degrades with $|$\kl$-$\kl$_{\rm ref}|$, including the thin high-\mhh\
-$k_{2V}$ tail. \dw C2ST $p>0.05$ across the scan, $|\log r|<10$, $<5\%$ basis bias at extremes. \sref{\S1}
-\item \priZ\,\eff{M} \textbf{Feature-ablation degeneracy-breaking: $\rho($\kl,JES/$\tau$ES$)$ and VIF vs feature
+$k_{2V}$ tail. \dw C2ST $p>0.05$ across the scan, $|\log r|<10$, $<5\%$ basis bias at extremes.
+\textcolor{green!45!black}{\emph{\small(Prelim.: a single \emph{distant} reference \kl$=5$ was chosen; a
+pooled-mixture reference gave 0.50 classifier accuracy [target--reference self-overlap] and was rejected;
+$r_{\rm ref}\equiv1$; stable against reference-sample replacement.)}} \sref{\S1}
+\item \stPart\ \priZ\,\eff{M} \textbf{Feature-ablation degeneracy-breaking: $\rho($\kl,JES/$\tau$ES$)$ and VIF vs feature
 schedule.} \mhh$\to$10-feature$\to+$constituents$\to+$SVfit covariance$\to+$resolution handles; ablate to find the
 critical features and the asymptotic $\rho$ floor. \dw reproduce $\rho\,1.000\to0.646$; a minimal set with
-$\rho<0.7$, VIF$<1.5$; settle whether constituents/SVfit push $\rho<0.60$ or it plateaus. \sref{\S2,\,\S5}
+$\rho<0.7$, VIF$<1.5$; settle whether constituents/SVfit push $\rho<0.60$ or it plateaus.
+\textcolor{orange!75!black}{\emph{\small(Prelim.: the \emph{degeneracy-break is demonstrated} --- the 10-feature
+NSBI lifts the binned-\mhh\ secondary minimum near \kl$\,\sim\,$3--4 [Fig.\,1]; features selected by
+total-variation distance $+$ integral-closure, stable under one-at-a-time low-TV removal. The
+$\rho($\kl,JES/$\tau$ES$)$/VIF quantification needs the systematic variations.)}} \sref{\S2,\,\S5}
 \item \priO\,\eff{S} \textbf{Source the \kl-differential THU$_{HH}$ theory band.} Compile the scale/PDF/$m_t$
 uncertainty vs \kl$\in[-2,5]$ from the LHC HH WG / Powheg-NLO and parametrise it as a POI-coupled weight. \dw a
 smooth band reproducing $+4/-18\%$ at the SM, ready for the factorisation study (\#5). \sref{\S2,\,\S5}
-\item \priO\,\eff{M} \textbf{Validate the LO$\to$NLO \kl-reweighting that generates the $R(x|$\kl$)$ sources.}
+\item \stPart\ \priO\,\eff{M} \textbf{Validate the LO$\to$NLO \kl-reweighting that generates the $R(x|$\kl$)$ sources.}
 Direct-NLO vs 2D-LO-reweight vs dedicated-NLO-reweight; propagate the difference through an Asimov fit. \dw
-NLO-reweight reproduces direct to $<5\%$/bin and $<0.1\sigma$ \kl\ bias; the LO-only cost quantified. \sref{\S2}
+NLO-reweight reproduces direct to $<5\%$/bin and $<0.1\sigma$ \kl\ bias; the LO-only cost quantified.
+\textcolor{orange!75!black}{\emph{\small(Prelim.: sidestepped --- signal generated \emph{directly} at NLO
+[\textsc{powheg}] at \kl$\in\{0,1,5\}$ with a 3-point quadratic basis [the $\kappa_\lambda=2.45$ point was dropped
+for morphing stability]; this study still applies if the CMS LO$+$reweighting samples are used instead.)}} \sref{\S2}
 \item \priO\,\eff{M} \textbf{Measure $k_{2V}$ sensitivity in the high-\mhh\ VBF tail via unbinned NSBI.}
 VBF-enriched ($M_{jj}>400$\,GeV), $k_{2V}$-morphed MC; Asimov-fit binned vs unbinned vs hybrid; cross-validate the
 tail (train low-\mhh, test high). \dw NSBI $k_{2V}$ error 20--40\% smaller, tail-extrapolation bias $<10\%$, a
@@ -173,11 +207,11 @@ combined \kl\ width within 5\% of the best combination; no extra $>0.5\sigma$ pu
 
 \subsection*{ML, samples \& pipeline}
 \begin{enumerate}[resume,leftmargin=2.6em]\small
-\item \priO\,\eff{M} \textbf{Low-signal robustness: morphing calibration \& uncertainty honesty at
+\item \stPart\ \priO\,\eff{M} \textbf{Low-signal robustness: morphing calibration \& uncertainty honesty at
 $\mathcal O(10$--$100)$ signal events.} Downsample the $\pm1\sigma$ sets and effective signal yield (50/100/250) and
 retrain per level. \dw C2ST $p>0.05$ at the $\pm1\sigma$ floor, ensemble spread $<2\times$ the high-stat value;
 flag the binned fallback if it fails. \sref{\S5,\,\S7}
-\item \priT\,\eff{L} \textbf{Reproducible Perlmutter pipeline for the $\sim$2000-NN morphing ensemble.}
+\item \stPart\ \priT\,\eff{L} \textbf{Reproducible Perlmutter pipeline for the $\sim$2000-NN morphing ensemble.}
 Containerise Sophon$+$\textsc{jax}$+$\textsc{iminuit}, a training manifest, resume-on-failure; benchmark per-NP
 classifiers vs a single conditional morphing network. \dw 500 NNs in $<4$\,h ($\sim$1 GPU-day), $>99\%$ resume,
 bit-identical reruns; the per-NP-vs-conditional trade-off documented. \sref{general}
@@ -739,6 +773,14 @@ GeV, TeV --- giga-/tera-electronvolt (energy/mass units).
   likelihoods}, arXiv:2509.05409 (2025) --- the $\sim$2$\times$ per-event gain on correlated-operator directions.
 \bibitem{comb} ATLAS+CMS HH combination, arXiv:2602.23991 / CMS-PAS-HIG-25-014 (early 2026):
   $k_{2V}\in[0.73,1.3]$, $\kl\in[-0.71,6.1]$, $\mu_{HH}<2.5$ (95\% CL).
+\bibitem{gkp} A.~Ghosh, M.~Klute, J.~Pan, \emph{Focused Neural Simulation-Based Inference for the Higgs
+  Self-Coupling in the $b\bar b\tau\tau$ Channel}, working note (22 Jun 2026); code:
+  \texttt{NSBI-pheno/dihiggs\_bbtautau}. Phenomenological \textsc{powheg}$+$\textsc{delphes} study; signal
+  $gg\to HH$ at NLO with $\kappa_\lambda\in\{0,1,5\}$ (three-point quadratic morphing basis); reference
+  $\kappa_\lambda=5$; ten event-level observables; full background model with weighted fake-$\tau$; unbinned
+  extended likelihood vs binned \mhh, plus a focused test statistic. Results: \kl$=0$ rejection $2.75\sigma$
+  ($450\,\mathrm{fb}^{-1}$) $\to 7.1\sigma$ (HL-LHC); 68\% interval $\sim$10$\times$ tighter than the binned fit;
+  500-toy coverage validated. \emph{No experimental systematics (phenomenological).}
 \end{thebibliography}
 
 \end{document}
