@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference — Data-driven backgrounds &amp; ABCDnn (HH→bbττ / NSBI)</title>
+<style>
+  :root{--ink:#1a1a1a;--mut:#6b6b6b;--rule:#d8d8d2;--accent:#7a2d2d;--box:#f3f3ec;--bg:#fcfcf9;--blue:#234e70;--bad:#9a3030;--good:#1f6b3b;}
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);margin:0;font-size:15px;line-height:1.42;
+       font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;}
+  .wrap{max-width:52rem;margin:0 auto;padding:1.8rem 1.3rem 3rem;}
+  h1{font-size:1.32rem;margin:.2rem 0 .1rem;}
+  .sub{color:var(--mut);font-style:italic;font-size:.86rem;margin:.1rem 0 1rem;}
+  h2{font-size:.78rem;font-variant:small-caps;letter-spacing:.1em;color:var(--accent);
+     border-bottom:1px solid var(--rule);padding-bottom:.15rem;margin:1.3rem 0 .5rem;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:0 1.6rem;}
+  p{margin:.35rem 0;} a{color:var(--accent);}
+  table{border-collapse:collapse;width:100%;font-size:.76rem;margin:.4rem 0;}
+  th,td{border:1px solid var(--rule);padding:.32rem .45rem;text-align:left;vertical-align:top;}
+  th{background:var(--box);} td:first-child{font-weight:700;}
+  .eq{background:var(--box);border:1px solid var(--rule);border-radius:6px;padding:.45rem .6rem;margin:.45rem 0;text-align:center;font-size:.92rem;}
+  .eq small{display:block;color:var(--mut);font-size:.72rem;font-style:italic;margin-top:.25rem;}
+  .k{color:var(--blue);font-weight:700;} .no{color:var(--bad);font-weight:700;}
+  ul{margin:.3rem 0;padding-left:1.1rem;} li{margin:.18rem 0;font-size:.84rem;}
+  .tag{font-size:.68rem;color:var(--mut);}
+  .foot{margin-top:1.6rem;border-top:1px solid var(--rule);padding-top:.6rem;color:var(--mut);font-size:.76rem;}
+  @media(max-width:640px){.grid{grid-template-columns:1fr}}
+  @media print{body{background:#fff;font-size:12px}a{color:#000;text-decoration:none}}
+</style>
+</head>
+<body><div class="wrap">
+
+  <h1>Data-driven backgrounds &amp; ABCDnn — quick reference</h1>
+  <p class="sub">For κ<sub>λ</sub> NSBI in HH→bbττ. Companion to
+  <a href="../lessons/0006-data-driven-backgrounds-and-abcdnn.html">Lesson 6</a>. The governing question:
+  <b>for each background, which of {shape, normalization} do I trust MC for?</b></p>
+
+  <h2>The spectrum — where each bbττ background sits</h2>
+  <table>
+    <tr><th>Background</th><th>Method</th><th>Data-driven for…</th></tr>
+    <tr><td>QCD multijet</td><td>ABCD</td><td>shape + normalization</td></tr>
+    <tr><td>jet→τ<sub>h</sub> fakes (W+jets, semilep. tt̄, QCD)</td><td>fake-factor</td><td>shape + normalization (per-event weight)</td></tr>
+    <tr><td>Z/γ*→ττ (DY, genuine τ)</td><td>τ-embedding</td><td>everything except the simulated τ decay</td></tr>
+    <tr><td>tt̄ (genuine τ)</td><td>MC + CR scale factor / floated</td><td>normalization only</td></tr>
+    <tr><td>single-H (ggH/VBF/VH), diboson</td><td>pure simulation</td><td>nothing</td></tr>
+  </table>
+
+  <div class="grid">
+    <div>
+      <h2>ABCD (QCD multijet)</h2>
+      <div class="eq">N<sub>D</sub> = N<sub>B</sub> · N<sub>C</sub> / N<sub>A</sub>
+        <small>4 orthogonal regions from 2 variables (e.g. charge OS/SS × τ-iso tight/anti); D = signal-like</small></div>
+      <ul>
+        <li><b>Assumes:</b> the 2 variables <i>factorize</i> for background; composition stable across regions.</li>
+        <li><b>Gives:</b> yield + coarse <i>binned</i> shape. <span class="no">Not a per-event density.</span></li>
+      </ul>
+    </div>
+    <div>
+      <h2>Fake-factor (jet→τ<sub>h</sub>)</h2>
+      <div class="eq">FF = N<sub>tight</sub> / (N<sub>loose</sub> − N<sub>genuine</sub>)
+        <small>measured in a fake-enriched DR; applied as a per-event weight to AR (loose-not-tight) events</small></div>
+      <ul>
+        <li><b>Regions:</b> SR (tight) · AR (loose-not-tight) · DR (fake-enriched: SS, or high m<sub>T</sub>).</li>
+        <li><b>Assumes:</b> fake <i>composition</i> stable DR→SR. Subtract genuine-τ first. Syst ~10–30%.</li>
+        <li><b>Gives:</b> per-event <i>weights</i> on a sample. <span class="no">Not an evaluable p(x).</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>The ladder — ABCD → ExtendedABCD → ABCDnn</h2>
+  <table>
+    <tr><th>Method</th><th>Idea</th><th>Handles correlation?</th><th>Output</th></tr>
+    <tr><td>ABCD</td><td>closed-form factorization</td><td>no (assumes it away)</td><td>yield</td></tr>
+    <tr><td>ExtendedABCD</td><td>extra sidebands measure the breaking</td><td>partly (corrects the yield)</td><td>better yield, low-dim shape</td></tr>
+    <tr><td>ABCDnn</td><td>NAF learns p<sub>bg</sub>(x | control)</td><td><b>yes</b> (learned)</td><td><b>full conditional density</b></td></tr>
+  </table>
+  <p class="tag">ABCDnn = neural autoregressive flow conditioned on control vars (e.g. N<sub>j</sub>, N<sub>b</sub>),
+  trained on signal-depleted sidebands, extrapolated to D. Original: max-likelihood (2008.03636). CMS four-top:
+  MMD-trained, yield/shape split (ExtendedABCD yield + ABCDnn shape of BDT+H<sub>T</sub>). ExtendedABCD there:
+  closure ~18–19% → ~1–7% (illustrative; S. An thesis, internal).</p>
+
+  <h2>The NSBI link — and the gap</h2>
+  <p>NSBI needs a per-event ratio r(x)=p<sub>sig</sub>(x|κ<sub>λ</sub>)/p<sub>ref</sub>(x) for <b>every</b> component.
+  Data-driven outputs don't supply one:</p>
+  <table>
+    <tr><th>Method</th><th>Output</th><th>per-event p(x)?</th><th>Bridge to NSBI</th></tr>
+    <tr><td>ABCD</td><td>yield + histogram</td><td class="no">no</td><td>train a flow (ABCDnn) → classifier vs ref → r(x)</td></tr>
+    <tr><td>fake-factor</td><td>per-event weights</td><td class="no">no</td><td>neural fake-factor = density ratio FF(x) (2511.06972)</td></tr>
+    <tr><td>embedding</td><td>a sample</td><td class="no">no</td><td>density-estimate / classifier-to-ref</td></tr>
+    <tr><td>ABCDnn</td><td><span class="k">learned density</span></td><td class="k">yes</td><td>classifier(flow-gen vs ref) → r(x)</td></tr>
+  </table>
+  <p><b>Honest gap:</b> ABCDnn deployments target a <i>low-dim</i> object (four-top: BDT+H<sub>T</sub>, for a
+  <i>binned</i> fit). NSBI wants the <i>full</i> 10+-dim per-event density → high-dim flow (hard), more data, punishing
+  closure tests, + per-event systematic morphing of r(x). <span class="no">No published bbττ NSBI does this yet.</span></p>
+  <p><b>Pragmatic first step:</b> ABCDnn/neural-FF model only the data-driven <i>shape of the 1-D NSBI discriminant</i>;
+  bin QCD/fakes as an auxiliary likelihood term; per-event morph only the MC components (embedded-DY, tt̄, single-H,
+  diboson). <span class="tag">(design proposal, not published)</span></p>
+
+  <div class="foot">
+    Key sources: ABCDnn <a href="https://arxiv.org/abs/2008.03636">2008.03636</a> ·
+    NAF <a href="https://arxiv.org/abs/1804.00779">1804.00779</a> ·
+    CMS HH→bbττ <a href="https://arxiv.org/abs/2206.09401">2206.09401</a> ·
+    CMS H→ττ fake-factor <a href="https://arxiv.org/abs/2204.12957">2204.12957</a> ·
+    embedding <a href="https://arxiv.org/abs/1903.01216">1903.01216</a> ·
+    universal FF <a href="https://arxiv.org/abs/2502.04156">2502.04156</a> ·
+    neural FF <a href="https://arxiv.org/abs/2511.06972">2511.06972</a> ·
+    S. An four-top thesis (internal). &nbsp; Region cuts &amp; κ<sub>λ</sub> limits are analysis-specific — verify, don't quote from memory.
+  </div>
+
+</div></body></html>

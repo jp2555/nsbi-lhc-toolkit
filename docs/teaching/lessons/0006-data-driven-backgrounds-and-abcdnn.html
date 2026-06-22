@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 6 — Data-driven backgrounds in HH→bbττ, and the ABCDnn bridge to NSBI</title>
+<style>
+  :root{--ink:#1a1a1a;--mut:#6b6b6b;--rule:#dcdcd6;--accent:#7a2d2d;--bg:#fcfcf9;--box:#f3f3ec;
+        --good:#1f6b3b;--bad:#9a3030;--blue:#234e70;}
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);margin:0;font-size:18px;line-height:1.55;
+       font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;}
+  .wrap{max-width:47rem;margin:0 auto;padding:3rem 1.4rem 5rem;}
+  h1{font-size:1.7rem;line-height:1.18;margin:.2rem 0 .3rem;}
+  h2{font-size:1.18rem;margin:2.3rem 0 .5rem;color:var(--accent);}
+  h3{font-size:1.0rem;margin:1.3rem 0 .3rem;}
+  .kicker{font-variant:small-caps;letter-spacing:.12em;color:var(--mut);font-size:.82rem;}
+  .sub{color:var(--mut);font-style:italic;margin:.1rem 0 1.3rem;}
+  p{margin:.55rem 0;} a{color:var(--accent);} em{font-style:italic;}
+  .lead{font-size:1.05rem;}
+  ol.pipe{margin:.6rem 0;padding-left:1.3rem;} ol.pipe li{margin:.45rem 0;}
+  ul{margin:.5rem 0;padding-left:1.2rem;} li{margin:.3rem 0;}
+  .eq{background:var(--box);border:1px solid var(--rule);border-radius:7px;padding:.8rem 1rem;margin:1rem 0;text-align:center;font-size:1.0rem;}
+  .eq small{display:block;color:var(--mut);font-size:.78rem;font-style:italic;margin-top:.4rem;}
+  table{border-collapse:collapse;width:100%;font-size:.8rem;margin:1rem 0;}
+  th,td{border:1px solid var(--rule);padding:.5rem .55rem;text-align:left;vertical-align:top;}
+  th{background:var(--box);} td:first-child{font-weight:700;white-space:normal;}
+  .steal{background:#eef3ef;border:1px solid #cfe0cf;border-radius:8px;padding:.7rem 1rem;margin:1rem 0;}
+  .steal b{color:var(--good);}
+  .note{background:#fbf4ee;border:1px solid #e6cdb3;border-radius:8px;padding:.9rem 1.1rem;margin:1.3rem 0;}
+  .crux{background:#eef1f6;border:1px solid #c4d0e0;border-radius:8px;padding:.9rem 1.1rem;margin:1.3rem 0;}
+  .crux b{color:var(--blue);}
+  .hard{color:var(--bad);font-weight:600;}
+  details{background:var(--box);border:1px solid var(--rule);border-radius:6px;padding:.55rem .9rem;margin:.5rem 0;}
+  summary{cursor:pointer;font-weight:600;} details p{font-size:.92rem;}
+  .foot{margin-top:2.4rem;border-top:1px solid var(--rule);padding-top:1rem;color:var(--mut);font-size:.86rem;}
+  .pill{display:inline-block;background:var(--box);border:1px solid var(--rule);border-radius:20px;padding:.05rem .6rem;font-size:.74rem;color:var(--mut);margin-right:.3rem;}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:.85em;background:#f0f0ea;padding:0 .25em;border-radius:3px;}
+  /* spectrum bar */
+  .spec{display:flex;margin:1.1rem 0 .3rem;border:1px solid var(--rule);border-radius:8px;overflow:hidden;font-size:.78rem;text-align:center;}
+  .spec div{padding:.55rem .5rem;flex:1;}
+  .s1{background:#f6ece9;} .s2{background:#eef0e7;} .s3{background:#e7eef0;}
+  .spec b{display:block;font-size:.72rem;font-variant:small-caps;letter-spacing:.05em;color:var(--mut);margin-bottom:.2rem;}
+  /* abcd grid */
+  .abcd{display:grid;grid-template-columns:auto 1fr 1fr;gap:.3rem;max-width:24rem;margin:1rem auto;font-size:.8rem;}
+  .abcd .cell{border:1px solid var(--rule);border-radius:6px;padding:.55rem;text-align:center;background:var(--box);}
+  .abcd .hd{background:none;border:0;font-variant:small-caps;color:var(--mut);font-size:.72rem;display:flex;align-items:center;justify-content:center;}
+  .abcd .sig{background:#f6ece9;border-color:#e0c3c3;font-weight:700;}
+  .ladder{counter-reset:l;margin:1rem 0;}
+  .ladder .step{border-left:3px solid var(--rule);padding:.2rem 0 .5rem .9rem;margin:.2rem 0;}
+  .ladder .step b{color:var(--accent);}
+  /* quiz */
+  .quiz{background:#fbfbf7;border:1px solid var(--rule);border-radius:8px;padding:1rem 1.1rem;margin:1.2rem 0;}
+  .quiz .q{font-weight:600;margin:.8rem 0 .4rem;}
+  .quiz button{display:block;width:100%;text-align:left;margin:.25rem 0;padding:.45rem .6rem;border:1px solid var(--rule);
+    background:#fff;border-radius:6px;cursor:pointer;font:inherit;font-size:.86rem;}
+  .quiz button:hover{background:var(--box);}
+  .quiz button.ok{background:#e7f1e9;border-color:#9ec9a8;} .quiz button.no{background:#f6e7e7;border-color:#d6a3a3;}
+  .quiz .fb{font-size:.82rem;color:var(--mut);margin:.3rem 0 .2rem;min-height:1rem;}
+  @media(max-width:640px){body{font-size:17px}.spec{flex-direction:column}}
+  @media print{body{background:#fff}a{border:0}details,table{break-inside:avoid}.quiz button{background:#fff}}
+</style>
+</head>
+<body><div class="wrap">
+
+  <div class="kicker">Teaching · NSBI · Lesson 6</div>
+  <h1>Data-driven backgrounds in HH→bbττ —<br>and the ABCDnn bridge to NSBI</h1>
+  <p class="sub">Your κ<sub>λ</sub> measurement's hardest <em>new</em> problem isn't the signal model — it's that
+  several bbττ backgrounds are estimated <em>from data</em>, and data-driven estimates don't naturally hand you the
+  one thing NSBI needs: a <strong>per-event density</strong>. This lesson maps the bbττ background toolkit, then
+  shows exactly where ABCDnn fits.</p>
+
+  <p class="lead">One question organises everything below: <strong>for each background, which of {shape,
+  normalization} do I trust simulation for?</strong> The answer puts every process on a spectrum, and decides which
+  ones cause NSBI trouble.</p>
+
+  <h2>1 · The estimation spectrum (and where each bbττ background sits)</h2>
+  <div class="spec">
+    <div class="s1"><b>fully data-driven</b>shape <em>and</em> normalization from data</div>
+    <div class="s2"><b>MC + CR scale factor</b>MC shape, data-fixed normalization</div>
+    <div class="s3"><b>pure simulation</b>shape <em>and</em> normalization from MC</div>
+  </div>
+  <p style="font-size:.8rem;color:var(--mut);margin-top:.1rem">"Data-driven" is not binary — it's a slider, and it
+  can sit on <em>shape</em> and <em>normalization</em> independently.</p>
+  <table>
+    <tr><th>Background</th><th>How it's estimated</th><th>Why</th></tr>
+    <tr><td>QCD multijet</td><td><b>Fully data-driven</b> — ABCD method (§2)</td><td>No reliable multijet MC; both shape &amp; rate from data.</td></tr>
+    <tr><td>jet→τ<sub>h</sub> fakes (W+jets, semileptonic tt̄, QCD)</td><td><b>Fully data-driven</b> — fake-factor method (§3)</td><td>Per-jet fake rate ~0.1–1%; MC too starved/untrustworthy for it.</td></tr>
+    <tr><td>Z/γ*→ττ (Drell–Yan, genuine τ)</td><td><b>τ-embedding</b> — data event, simulated τ decay</td><td>Takes UE/pileup/Z-kinematics from data μμ events; only the τ decay is MC.</td></tr>
+    <tr><td>tt̄ (genuine τ)</td><td><b>MC shape + data normalization</b> (CR scale factor and/or floated in fit)</td><td>tt̄ kinematics well-modelled; rate pinned by data.</td></tr>
+    <tr><td>single-Higgs (ggH/VBF/VH, H→ττ/bb/WW), diboson</td><td><b>Pure simulation</b></td><td>Small, theoretically controlled, hard to isolate in data.</td></tr>
+  </table>
+  <p>So the <em>signal-region background</em> in bbττ is a stack of <em>different</em> estimation methods — unlike
+  the ATLAS off-shell H→ZZ→4ℓ measurement (<a href="0005-offshell-nsbi-recipe-for-kappa-lambda.html">Lesson 5</a>),
+  whose dominant background is a <em>single irreducible</em> qq̄→ZZ taken from MC and constrained in situ. That
+  contrast <em>is</em> the new difficulty.</p>
+
+  <h2>2 · Workhorse 1 — ABCD (for QCD multijet)</h2>
+  <p>Pick two variables believed <em>independent for the background</em> — e.g. di-τ <strong>charge</strong> (OS/SS)
+  and τ <strong>isolation</strong> (tight/anti-isolated). They carve four orthogonal regions; D is signal-like.</p>
+  <div class="abcd">
+    <div class="hd"></div><div class="hd">tight iso</div><div class="hd">anti-iso</div>
+    <div class="hd">OS</div><div class="cell sig">D<br><small>signal-like</small></div><div class="cell">C</div>
+    <div class="hd">SS</div><div class="cell">B</div><div class="cell">A</div>
+  </div>
+  <div class="eq">N<sub>D</sub> = N<sub>B</sub> · N<sub>C</sub> / N<sub>A</sub>
+    <small>the transfer factor N<sub>B</sub>/N<sub>A</sub> measured in the SS sidebands is applied to the OS axis
+    (it can be a single number or a binned function of a kinematic variable)</small></div>
+  <p><strong>One load-bearing assumption:</strong> the two variables <em>factorize</em> for the background (isolation
+  behaviour independent of charge), and the background <em>composition</em> doesn't change across regions. If they
+  correlate, the equation is biased.<span class="pill">cites: CMS Open Data ABCD lesson · arXiv:2206.09401</span></p>
+  <p><strong>What you get:</strong> a yield and a (typically 1-D, binned) shape. Enough for a histogram fit —
+  <em>not</em> a per-event density. Hold that thought for §5.</p>
+  <p style="font-size:.8rem;color:var(--mut)">(The exact two-variable choice and isolation working point are
+  analysis-note-specific; don't read the OS/SS×iso labels above as the literal cuts of any one paper.)</p>
+
+  <h2>3 · Workhorse 2 — the fake-factor method (for jet→τ<sub>h</sub>)</h2>
+  <p>A quark/gluon jet faking a hadronic τ is rare per jet, so measure the rate <em>from data</em>. Three regions,
+  identical except the τ-ID requirement:</p>
+  <ul>
+    <li><strong>SR</strong> — tight τ-ID (where you want the prediction);</li>
+    <li><strong>AR</strong> — loose-but-not-tight τ-ID, same kinematics/charge as SR (the events you reweight);</li>
+    <li><strong>DR</strong> — a fake-enriched region (e.g. SS, or high m<sub>T</sub>(ℓ,MET) for W+jets) where you
+    <em>measure</em> the rate.</li>
+  </ul>
+  <div class="eq">FF = N<sub>tight</sub> / (N<sub>loose</sub> − N<sub>genuine</sub>)&nbsp;<small>measured in the DR;
+    genuine-τ contamination subtracted (else FF biases high) — then applied as a <b>per-event weight</b> to AR events</small></div>
+  <p><strong>Assumption:</strong> the fake <em>composition</em> (quark/gluon/b/pileup mix) is stable from DR to SR,
+  so the measured rate transfers. ATLAS's flavor-decomposed "universal" fake factor (arXiv:2502.04156) relaxes this.
+  Typical FF systematics ~10–30%.<span class="pill">cites: arXiv:2204.12957 · 1510.07488 · 2502.04156</span></p>
+  <p><strong>What you get:</strong> per-event <em>weights</em> on AR events — a reweighted sample, <em>not</em> a
+  function p(x) you can evaluate at an arbitrary point x. Hold that thought too.</p>
+
+  <h2>4 · The ladder: ABCD → ExtendedABCD → ABCDnn</h2>
+  <p>Same goal (a data-driven background in the signal region), increasing power to handle correlation and to deliver
+  a real <em>shape</em>:</p>
+  <div class="ladder">
+    <div class="step"><b>ABCD.</b> Closed-form N<sub>D</sub>=N<sub>B</sub>N<sub>C</sub>/N<sub>A</sub>. Gives a yield +
+      coarse binned shape. <em>Assumes</em> factorization — its single point of failure.</div>
+    <div class="step"><b>ExtendedABCD.</b> Add sidebands to <em>measure and correct</em> the residual correlation
+      instead of assuming it away. Still closed-form. In the CMS all-hadronic four-top analysis it improved closure
+      from ~18–19% (standard ABCD, high jet multiplicity) to ~1–7%.<span class="pill">illustrative — that analysis (S. An thesis, internal)</span>
+      Buys <em>normalization</em> accuracy; still only a low-dim shape.</div>
+    <div class="step"><b>ABCDnn.</b> Replace the multiplicative factorization with a <em>learned conditional density</em>.
+      A <strong>neural autoregressive flow</strong> (NAF — an invertible, monotonic map) is conditioned on the control
+      variables (e.g. N<sub>j</sub>, N<sub>b</sub>) and trained on signal-depleted sidebands to learn
+      p<sub>bg</sub>(x | control), then extrapolated to D. It does <em>not</em> assume independence — the flow learns
+      arbitrary correlations, and it <em>generates the full multivariate distribution</em>, not just a yield.
+      <span class="pill">cites: arXiv:2008.03636 · NAF 1804.00779</span></div>
+  </div>
+  <p>The original ABCDnn (<a href="https://arxiv.org/abs/2008.03636">2008.03636</a>) trains the flow by maximum
+  likelihood; the CMS four-top deployment trains it via <em>Maximum Mean Discrepancy</em> and uses a
+  <strong>yield/shape split</strong> — ExtendedABCD for the normalization, ABCDnn for the differential shape.</p>
+  <div class="eq">ABCD: assumes factorization → <b>yield</b> &nbsp;•&nbsp; ExtendedABCD: measures the breaking → <b>better yield</b>
+    &nbsp;•&nbsp; ABCDnn: learns the conditional density → <b>shape</b></div>
+
+  <h2>5 · The crux — why this is an NSBI problem, and how ABCDnn bridges it</h2>
+  <p>NSBI builds an unbinned likelihood from <em>per-event density ratios</em>
+  r(x)=p<sub>sig</sub>(x|κ<sub>λ</sub>)/p<sub>ref</sub>(x), and it needs a computable per-event probability for
+  <em>every</em> component — <strong>including each background</strong>. But look at what the data-driven methods
+  actually hand you:</p>
+  <table>
+    <tr><th>Method</th><th>Output</th><th>Is it a per-event density p(x)?</th></tr>
+    <tr><td>ABCD</td><td>yield + coarse histogram</td><td><span class="hard">No</span> — a binned shape</td></tr>
+    <tr><td>fake-factor</td><td>per-event weights on AR events</td><td><span class="hard">No</span> — a reweighted sample, not an evaluable p(x)</td></tr>
+    <tr><td>τ-embedding</td><td>a sample of events</td><td><span class="hard">No</span> — samples, no explicit p(x)</td></tr>
+  </table>
+  <p>So NSBI <em>cannot directly ingest</em> the QCD / fake / DY estimates. This is the structural gap the off-shell
+  measurement never faced (its background was one MC density).</p>
+
+  <div class="crux"><b>ABCDnn is the natural bridge.</b> ABCDnn already <em>is</em> a learned density
+  p<sub>bg</sub>(x | control). To feed NSBI, train a classifier between flow-generated background events and the
+  reference hypothesis — that converts the density into the per-event ratio r(x) NSBI consumes.
+  <strong>Neural fake-factor estimation</strong> (arXiv:2511.06972) does the analogue for fakes: it recasts the fake
+  factor as a neural density-<em>ratio</em> p<sub>loose</sub>(x)/p<sub>tight</sub>(x) in high-dimensional feature
+  space — a continuous, unbinned, per-event FF(x) instead of a binned lookup, directly NSBI-compatible.</div>
+
+  <div class="note"><b>The honest gap (the real caveat).</b> Every ABCDnn deployment to date targets a
+  <em>low-dimensional</em> object — in the four-top analysis, just the BDT discriminant + H<sub>T</sub>, because the
+  downstream fit is <em>binned</em>. NSBI for bbττ wants the <em>full</em> per-event density over the whole 10+-feature
+  vector. That needs a high-dimensional flow (harder to train cleanly; non-negativity/monotonicity must hold
+  everywhere), much more training data, and high-dimensional closure tests that are statistically punishing — plus
+  every systematic propagated as a per-event <em>morphing</em> of r(x) (the learned-morphing burden from
+  <a href="0004-systematics-for-kappa-lambda.html">Lesson 4</a>). <span class="hard">No published bbττ NSBI consumes
+  a full high-dimensional ABCDnn background density yet.</span></p></div>
+
+  <div class="steal"><b>Pragmatic compromise to reach for first:</b> use ABCDnn (or neural fake-factor) to model only
+  the data-driven <em>shape of the 1-D NSBI discriminant</em> (the summed log-ratio score), treat QCD/fakes as a
+  <em>binned auxiliary term</em> in the combined likelihood, and reserve full per-event morphing for the MC-modelled
+  components (embedded-DY, tt̄, single-H, diboson) where it's tractable. You give up unbinned information on the
+  fakes, but you get a buildable analysis. <em>(A design proposal — not a published bbττ result.)</em></div>
+
+  <!-- QUIZ -->
+  <h2>Check yourself <span style="font-weight:400;font-size:.8rem;color:var(--mut)">(retrieval &gt; re-reading)</span></h2>
+  <div class="quiz" id="quiz">
+    <div class="q">1 · ABCD's single load-bearing assumption is that —</div>
+    <div data-correct="1">
+      <button>the four regions overlap by design</button>
+      <button>the two variables factorize for background</button>
+      <button>the transfer factor equals exactly one</button>
+      <button>the signal region contains no events</button>
+    </div>
+    <div class="fb"></div>
+
+    <div class="q">2 · Per application-region event, the fake-factor method delivers a —</div>
+    <div data-correct="0">
+      <button>weight extrapolating fakes into signal region</button>
+      <button>full multivariate probability density over x</button>
+      <button>closed-form yield from four sideband regions</button>
+      <button>binned histogram of genuine tau leptons</button>
+    </div>
+    <div class="fb"></div>
+
+    <div class="q">3 · ABCDnn improves on classic ABCD chiefly by —</div>
+    <div data-correct="3">
+      <button>assuming stronger independence between two variables</button>
+      <button>removing all need for control regions</button>
+      <button>fitting signal and background simultaneously together</button>
+      <button>learning the full conditional background density</button>
+    </div>
+    <div class="fb"></div>
+
+    <div class="q">4 · Data-driven backgrounds are awkward for NSBI because —</div>
+    <div data-correct="2">
+      <button>they require far too much simulation</button>
+      <button>they cannot be normalized to data</button>
+      <button>they give yields not per-event densities</button>
+      <button>they ignore all kinematic correlations entirely</button>
+    </div>
+    <div class="fb"></div>
+  </div>
+
+  <h2>Read this next (primary source)</h2>
+  <p>The single highest-value read for the idea this lesson turns on — converting a data-driven estimate into a
+  <em>learned multivariate density</em> — is the ABCDnn paper:
+  <a href="https://arxiv.org/abs/2008.03636"><strong>Choi, Lim &amp; Oh, “Data-driven Estimation of Background
+  Distribution through Neural Autoregressive Flows” (arXiv:2008.03636)</strong></a>. Pair it with
+  <a href="https://arxiv.org/abs/2206.09401">arXiv:2206.09401</a> (CMS nonresonant HH→bbττ, full Run 2) for the
+  background recipe, and <a href="https://arxiv.org/abs/2511.06972">arXiv:2511.06972</a> (neural fake-factor as a
+  density ratio) for the fakes-into-NSBI route.</p>
+
+  <div class="note" style="background:#f3f3ec;border-color:var(--rule)">
+    <b>Ask your teacher.</b> Anything here unclear — the ABCD algebra, why a reweighted sample isn't a density, how
+    embedding works, what "convert a flow into a ratio" means in practice — ask me. That's what I'm for.
+    And to pressure-test the <em>wisdom</em> (region definitions, FF systematics in practice), the right rooms are the
+    <strong>CMS Tau POG</strong> and the <strong>HH→bbττ subgroup</strong> (internal), and publicly the
+    <a href="https://indico.cern.ch/category/11413/">ML4Jets</a> community for the ML-for-backgrounds methods.
+  </div>
+
+  <div class="foot">
+    <span class="pill">Lesson 6</span>
+    Series: <a href="0001-nsbi-systematics-field-map.html">1 field map</a> ·
+    <a href="0002-decoding-the-jargon.html">2 jargon</a> ·
+    <a href="0003-methods-expanded-and-recommendation.html">3 methods</a> ·
+    <a href="0004-systematics-for-kappa-lambda.html">4 systematics</a> ·
+    <a href="0005-offshell-nsbi-recipe-for-kappa-lambda.html">5 off-shell recipe</a> ·
+    <b>6 data-driven backgrounds</b><br>
+    Reference: <a href="../reference/data-driven-backgrounds-cheatsheet.html">Data-driven backgrounds cheat-sheet</a> ·
+    <a href="../reference/nsbi-systematics-glossary.html">NSBI systematics glossary</a><br>
+    Sources cited inline: arXiv:2008.03636, 2206.09401, 2204.12957, 1903.01216, 2502.04156, 2511.06972, 1804.00779,
+    1510.07488; CMS Open Data ABCD lesson; S. An (CMU) four-top thesis (internal/thesis).
+  </div>
+
+<script>
+  document.querySelectorAll('#quiz [data-correct]').forEach(function(group){
+    var correct = +group.getAttribute('data-correct');
+    var fb = group.nextElementSibling;
+    var btns = group.querySelectorAll('button');
+    btns.forEach(function(b, i){
+      b.addEventListener('click', function(){
+        btns.forEach(function(x){ x.disabled = true; });
+        if(i === correct){ b.classList.add('ok'); fb.textContent = '✓ Correct.'; fb.style.color = '#1f6b3b'; }
+        else { b.classList.add('no'); btns[correct].classList.add('ok');
+               fb.textContent = '✗ The highlighted answer is right.'; fb.style.color = '#9a3030'; }
+      });
+    });
+  });
+</script>
+
+</div></body></html>

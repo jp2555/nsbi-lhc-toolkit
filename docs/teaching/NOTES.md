@@ -1,8 +1,9 @@
 # Notes & preferences
 
-- **Workspace location:** `teaching/` inside the NSBI-workflow-tutorial repo (kept in a contained
-  subdir to avoid cluttering the git root; untracked). Future `/teach` sessions: run from here, or
-  point me at this folder.
+- **Workspace location (MOVED 2026-06-22):** now `docs/teaching/` inside the **nsbi-lhc-toolkit** repo,
+  on branch `claude/omnilearn-nsbi` (origin jp2555/nsbi-lhc-toolkit). It was moved here from the old
+  NSBI-workflow-tutorial repo to sit alongside the sophon code it informs, and is now **tracked + pushed**.
+  Future `/teach` sessions: run from `~/Desktop/nsbi-lhc-toolkit/docs/teaching/`. Commit + push edits there.
 - **Audience level (REVISED 2026-06-19):** strong on the ML/physics side, but does NOT assume
   fluency in HistFactory / profile-likelihood *statistics* vocabulary. Lesson 1 pitched too high
   (too much stats jargon at once). Going forward: introduce each stats term in plain words with
