@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 3 — The five methods, expanded; what fits HH→bbττ / κλ</title>
+<style>
+  :root{--ink:#1a1a1a;--mut:#6b6b6b;--rule:#dcdcd6;--accent:#7a2d2d;--bg:#fcfcf9;--box:#f3f3ec;--good:#1f6b3b;--bad:#9a3030;--blue:#234e70;}
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);margin:0;font-size:18px;line-height:1.55;
+       font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;}
+  .wrap{max-width:46rem;margin:0 auto;padding:3rem 1.4rem 5rem;}
+  h1{font-size:1.78rem;line-height:1.18;margin:.2rem 0 .3rem;}
+  h2{font-size:1.2rem;margin:2.4rem 0 .5rem;color:var(--accent);}
+  h3{font-size:1.05rem;margin:.2rem 0 .3rem;}
+  .kicker{font-variant:small-caps;letter-spacing:.12em;color:var(--mut);font-size:.82rem;}
+  .sub{color:var(--mut);font-style:italic;margin:.1rem 0 1.4rem;}
+  p{margin:.55rem 0;} a{color:var(--accent);} em{font-style:italic;}
+  .lead{font-size:1.05rem;}
+  .m{background:#fff;border:1px solid var(--rule);border-left:4px solid var(--blue);border-radius:7px;padding:.9rem 1.05rem;margin:1.1rem 0;}
+  .m .tag{font-variant:small-caps;letter-spacing:.07em;font-size:.74rem;color:var(--mut);}
+  .m h3{color:var(--blue);}
+  .row{margin:.5rem 0;font-size:.95rem;}
+  .row b.lab{display:inline-block;min-width:6.6rem;color:var(--accent);font-variant:small-caps;letter-spacing:.04em;font-weight:700;font-size:.82rem;vertical-align:top;}
+  .row span{display:inline-block;width:calc(100% - 7rem);}
+  .win{color:var(--good);} .lim{color:var(--bad);}
+  table{border-collapse:collapse;width:100%;font-size:.78rem;margin:1rem 0;}
+  th,td{border:1px solid var(--rule);padding:.45rem .5rem;text-align:left;vertical-align:top;}
+  th{background:var(--box);} td:first-child{font-weight:700;white-space:nowrap;}
+  .note{background:#eef3ef;border:1px solid #cfe0cf;border-radius:8px;padding:.9rem 1.1rem;margin:1.4rem 0;}
+  .rec{background:#fbf4ee;border:1px solid #e6cdb3;border-radius:8px;padding:.9rem 1.1rem;margin:1rem 0;}
+  .rec .lvl{font-weight:700;color:var(--accent);}
+  details{background:var(--box);border:1px solid var(--rule);border-radius:6px;padding:.55rem .9rem;margin:.5rem 0;}
+  summary{cursor:pointer;font-weight:600;} details p{font-size:.92rem;}
+  .foot{margin-top:2.4rem;border-top:1px solid var(--rule);padding-top:1rem;color:var(--mut);font-size:.86rem;}
+  .pill{display:inline-block;background:var(--box);border:1px solid var(--rule);border-radius:20px;padding:.05rem .6rem;font-size:.74rem;color:var(--mut);margin-right:.3rem;}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:.85em;background:#f0f0ea;padding:0 .25em;border-radius:3px;}
+  @media(max-width:640px){body{font-size:17px}.row span{width:100%;display:block}}
+  @media print{body{background:#fff}a{border:0}.m,details{break-inside:avoid}}
+</style>
+</head>
+<body><div class="wrap">
+
+  <div class="kicker">Teaching · NSBI · Lesson 3</div>
+  <h1>The five methods, expanded —<br>and what fits HH→bb̄ττ / κ<sub>λ</sub></h1>
+  <p class="sub">Builds on <a href="0002-decoding-the-jargon.html">Lesson 2</a> (the vocabulary) and
+  <a href="0001-nsbi-systematics-field-map.html">Lesson 1</a> (the map). Reminder of the one idea:
+  every method is a way to build the <em>morphing</em> <b>Δ(x|α)</b> — how each event's probability
+  bends as you turn the systematic knobs — or, for RS3L, a way to avoid needing it.</p>
+
+  <h2>1 · The methods, in depth</h2>
+
+  <div class="m">
+    <div class="tag">R1 · Ghosh–Nachman–Whiteson · PRD 104 056026 (2021) · <a href="https://arxiv.org/abs/2105.08742">2105.08742</a></div>
+    <h3>Uncertainty-aware learning — the principle everything rests on</h3>
+    <div class="row"><b class="lab">Idea</b><span>The old instinct was to make a classifier <em>blind</em> to systematics ("decorrelation" / "pivoting" / adversarial training) so the result is robust. This paper shows the opposite is better: make the classifier <em>aware</em> of the nuisance and let the <em>fit</em> handle the dependence.</span></div>
+    <div class="row"><b class="lab">Mechanism</b><span>Feed the nuisance knob α to the network as an input. The per-event score then depends on α, and the profile likelihood uses that dependence rather than discarding it.</span></div>
+    <div class="row"><b class="lab win">Strength</b><span>Better sensitivity than forced invariance — you keep information instead of throwing it away. This is the justification for <em>all</em> of R2–R4.</span></div>
+    <div class="row"><b class="lab lim">Limit</b><span>A principle + toy demonstration (Gaussian, H→ττ), not a full recipe. It doesn't tell you <em>how</em> to build Δ(x|α) efficiently for hundreds of knobs.</span></div>
+  </div>
+
+  <div class="m">
+    <div class="tag">R2 · ATLAS · Rep. Prog. Phys. 88 (2025) · <a href="https://arxiv.org/abs/2412.01600">2412.01600</a></div>
+    <h3>ATLAS NSBI — the first full-scale, real measurement</h3>
+    <div class="row"><b class="lab">Idea</b><span>Carry per-event NSBI all the way through a real analysis (off-shell H→ZZ→4ℓ) <em>with</em> a large set of systematics — and produce proper confidence intervals.</span></div>
+    <div class="row"><b class="lab">Mechanism</b><span>For each nuisance, train classifiers that learn the per-event ratio between the "knob = ±1" sample and the nominal sample, then interpolate to build Δ(x|α). Wrap it in a profile-likelihood fit (test statistic t<sub>μ</sub>), with explicit diagnostics and treatment of the uncertainty from finite training samples.</span></div>
+    <div class="row"><b class="lab win">Strength</b><span>It <em>works on real data</em> and defines the whole production machinery — CI construction, validation, training-stat uncertainty. Everyone else builds on this.</span></div>
+    <div class="row"><b class="lab lim">Limit</b><span>As characterized by the CMS/refinable work (R4): <em>two classifiers per knob</em> (expensive for many systematics), a <em>fixed (low) interpolation order</em>, <em>no non-factorizable</em> knobs (assumes systematics act independently), kinematics unused in the interior |α|&lt;1, and no use of joint-likelihood (truth) information.</span></div>
+  </div>
+
+  <div class="m">
+    <div class="tag">R3 · Cranmer–Feickert–Heinrich–Held–Sandesara · SBI Blueprint, Feb 2026 · <a href="https://github.com/pyhf/pyhf-gpsys">pyhf-gpsys</a></div>
+    <h3>HistFactory v2 — Gaussian-Process morphing (with an error bar on the morphing)</h3>
+    <div class="row"><b class="lab">Idea</b><span>Traditional morphing assumes (a) systematics <em>factorize</em> and (b) a rigid <em>analytic</em> interpolation shape (piecewise-linear/exponential). Replace that with a Gaussian Process: a flexible, data-driven interpolator that <em>also reports its own uncertainty</em>.</span></div>
+    <div class="row"><b class="lab">Mechanism</b><span>A Gaussian Process learns Δ(α) from the simulated anchor points (which may sit anywhere in knob-space, not just on the axes). For any new α it returns a Gaussian: a <em>mean</em> (the interpolated morphing) and a <em>covariance</em> (how unsure the interpolation is). That uncertainty becomes an extra constrained parameter γ that flows into the fit. Generalizes from binned to unbinned/SBI.</span></div>
+    <div class="row"><b class="lab win">Strength</b><span><em>Non-parametric</em> (no rigid ansatz), <em>high-dimensional, no factorization</em> assumption, and — uniquely — an <b>honest uncertainty on the interpolation itself</b>. In a low-statistics fit, that guards against the morphing silently being wrong.</span></div>
+    <div class="row"><b class="lab lim">Limit</b><span>GP cost grows fast with the number of anchors; the kernel/prior is a modelling choice (injected smoothness bias); high-dim α still needs enough simulated anchors to pin down; pre-publication.</span></div>
+  </div>
+
+  <div class="m">
+    <div class="tag">R4 · Barrué–Schöfbeck et&nbsp;al. · MLST 6 015007 (2025) + PRD 112 052006 (2025) · tool: GOLLUM</div>
+    <h3>Refinable unbinned ML systematics — the most complete per-event recipe</h3>
+    <div class="row"><b class="lab">Idea</b><span>Split the per-event ratio into three learned parts — <code>R(x|θ)</code> (the physics POIs, e.g. κ<sub>λ</sub>) × <code>S(x|α)</code> (the systematics) × <code>g(x)</code> (which process the event is) — and learn the systematics part with a flexible <em>parametric</em> model in the knobs.</span></div>
+    <div class="row"><b class="lab">Mechanism</b><span>Write <code>log[σ(α)/σ(0)] = α<sub>A</sub>·Δ̂<sub>A</sub>(x)</code> with a basis A that can include linear, quadratic, and <em>cross-terms</em> between knobs. Fit the coefficient functions Δ̂<sub>A</sub>(x) from simulated basis points (binned) or learn them with a cross-entropy loss (unbinned). "Refinable" = start low-order/cheap, add terms to improve. Validate with Classifier Two-Sample Tests.</span></div>
+    <div class="row"><b class="lab win">Strength</b><span><em>Arbitrary order</em> (captures non-linear systematic effects the ±1σ picture misses), <em>handles non-factorizable</em> knobs (cross-terms), <em>uses kinematics across the whole α range</em>, <em>fewer estimators</em> than ATLAS (log-linear), and exploits joint-likelihood info. <b>Tested on your FAIR Universe benchmark</b>: ~20% tighter 1σ on μ vs binned (1.00 ± 0.17 vs ± 0.21), with tighter calibration-systematic constraints.</span></div>
+    <div class="row"><b class="lab lim">Limit</b><span>Still assumes a (flexible) <em>functional form</em> in α — no built-in interpolation-uncertainty like the GP. Needs simulated basis points. And the process-fraction <em>calibration is make-or-break</em>: dropping it biased μ by 0.3–0.4.</span></div>
+  </div>
+
+  <div class="m" style="border-left-color:var(--good)">
+    <div class="tag">R5 · Harris et&nbsp;al. · PRD 111 032010 (2025) · <a href="https://arxiv.org/abs/2403.07066">2403.07066</a></div>
+    <h3>RS3L — robustness in the representation (the other philosophy)</h3>
+    <div class="row"><b class="lab">Idea</b><span>Don't model the knob in the likelihood at all — build input <em>features</em> that are insensitive to it, so the systematic shrinks at the source.</span></div>
+    <div class="row"><b class="lab">Mechanism</b><span>Self-supervised contrastive pretraining where the "same" example is the <em>same hard event re-simulated</em> with different shower/hadronization/detector settings. The encoder learns to give them the same embedding → invariant to those modelling variations.</span></div>
+    <div class="row"><b class="lab win">Strength</b><span>Attacks the <em>modelling</em> systematics (shower/hadronization) that are hardest to parameterize as knobs; gives a reusable robust representation; <em>complements</em> a likelihood treatment.</span></div>
+    <div class="row"><b class="lab lim">Limit</b><span>Needs the re-simulation chain and constituent-level inputs; covers only the systematics it re-simulated (not luminosity/normalization); <em>full invariance can discard signal info</em> correlated with the knob (the pivot/info trade-off); and it still needs a likelihood/fit on top to get a CI.</span></div>
+  </div>
+
+  <h2>2 · How they relate (the family tree)</h2>
+  <p>Read <strong>R1 → R2 → {R3, R4}</strong> as one lineage, all "model the knob in the likelihood":</p>
+  <ul>
+    <li><strong>R1</strong> says: parameterize on α, don't decorrelate. (the principle)</li>
+    <li><strong>R2</strong> realizes it per-event at full scale, with a <em>fixed-order, factorized</em> morphing. (the baseline)</li>
+    <li><strong>R3 and R4 are two different upgrades of R2's morphing:</strong>
+       R4 makes the <em>parametric</em> model far more expressive (arbitrary order, cross-terms, kinematics);
+       R3 goes <em>non-parametric</em> and adds an <em>uncertainty</em> on the interpolation.
+       They're complementary — you could even use a GP-style uncertainty on a refinable-style surrogate.</li>
+  </ul>
+  <p><strong>R5 is off this tree entirely</strong> — it changes the <em>inputs</em>, not the likelihood. It composes with any of R2–R4 rather than competing with them.</p>
+
+  <h2>3 · The comparison, reasoned</h2>
+  <table>
+    <tr><th>Axis</th><th>R2 ATLAS</th><th>R3 GP</th><th>R4 Refinable</th><th>R5 RS3L</th></tr>
+    <tr><td>Builds Δ(x\|α)?</td><td>yes (classifiers)</td><td>yes (GP)</td><td>yes (ML ansatz)</td><td>no — robust features</td></tr>
+    <tr><td>Expressiveness of Δ</td><td>fixed order</td><td>non-parametric</td><td><b>arbitrary order</b></td><td>—</td></tr>
+    <tr><td>Non-factorizable knobs</td><td>no</td><td><b>yes</b></td><td><b>yes</b></td><td>—</td></tr>
+    <tr><td>Uncertainty on the morphing</td><td>no</td><td><b>yes (unique)</b></td><td>no</td><td>—</td></tr>
+    <tr><td>Cost / # estimators</td><td>high (2/knob)</td><td>scales w/ anchors</td><td>lower (log-linear)</td><td>1 pretrain + sim chain</td></tr>
+    <tr><td>Maturity</td><td><b>production</b></td><td>emerging</td><td>recent, benchmarked</td><td>recent</td></tr>
+    <tr><td>Touches the inputs?</td><td>no</td><td>no</td><td>no</td><td><b>yes</b></td></tr>
+  </table>
+  <p>The headline trade-off inside the "model-it" camp: <strong>expressiveness vs. honesty.</strong> R4 buys you the most
+  <em>expressive</em> morphing (it can fit complicated, interacting systematics); R3 buys you <em>honesty</em>
+  (it tells you how much to trust the morphing). Neither is strictly better — and they're combinable.</p>
+
+  <h2>4 · What fits HH→bb̄ττ / κ<sub>λ</sub></h2>
+  <p>Your situation: a <em>tiny signal</em>, several backgrounds with their own systematics, many experimental knobs
+  (b-tagging, τ-ID, JES, τES) <em>and</em> theory knobs (scale/PDF/parton-shower on the HH signal), and a measurement
+  that's <strong>both statistics- and systematics-limited</strong>. κ<sub>λ</sub> itself lives in the m<sub>HH</sub> shape,
+  which is the POI part <code>R(x|θ)</code> — so the systematics are a <em>separate</em> factor you bolt on.
+  A layered plan:</p>
+
+  <div class="rec"><span class="lvl">Foundation — adopt the machinery (R2).</span> Follow the ATLAS NSBI template for the
+  fit, the test statistic, confidence intervals, diagnostics, and the finite-training-stat uncertainty. This is the
+  scaffolding you need <em>regardless</em> of which morphing you choose.</div>
+
+  <div class="rec"><span class="lvl">Core — use the refinable surrogate (R4) for the morphing.</span> It is the closest fit:
+  it's per-event, it cleanly separates κ<sub>λ</sub> (R) from systematics (S) from process (g) — your κ<sub>λ</sub>
+  morphing slots straight into R — it handles the calibration knobs (JES/τES) and their interactions, and it's
+  <em>already validated on your FAIR Universe testbed</em> with a real ~20% CI gain. This is the thing to reproduce first.
+  <b>Heed its warning:</b> get the process-fraction calibration right, or you'll bias the result.</div>
+
+  <div class="rec"><span class="lvl">Honesty layer — add GP-style interpolation uncertainty (R3) for the dominant, sparsely-simulated knobs.</span>
+  HH has <em>few</em> signal events and <em>few</em> simulated systematic points → the morphing is genuinely uncertain.
+  An error bar on the interpolation (not pretending it's exact) protects κ<sub>λ</sub> from morphing-induced bias.
+  Prototype with <a href="https://github.com/pyhf/pyhf-gpsys">pyhf-gpsys</a>.</div>
+
+  <div class="rec"><span class="lvl">Complement — RS3L-style robust inputs (R5) for shower/hadronization, later.</span>
+  These modelling systematics are hard to parameterize as knobs; a robust representation reduces them at the source.
+  Bigger infrastructure lift (needs re-simulation), so treat it as a second-phase enhancement — and note this is
+  exactly where your foundation-model / Sophon thread connects to the systematics story.</div>
+
+  <div class="note"><strong>One-sentence answer.</strong> Build on ATLAS's NSBI machinery, use the refinable
+  per-event surrogate (R4) as your systematics morphing because it's proven on your exact benchmark and handles your
+  calibration knobs, add a GP-style uncertainty (R3) on the morphing because you're statistics-starved, and keep
+  RS3L (R5) as a later, complementary lever for the parton-shower systematics — where your FM work already lives.</div>
+
+  <h2>Check yourself</h2>
+  <details><summary>1. R3 and R4 are both "upgrades of ATLAS's morphing." What does each add that the other doesn't?</summary>
+    <p>R4 adds <em>expressiveness</em> (arbitrary order, cross-terms, kinematics in a parametric model);
+    R3 adds <em>honesty</em> (a non-parametric fit plus an uncertainty on the interpolation). They're combinable.</p></details>
+  <details><summary>2. Why is RS3L "off the family tree"?</summary>
+    <p>It doesn't build Δ(x|α) at all — it changes the input representation to be insensitive to the knob.
+    It composes with R2–R4 rather than replacing them.</p></details>
+  <details><summary>3. For κ<sub>λ</sub>, which factor does the self-coupling live in, and which factor carries the systematics?</summary>
+    <p>κ<sub>λ</sub> lives in the POI factor R(x|θ) (the m<sub>HH</sub> shape morphing across coupling values);
+    the systematics are the separate S(x|α) factor. They're modelled independently and multiplied.</p></details>
+
+  <div class="foot">
+    <p><span class="pill">Read next</span> <a href="https://arxiv.org/abs/2412.01600">ATLAS NSBI (2412.01600)</a> for the full machinery, then MLST 6 015007 (R4) for the surrogate you'll reproduce, then the <a href="https://github.com/pyhf/pyhf-gpsys">pyhf-gpsys</a> notebooks for the GP idea.</p>
+    <p><span class="pill">Community</span> IRIS-HEP SBI Blueprint / Statistics Forum; scikit-hep / pyhf discussions.</p>
+    <p><b>Ask your teacher.</b> Want the next lesson to be a hands-on of R4's <code>R·S·g</code> factorization on your
+    FAIR Universe pipeline, or a deeper look at the GP morphing? Or should I draw the family-tree / trade-off as a diagram?</p>
+  </div>
+
+</div></body></html>

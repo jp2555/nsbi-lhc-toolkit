@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference — NSBI systematics glossary</title>
+<style>
+  :root{--ink:#1a1a1a;--mut:#6b6b6b;--rule:#dcdcd6;--accent:#7a2d2d;--bg:#fcfcf9;--box:#f3f3ec;}
+  body{background:var(--bg);color:var(--ink);margin:0;font-size:16px;line-height:1.45;
+       font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;}
+  .wrap{max-width:44rem;margin:0 auto;padding:2.4rem 1.3rem 4rem;}
+  h1{font-size:1.5rem;margin:0 0 .2rem;} .sub{color:var(--mut);font-style:italic;margin:0 0 1.4rem;}
+  a{color:var(--accent);}
+  dl{margin:0;} dt{font-weight:700;margin:1rem 0 .15rem;}
+  dt .sym{font-style:italic;color:var(--accent);font-weight:400;margin-left:.4rem;}
+  dd{margin:0 0 .2rem;color:#262626;font-size:.95rem;}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:.85em;background:#f0f0ea;padding:0 .25em;border-radius:3px;}
+  .grp{font-variant:small-caps;letter-spacing:.1em;color:var(--mut);font-size:.8rem;
+       border-bottom:1px solid var(--rule);margin:1.8rem 0 .3rem;padding-bottom:.2rem;}
+  @media print{body{background:#fff}}
+</style>
+</head>
+<body><div class="wrap">
+  <h1>NSBI systematics — glossary</h1>
+  <p class="sub">Quick reference for <a href="../lessons/0001-nsbi-systematics-field-map.html">Lesson 1</a>. One vocabulary, used consistently.</p>
+
+  <div class="grp">Core objects</div>
+  <dl>
+    <dt>NSBI / SBI<span class="sym"></span></dt>
+    <dd>(Neural) Simulation-Based Inference. Estimate per-event likelihood ratios with networks, then do a likelihood fit — no binning into histograms.</dd>
+    <dt>Per-event likelihood ratio<span class="sym">r(x)</span></dt>
+    <dd>The learned object replacing the histogram template: ratio of probability densities for one event x under two hypotheses. Trained as a calibrated classifier.</dd>
+    <dt>Parameter of interest (POI)<span class="sym">η, μ, κ<sub>λ</sub></span></dt>
+    <dd>What you measure (signal strength μ; Higgs self-coupling κ<sub>λ</sub>). Has known a-priori dependence in the rate factor.</dd>
+    <dt>Nuisance parameter (NP)<span class="sym">α, ν, χ</span></dt>
+    <dd>A systematic's continuous knob (tau energy scale, JES, shower model, background norm), constrained by an auxiliary measurement / prior.</dd>
+    <dt>Systematic morphing<span class="sym">Δ<sub>s</sub>(x|α)</span></dt>
+    <dd>How sample <em>s</em>'s per-event density deforms as α varies. <b>The hard, intractable, no-known-form factor</b> every method approximates.</dd>
+    <dt>Anchor point<span class="sym">α<sup>(i)</sup></span></dt>
+    <dd>A nuisance value where a full simulation exists (often nominal and ±1σ). Δ is known here; you must interpolate between them.</dd>
+  </dl>
+
+  <div class="grp">Statistics</div>
+  <dl>
+    <dt>Profile likelihood / profiling<span class="sym"></span></dt>
+    <dd>Maximize the likelihood over the NPs at each POI value; the resulting curve gives the confidence interval. "Costing" the systematics.</dd>
+    <dt>Test statistic<span class="sym">t<sub>μ</sub>, q<sub>θ</sub></span></dt>
+    <dd>t<sub>μ</sub> = −2 Δln L profiled over NPs. 68% CI where t<sub>μ</sub> = 1; 95% where t<sub>μ</sub> = 3.84.</dd>
+    <dt>Systematic inflation<span class="sym"></span></dt>
+    <dd>How much the profiled CI widens vs stat-only — the cost of the systematics. Smaller = a more robust analysis.</dd>
+    <dt>Constraint term<span class="sym">f(a|χ)</span></dt>
+    <dd>The auxiliary-measurement prior on each NP (often Gaussian) multiplied into the likelihood.</dd>
+  </dl>
+
+  <div class="grp">Method ideas</div>
+  <dl>
+    <dt>Factorizable NP<span class="sym"></span></dt>
+    <dd>Its impact factorizes across samples/other NPs (Δ = ∏ of single-NP factors). Traditional HistFactory assumes this; R3/R4 relax it (non-factorizable).</dd>
+    <dt>Parametric ansatz<span class="sym"></span></dt>
+    <dd>Assume a functional form for Δ(α) (piecewise-linear/exponential, polynomial). Cheap but can be too rigid. R4 makes the ansatz ML-learned & arbitrary-order; R3 drops it for a GP.</dd>
+    <dt>Gaussian Process regression<span class="sym">f ∼ GP(m,k)</span></dt>
+    <dd>Non-parametric interpolation that also returns a posterior <em>uncertainty</em>. R3 uses it to model Δ(α) in high-dim with an interpolation error band.</dd>
+    <dt>Uncertainty-aware / nuisance-parameterized<span class="sym"></span></dt>
+    <dd>Feed α as a network input so the ratio learns the (x, α) correlation, instead of decorrelating from it (R1). Basis for R2–R4.</dd>
+    <dt>Pivot / decorrelation<span class="sym"></span></dt>
+    <dd>Train a discriminant to be <em>independent</em> of a nuisance. The "robust representation" idea; RS3L is its self-supervised, re-simulation form.</dd>
+    <dt>Re-simulation (RS3L)<span class="sym"></span></dt>
+    <dd>Re-run shower/hadronization/detector on the same hard event to make contrastive augmentations → a representation insensitive to those systematics.</dd>
+    <dt>Joint likelihood ratio<span class="sym"></span></dt>
+    <dd>Extra simulator-truth information (e.g. per-event weights) used to train ratio estimators more efficiently (exploited by R4).</dd>
+    <dt>Classifier Two-Sample Test (C2ST)<span class="sym"></span></dt>
+    <dd>Train a classifier to tell learned-vs-true samples apart; near-chance AUC ⇒ the surrogate is faithful. R4's validation.</dd>
+  </dl>
+
+  <div class="grp">Tools / benchmarks</div>
+  <dl>
+    <dt>HistFactory / pyhf<span class="sym"></span></dt>
+    <dd>The standard binned-template likelihood. "v2" = the GP-morphing generalization (R3).</dd>
+    <dt>GOLLUM<span class="sym"></span></dt>
+    <dd>The unbinned-ML-systematics fitting framework used in R4's FAIR Universe study.</dd>
+    <dt>FAIR Universe<span class="sym"></span></dt>
+    <dd>Tabular H→ττ vs Z→ττ/tt̄ benchmark with real TES/JES/soft-MET/bkg-norm nuisances; the shared testbed (also yours).</dd>
+  </dl>
+</div></body></html>

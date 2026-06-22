@@ -1,0 +1,82 @@
+[
+  {
+    "n_features": 1,
+    "added": "m_HH",
+    "rho_degeneracy": 1.0,
+    "sigma_stat": 0.07071067811865475,
+    "sigma_profiled": 0.9027735042633912,
+    "syst_inflation": 12.76714533480373
+  },
+  {
+    "n_features": 2,
+    "added": "cos_theta*",
+    "rho_degeneracy": 0.884711779127359,
+    "sigma_stat": 0.06063390625908324,
+    "sigma_profiled": 0.12866734450008963,
+    "syst_inflation": 2.1220362077664205
+  },
+  {
+    "n_features": 3,
+    "added": "pT_HH",
+    "rho_degeneracy": 0.8959570934086618,
+    "sigma_stat": 0.05572782125753528,
+    "sigma_profiled": 0.12408996810078055,
+    "syst_inflation": 2.226714867019884
+  },
+  {
+    "n_features": 4,
+    "added": "m_bb",
+    "rho_degeneracy": 0.6769979766566635,
+    "sigma_stat": 0.05568460463897045,
+    "sigma_profiled": 0.07556697151593922,
+    "syst_inflation": 1.357053210772987
+  },
+  {
+    "n_features": 5,
+    "added": "dR_bb",
+    "rho_degeneracy": 0.6774137826667335,
+    "sigma_stat": 0.05551273816533689,
+    "sigma_profiled": 0.07537285660117242,
+    "syst_inflation": 1.3577578604875327
+  },
+  {
+    "n_features": 6,
+    "added": "m_tautau",
+    "rho_degeneracy": 0.67689249456901,
+    "sigma_stat": 0.05547001962252291,
+    "sigma_profiled": 0.07526603454937753,
+    "syst_inflation": 1.3568777343431242
+  },
+  {
+    "n_features": 7,
+    "added": "dphi_HH",
+    "rho_degeneracy": 0.6671523983643789,
+    "sigma_stat": 0.05399492471560388,
+    "sigma_profiled": 0.07239983485711074,
+    "syst_inflation": 1.3408637059584243
+  },
+  {
+    "n_features": 8,
+    "added": "dR_tautau",
+    "rho_degeneracy": 0.6652158125711429,
+    "sigma_stat": 0.05383819020581655,
+    "sigma_profiled": 0.0720232920639599,
+    "syst_inflation": 1.33777327559905
+  },
+  {
+    "n_features": 9,
+    "added": "pT_H1",
+    "rho_degeneracy": 0.6509991427508302,
+    "sigma_stat": 0.05322462954123495,
+    "sigma_profiled": 0.07005922706079236,
+    "syst_inflation": 1.3162933714083453
+  },
+  {
+    "n_features": 10,
+    "added": "pT_H2",
+    "rho_degeneracy": 0.6457962733644262,
+    "sigma_stat": 0.05263157894736842,
+    "sigma_profiled": 0.06888815706280958,
+    "syst_inflation": 1.3088749841933822
+  }
+]

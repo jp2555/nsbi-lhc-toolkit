@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 5 — The ATLAS off-shell NSBI recipe, and what changes for κλ</title>
+<style>
+  :root{--ink:#1a1a1a;--mut:#6b6b6b;--rule:#dcdcd6;--accent:#7a2d2d;--bg:#fcfcf9;--box:#f3f3ec;
+        --good:#1f6b3b;--bad:#9a3030;--blue:#234e70;}
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);margin:0;font-size:18px;line-height:1.55;
+       font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;}
+  .wrap{max-width:47rem;margin:0 auto;padding:3rem 1.4rem 5rem;}
+  h1{font-size:1.7rem;line-height:1.18;margin:.2rem 0 .3rem;}
+  h2{font-size:1.18rem;margin:2.3rem 0 .5rem;color:var(--accent);}
+  .kicker{font-variant:small-caps;letter-spacing:.12em;color:var(--mut);font-size:.82rem;}
+  .sub{color:var(--mut);font-style:italic;margin:.1rem 0 1.3rem;}
+  p{margin:.55rem 0;} a{color:var(--accent);} em{font-style:italic;}
+  .lead{font-size:1.05rem;}
+  ol.pipe{margin:.6rem 0;padding-left:1.3rem;} ol.pipe li{margin:.45rem 0;}
+  .eq{background:var(--box);border:1px solid var(--rule);border-radius:7px;padding:.8rem 1rem;margin:1rem 0;text-align:center;font-size:1.0rem;}
+  .eq small{display:block;color:var(--mut);font-size:.78rem;font-style:italic;margin-top:.4rem;}
+  table{border-collapse:collapse;width:100%;font-size:.8rem;margin:1rem 0;}
+  th,td{border:1px solid var(--rule);padding:.5rem .55rem;text-align:left;vertical-align:top;}
+  th{background:var(--box);} td:first-child{font-weight:700;white-space:normal;}
+  .steal{background:#eef3ef;border:1px solid #cfe0cf;border-radius:8px;padding:.7rem 1rem;margin:1rem 0;}
+  .steal b{color:var(--good);}
+  .note{background:#fbf4ee;border:1px solid #e6cdb3;border-radius:8px;padding:.9rem 1.1rem;margin:1.3rem 0;}
+  .hard{color:var(--bad);font-weight:600;}
+  details{background:var(--box);border:1px solid var(--rule);border-radius:6px;padding:.55rem .9rem;margin:.5rem 0;}
+  summary{cursor:pointer;font-weight:600;} details p{font-size:.92rem;}
+  .foot{margin-top:2.4rem;border-top:1px solid var(--rule);padding-top:1rem;color:var(--mut);font-size:.86rem;}
+  .pill{display:inline-block;background:var(--box);border:1px solid var(--rule);border-radius:20px;padding:.05rem .6rem;font-size:.74rem;color:var(--mut);margin-right:.3rem;}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:.85em;background:#f0f0ea;padding:0 .25em;border-radius:3px;}
+  @media(max-width:640px){body{font-size:17px}}
+  @media print{body{background:#fff}a{border:0}details,table{break-inside:avoid}}
+</style>
+</head>
+<body><div class="wrap">
+
+  <div class="kicker">Teaching · NSBI · Lesson 5</div>
+  <h1>The ATLAS off-shell NSBI recipe —<br>and what changes for κ<sub>λ</sub></h1>
+  <p class="sub">The first full NSBI measurement (ATLAS off-shell H→ZZ→4ℓ, HIGG-2023-01 / Sandesara et al. /
+  <a href="https://arxiv.org/abs/2412.01600">2412.01600</a>) is the closest template for your di-Higgs κ<sub>λ</sub>
+  analysis. Here's its systematics recipe (Sec 5), the mapping to κ<sub>λ</sub>, and where di-Higgs gets harder.</p>
+
+  <p class="lead">Design goal of their Sec 5: get nuisance-parameter dependence into a <em>per-event</em> likelihood
+  <strong>without</strong> training one giant network on ~100 NPs. The trick is <strong>factorization</strong>.</p>
+
+  <h2>1 · The recipe (Sec 5)</h2>
+  <ol class="pipe">
+    <li><strong>Reference hypothesis.</strong> Write everything relative to a fixed P<sub>ref</sub>(x)=P(x|μ=1,α=0);
+    every NN estimates a ratio to that reference. NPs enter both the Poisson rate ν(μ,α) and the unbinned density,
+    each constrained by a Gaussian term (5.1.1).</li>
+    <li><strong>Factorize the systematic dependence.</strong> Split the per-event density ratio into an
+    α-independent piece (trained once) × a systematic weight that factorizes over NPs:
+      <div class="eq">P<sub>X</sub>(x,α) = <b style="color:var(--accent)">w<sub>X</sub>(x,α)</b> · [nominal ratio],
+        &nbsp; w<sub>X</sub>(x,α) = ∏<sub>m</sub> w<sub>X</sub>(x,α<sub>m</sub>)
+        <small>each NP an independent source; each single-NP weight built by the standard HistFactory
+        polynomial-exponential interpolation — but applied <em>per event</em> (5.1.2–5.1.3)</small></div>
+    They <em>explicitly reject</em> feeding α into the NN (Cranmer-style) — un-trainable for O(100) NPs.</li>
+    <li><strong>Learn the ±1σ per-event weights.</strong> Each w<sub>X</sub>(x,α<sup>±</sup>) = P<sub>X</sub>(x|α<sup>±</sup>)/P<sub>X</sub>(x|0)
+    is itself a density ratio (varied vs nominal sample) → a <em>separate classifier</em>, trained with the same
+    cross-entropy trick: w = ŝ/(1−ŝ). <strong>Two NNs per (NP × process) → ~O(2000) networks</strong> here (5.1.4).</li>
+    <li><strong>MC-stat uncertainty as its own NP.</strong> The NN-ensemble spread <em>is</em> the training-stat
+    uncertainty (σ = σ<sub>ens</sub>/√N<sub>ens</sub>); propagate it as a single coherent nuisance α<sub>stat</sub>,
+    calibrated against the spurious spread of μ̂ (5.2).</li>
+    <li><strong>The fit.</strong> Custom <strong>JAX + iminuit</strong> (RooFit/HistFactory is binned-only): MIGRAD
+    profile fits, exact gradients/Hessian, and an <em>interference-aware</em> impact definition (implicit-function
+    theorem, not finite-difference) because interference makes the standard impact ambiguous (5.3).</li>
+  </ol>
+  <p>In one line: train the α=0 ratios once, train ~2000 ±1σ per-event systematic-weight ratios, interpolate
+  poly-exp per NP, multiply, profile in JAX. This <em>is</em> the <strong>R2</strong> approach from
+  <a href="0003-methods-expanded-and-recommendation.html">Lesson 3</a> — <em>factorized, fixed-order, two-classifiers-per-NP.</em></p>
+
+  <div class="steal"><b>Pieces worth stealing wholesale for κ<sub>λ</sub>:</b> the reference-hypothesis trick;
+  the MC-stat-as-an-NP (you're stat-starved, so you need it); and especially the
+  <b>interference-aware impact definition</b> — κ<sub>λ</sub> has the <em>same</em> interference-impact ambiguity,
+  so you'll need exactly this.</div>
+
+  <h2>2 · Mapping it to κ<sub>λ</sub> (yes, it's a baseline)</h2>
+  <p>Off-shell is the only published <em>"a coupling morphs an interference shape"</em> NSBI — structurally identical
+  to κ<sub>λ</sub>. The one substitution: their POI coefficients become the κ<sub>λ</sub> morphing basis.</p>
+  <div class="eq">
+    off-shell: &nbsp; (μ−√μ)·S + √μ·SBI + (1−√μ)·B
+    &nbsp;&nbsp;⟶&nbsp;&nbsp;
+    κ<sub>λ</sub>: &nbsp; <b>κ<sub>λ</sub>²</b>·|triangle|² + <b>κ<sub>λ</sub></b>·interference + <b>1</b>·|box|²
+    <small>same search-oriented mixture model (Eq 5.6); replace the √μ interference structure with the
+    quadratic {κ<sub>λ</sub>², κ<sub>λ</sub>, 1} from gg→HH = κ<sub>λ</sub>·triangle + box</small>
+  </div>
+  <p>Everything else — reference trick, factorized systematic weights, MC-stat NP, JAX fit — carries over directly.
+  <strong>Use it as your skeleton.</strong></p>
+
+  <h2>3 · Where di-Higgs is harder — side by side</h2>
+  <table>
+    <tr><th>aspect</th><th>ATLAS off-shell H→ZZ→4ℓ</th><th>di-Higgs HH→bb̄ττ (κ<sub>λ</sub>)</th></tr>
+    <tr><td>POI / physics</td><td>μ<sub>off-shell</sub>; ggZZ triangle–box interference</td><td>κ<sub>λ</sub>; HH triangle–box interference (same class)</td></tr>
+    <tr><td>signal observable</td><td>m<sub>4ℓ</sub> + 4ℓ kinematics, fully reconstructed</td><td>m<sub>HH</sub> (resolved 250–400); m<sub>ττ</sub> needs MMC (ν's)</td></tr>
+    <tr><td>final-state cleanliness</td><td><b>very clean</b> — 4 leptons, tiny scale systematics</td><td>b-jets + τ<sub>h</sub> + MET — large JES/τES/b-tag/fake systematics</td></tr>
+    <tr><td>dominant systematics</td><td>theory (qqZZ/ggZZ modelling, PS) — <b>separable</b> from signal shape</td><td>JES/τES/b-tag — <span class="hard">deform m<sub>HH</sub>, degenerate with κ<sub>λ</sub></span></td></tr>
+    <tr><td>backgrounds</td><td>qqZZ irreducible but MC-modelled</td><td>tt̄, DY, <b>data-driven fakes</b> (don't fit SBI densities naturally)</td></tr>
+    <tr><td>signal statistics</td><td>off-shell tail ~15% of σ, full Run-2</td><td><b>data yield</b> ~10³× smaller (intrinsic, fb-scale σ); but <b>MC/training stats ample</b> (≈500k–750k/λ) → morphing well-trained</td></tr>
+    <tr><td>POI × systematic</td><td>μ scales interference; theory ~POI-independent</td><td>κ<sub>λ</sub>-dependent theory uncertainties → <b>entangled</b></td></tr>
+    <tr><td># systematic NNs</td><td>~O(2000)</td><td>grows (more NPs: b-jet, τ, MET, fakes)</td></tr>
+    <tr><td>status</td><td><b>baseline established</b></td><td>harder on degeneracy, systematics, fakes, stats, entanglement</td></tr>
+  </table>
+  <p>The four bb̄ττ-specific hardships, in plain terms: (i) the <strong>κ<sub>λ</sub>–systematic shape degeneracy</strong>
+  is acute because JES/τES move m<sub>HH</sub> (4ℓ mostly dodges this — leptons are clean); (ii) <strong>many more,
+  larger experimental systematics</strong>; (iii) <strong>data-driven fakes</strong> have no natural per-event density;
+  (iv) far lower <strong>data</strong> signal yield (intrinsic, fb-scale σ) — though <em>ample MC</em>
+  (≈500k–750k/λ) keeps the morphing well-trained, so this actually <em>favours</em> NSBI (per-event info matters
+  most when events are few); plus (v) κ<sub>λ</sub>-dependent theory entangles
+  the systematic with the POI.</p>
+
+  <div class="note"><strong>The implication.</strong> Adopt the off-shell recipe as your <strong>foundation</strong> —
+  especially the reference trick, MC-stat-as-NP, and the interference-aware JAX impact. But its <em>factorized,
+  fixed-order, ~2000-NN morphing</em> — fine for clean 4ℓ — is exactly the part the harder bb̄ττ systematics stress.
+  That's why the plan is <strong>R2 as skeleton, with the morphing upgraded by R4 (expressive, non-factorizable,
+  fewer estimators) and R3 (honest, since you're stat-starved).</strong> Neat footnote: J. Sandesara (lead author
+  of this baseline) is also on the HistFactory-v2/GP work (R3) — the same group is already building the upgrade.</p>
+
+  <h2 id="cms">4 · How the current CMS bb̄ττ analysis does systematics — and how NSBI compares</h2>
+  <p>The CMS Run-II HH→bb̄ττ analysis (AN-18-121, Sec 9) is a <strong>binned-template / Combine</strong> fit.
+  Systematics split into <em>normalisation</em> NPs (lumi, e/μ-ID, prefiring, PU, tt̄/QCD/DY norms, background
+  cross-sections, VBF dipole-recoil, and a κ<sub>λ</sub>-dependent theory NP <code>THU_HH</code> = +4/−18% at SM)
+  and <em>shape</em> NPs. The shape mechanism (their words): <em>"for each source the relevant objects are shifted
+  up and down with all depending objects (shifting τ also shifts MET and SVfit) and the final discriminants are
+  recomputed"</em> — i.e. <strong>shift objects → re-run the (fixed, trained) DNN/multiclass → re-histogram →
+  up/down templates.</strong> The observable is the <strong>binned DNN score</strong> (Bayesian-optimised binning);
+  κ<sub>λ</sub> enters by <strong>reweighting</strong> the signal MC (the 2D m<sub>HH</sub>×cosθ* / NLO reweighting).</p>
+
+  <p><strong>The key point — and a correction to a strawman.</strong> CMS does <em>not</em> bin m<sub>HH</sub>; it bins
+  a <em>multivariate DNN score</em>, propagating systematics by re-running that DNN on varied inputs. So CMS already
+  carries the same multi-dimensional systematic information NSBI does — <strong>NSBI is <em>not</em> "exposed to more
+  systematics" than the real CMS fit.</strong></p>
+
+  <table>
+    <tr><th>axis</th><th>CMS (Sec 9, binned DNN)</th><th>NSBI (off-shell Sec 5)</th></tr>
+    <tr><td>systematic sources &amp; sizes</td><td colspan="2" style="text-align:center"><b>identical</b> — same POG/theory NPs</td></tr>
+    <tr><td>object-level propagation</td><td colspan="2" style="text-align:center"><b>same</b> — shift objects (+MET, +SVfit), recompute</td></tr>
+    <tr><td>factorization / ±1σ interp / profiling</td><td colspan="2" style="text-align:center"><b>same assumptions</b></td></tr>
+    <tr><td>κ<sub>λ</sub>-dependent theory (THU_HH)</td><td colspan="2" style="text-align:center"><b>same problem</b></td></tr>
+    <tr><td>shape systematic obtained by</td><td>re-run fixed DNN → <b>histogram</b> (counted, exact up to MC stat)</td><td><b>train</b> a per-event weight classifier (~2000 NNs) — <b>learned</b></td></tr>
+    <tr><td>observable</td><td><b>binned</b> DNN score</td><td><b>unbinned</b> per-event ratio</td></tr>
+    <tr><td>κ<sub>λ</sub> in the observable</td><td>one fixed DNN, signal reweighted</td><td><b>κ<sub>λ</sub>-optimal</b> per-event ratio R(x\|κ<sub>λ</sub>)</td></tr>
+    <tr><td>stats framework</td><td>Combine (decades-validated)</td><td>custom JAX/iminuit + Neyman (must validate)</td></tr>
+    <tr><td>template MC-stat</td><td>Barlow–Beeston / autoMCStats</td><td>ensemble-spread-as-NP (newer)</td></tr>
+  </table>
+
+  <p><strong>So the real differences are just two</strong> (not "exposure"):
+  (1) <b>counted vs learned</b> — CMS histograms its re-run DNN (no new estimation); NSBI must <em>train</em> the
+  per-event systematic weight, adding the one ML layer that can be wrong even when the physics is fine (→ what
+  validation / calibration / C2ST guard); (2) <b>what NSBI buys</b> — <b>unbinning</b> + a <b>κ<sub>λ</sub>-optimal</b>
+  ratio (CMS's DNN is a single fixed discriminant). The off-shell ~2× and FAIR-Universe ~20% gains are exactly
+  these. Everything hard and shared (κ<sub>λ</sub> theory, JES×τES factorization, QCD/fake modelling) is the same
+  either way.</p>
+
+  <div class="note" style="background:#eef0f4;border-color:#c4cede"><strong>Reframed plan.</strong> NSBI for κ<sub>λ</sub>
+  is best seen as <em>"replace CMS's binned-DNN observable with an unbinned, κ<sub>λ</sub>-optimal per-event likelihood,
+  keeping the identical systematic NPs."</em> The gain is information (unbinning + optimality); the new cost is the
+  learned morphing + coverage validation; the systematics budget carries over unchanged. The danger of
+  "worse than CMS" is the learned layer being mis-calibrated / under-validated — not a heavier systematics burden.</div>
+
+  <h2>Check yourself</h2>
+  <details><summary>1. What is the single idea that lets the off-shell analysis avoid a 100-NP network?</summary>
+    <p>Factorization: split the per-event ratio into an α-independent piece (trained once) × a product of single-NP
+    systematic weights, each built by per-event interpolation between separately-trained ±1σ ratio classifiers.</p></details>
+  <details><summary>2. Which off-shell ingredients should you copy directly for κ<sub>λ</sub>?</summary>
+    <p>The reference-hypothesis trick, MC-statistical-uncertainty-as-an-NP, and the interference-aware impact
+    definition (κ<sub>λ</sub> has the same interference ambiguity). And the mixture-model structure, with
+    {μ−√μ,√μ,1−√μ} → {κ<sub>λ</sub>²,κ<sub>λ</sub>,1}.</p></details>
+  <details><summary>3. Why is the off-shell morphing "good enough" there but stressed for bb̄ττ?</summary>
+    <p>4ℓ is clean — its big systematics (theory) are separable from the signal shape, so a fixed-order factorized
+    morphing suffices. bb̄ττ's big systematics (JES/τES) deform m<sub>HH</sub> itself (degenerate with κ<sub>λ</sub>),
+    there are far more of them, and signal stats are tiny — so the morphing quality becomes the limiting factor → R4/R3.</p></details>
+
+  <div class="foot">
+    <p><span class="pill">Series</span> <a href="0001-nsbi-systematics-field-map.html">L1 map</a> ·
+       <a href="0002-decoding-the-jargon.html">L2 jargon</a> ·
+       <a href="0003-methods-expanded-and-recommendation.html">L3 methods</a> ·
+       <a href="0004-systematics-for-kappa-lambda.html">L4 κλ capstone</a> ·
+       <a href="../reference/nsbi-systematics-glossary.html">glossary</a></p>
+    <p><b>Ask your teacher.</b> Natural next step: a concrete <em>port plan</em> — take the off-shell mixture model +
+    factorized morphing and write out the κ<sub>λ</sub> version (templates, NP list, which morphing to upgrade first)
+    against your FAIR Universe / Delphes pipeline. Say the word.</p>
+  </div>
+
+</div></body></html>

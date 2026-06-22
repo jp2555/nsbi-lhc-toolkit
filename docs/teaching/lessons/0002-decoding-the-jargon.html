@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 2 — Decoding the jargon (plain words, one example)</title>
+<style>
+  :root{--ink:#1a1a1a;--mut:#6b6b6b;--rule:#dcdcd6;--accent:#7a2d2d;--bg:#fcfcf9;--box:#f3f3ec;--good:#1f6b3b;}
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);margin:0;font-size:18px;line-height:1.55;
+       font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;}
+  .wrap{max-width:44rem;margin:0 auto;padding:3rem 1.4rem 5rem;}
+  h1{font-size:1.8rem;line-height:1.18;margin:.2rem 0 .3rem;}
+  h2{font-size:1.18rem;margin:2.2rem 0 .4rem;color:var(--accent);}
+  .kicker{font-variant:small-caps;letter-spacing:.12em;color:var(--mut);font-size:.82rem;}
+  .sub{color:var(--mut);font-style:italic;margin:.1rem 0 1.4rem;}
+  p{margin:.6rem 0;} a{color:var(--accent);}
+  .term{font-weight:700;} .term .sym{font-style:italic;color:var(--accent);font-weight:400;margin-left:.35rem;}
+  .why{color:var(--good);font-size:.92rem;} .why::before{content:"→ why it matters: ";font-style:italic;color:var(--mut);}
+  .ex{background:#eef3ef;border:1px solid #cfe0cf;border-radius:8px;padding:.9rem 1.1rem;margin:1.2rem 0;}
+  .ex b{color:var(--good);}
+  .item{margin:1.1rem 0;padding-left:.9rem;border-left:3px solid var(--rule);}
+  table{border-collapse:collapse;width:100%;font-size:.86rem;margin:1rem 0;}
+  th,td{border:1px solid var(--rule);padding:.45rem .6rem;text-align:left;vertical-align:top;}
+  th{background:var(--box);} td:first-child{font-weight:700;white-space:nowrap;font-style:italic;color:var(--accent);}
+  .eq{background:var(--box);border:1px solid var(--rule);border-radius:7px;padding:.8rem 1rem;margin:1rem 0;text-align:center;font-size:1.02rem;}
+  .foot{margin-top:2.4rem;border-top:1px solid var(--rule);padding-top:1rem;color:var(--mut);font-size:.88rem;}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:.86em;background:#f0f0ea;padding:0 .25em;border-radius:3px;}
+  @media(max-width:640px){body{font-size:17px}}
+  @media print{body{background:#fff}a{border:0}}
+</style>
+</head>
+<body><div class="wrap">
+
+  <div class="kicker">Teaching · NSBI · Lesson 2</div>
+  <h1>Decoding the jargon</h1>
+  <p class="sub">Lesson 1 threw a lot of vocabulary at once. Here's the same content rebuilt slowly,
+  around <em>one</em> example — no equations until the end, and by then it reads itself.</p>
+
+  <div class="ex">
+    <b>Our running example.</b> You want to measure <b>how much H→ττ signal</b> is in your data
+    (call that amount <i>μ</i>: μ=1 means "exactly the Standard-Model amount"). The signal sits under
+    backgrounds (Z→ττ, tt̄). One problem: the detector's <b>τ energy calibration</b> might be slightly off —
+    say by ±1%. That small mis-calibration shifts your reconstructed mass spectra, so it could be faked as,
+    or hide, signal. Everything below is about handling that.
+  </div>
+
+  <h2>Movement 1 — the setup</h2>
+
+  <div class="item">
+    <span class="term">Likelihood<span class="sym">L</span></span> — a number that says "how probable is the
+    data I observed, <em>if</em> this hypothesis were true?" You tune the hypothesis (e.g. the value of μ) to
+    make the data most probable. <span class="why">the whole measurement = find the μ that maximizes L, and ask how sharply L peaks (that's your error bar).</span>
+  </div>
+
+  <div class="item">
+    <span class="term">Likelihood ratio<span class="sym">r(x)</span></span> — for a single event <i>x</i>,
+    "how much more signal-like than background-like is it?" = (prob of x if signal) ÷ (prob of x if background).
+    A classifier score, calibrated, <em>is</em> this ratio. <span class="why">it's the per-event evidence the whole fit is built from.</span>
+  </div>
+
+  <div class="item">
+    <span class="term">Binned vs unbinned (per-event)</span> — <em>Binned</em>: histogram a variable (say m<sub>ττ</sub>)
+    and count events per bin (the classic "template" analysis). <em>Unbinned / per-event</em>: skip the histogram;
+    use each event's own likelihood ratio. NSBI is the unbinned version. <span class="why">binning throws away information; per-event keeps it — that's the point of NSBI.</span>
+  </div>
+
+  <h2>Movement 2 — systematics become "knobs"</h2>
+
+  <div class="item">
+    <span class="term">Systematic uncertainty → nuisance parameter<span class="sym">α</span></span> — a systematic
+    (the τ energy scale) is something you don't know exactly. You turn it into a <em>knob</em> <i>α</i>:
+    α=0 is your best guess, α=+1 / −1 are the "1σ off" versions. The fit is allowed to turn this knob.
+    "Nuisance" = you don't care about it, but you must account for it. <span class="why">this is the central move — every systematic is one (or more) of these α knobs.</span>
+  </div>
+
+  <div class="item">
+    <span class="term">Constraint term<span class="sym">f(a|α)</span></span> — the knob is <em>springy</em>: an
+    auxiliary measurement says "α is near 0, give or take 1," so the fit pays a penalty for turning it far from 0.
+    Usually a Gaussian pull. <span class="why">without it the fit could blame everything on systematics; the spring keeps them honest.</span>
+  </div>
+
+  <div class="item">
+    <span class="term">Anchor point<span class="sym">α<sup>(i)</sup></span></span> — a knob setting where you actually
+    ran a full simulation. Typically you only have α = 0, +1, −1 simulated. <span class="why">you know the world at a few knob settings, but the fit needs <em>every</em> setting in between.</span>
+  </div>
+
+  <h2>Movement 3 — the hard part</h2>
+
+  <div class="item">
+    <span class="term">Morphing / interpolation<span class="sym">Δ(x|α)</span></span> — the recipe for "what does the
+    data distribution look like at knob value α=0.37, when I only simulated 0 and ±1?" You <em>morph</em> (smoothly
+    interpolate) the distribution between the anchor points. Δ(x|α) is exactly that deformation, event by event.
+    <span class="why">this is <b>the</b> hard object of the whole field — it has no known formula, and α can be hundreds of knobs at once. Lesson 1's "five methods" are five ways to build Δ.</span>
+  </div>
+
+  <div class="item">
+    <span class="term">Surrogate</span> — the true Δ(x|α) is <em>intractable</em> (you can't write it down or
+    compute it exactly), so you train a neural network to <em>stand in</em> for it. The net is the surrogate.
+    <span class="why">"learned surrogate for an intractable density ratio" = the one-line definition of NSBI.</span>
+  </div>
+
+  <div class="item">
+    <span class="term">Calibration</span> — a classifier's raw output (0.83) is only useful if it's a <em>truthful
+    probability</em> (events scoring 0.83 really are signal 83% of the time). Calibration (e.g. isotonic regression)
+    fixes this. <span class="why">if the surrogate isn't calibrated, the fit is biased — Lesson 1 noted dropping it caused a 0.3–0.4 bias on μ.</span>
+  </div>
+
+  <h2>Movement 4 — getting the answer</h2>
+
+  <div class="item">
+    <span class="term">Profiling / profile likelihood</span> — when you quote your result on μ, you let every
+    nuisance knob α float to whatever value best fits the data (paying its spring penalty). "Profile over the
+    nuisances" = optimize them away at each μ. <span class="why">this is how systematics "cost" you: floating the knobs widens your error bar on μ.</span>
+  </div>
+
+  <div class="item">
+    <span class="term">Test statistic & confidence interval<span class="sym">t<sub>μ</sub></span></span> —
+    t<sub>μ</sub> = −2 × (log-likelihood drop) as you move μ away from its best value, after profiling. Your
+    <b>68% confidence interval</b> is the range of μ where t<sub>μ</sub> ≤ 1 (95% where ≤ 3.84).
+    <span class="why">the number you ultimately report ("μ = 1.00 ± 0.17") comes straight from this curve. Smaller interval = better measurement.</span>
+  </div>
+
+  <div class="item">
+    <span class="term">Factorizable vs non-factorizable</span> — <em>Factorizable</em>: each knob acts on its own,
+    so the total effect is just the product of single-knob effects (the convenient assumption). <em>Non-factorizable</em>:
+    knobs interact (turning JES changes what turning TES does). <span class="why">the newer methods (GP, refinable) can handle interacting knobs; older ones assume they don't interact.</span>
+  </div>
+
+  <h2>Now re-read the Lesson&nbsp;1 equation</h2>
+  <div class="eq">
+    P(x | η, χ) ∝ ∏<sub>events</sub> [ Σ<sub>samples</sub> ν · κ · <b style="color:var(--accent)">Δ(x|α)</b> · P<sub>s</sub>(x) ] · ∏ constraints
+  </div>
+  <table>
+    <tr><th>Symbol</th><th>In plain words</th></tr>
+    <tr><td>∏ events</td><td>"multiply over every event" — this is the per-event (unbinned) part</td></tr>
+    <tr><td>Σ samples</td><td>"add up the processes" — signal + each background</td></tr>
+    <tr><td>ν, κ</td><td>how many events each process gives (rates: luminosity, cross-section, the signal amount μ)</td></tr>
+    <tr><td>Δ(x|α)</td><td><b>the morphing</b> — how this event's probability bends as you turn the systematic knobs α (the hard, learned part)</td></tr>
+    <tr><td>P<sub>s</sub>(x)</td><td>the baseline per-event probability density for process s</td></tr>
+    <tr><td>∏ constraints</td><td>the springs holding each knob α near its nominal value</td></tr>
+    <tr><td>η, χ</td><td>η = what you want (μ, κ<sub>λ</sub>); χ = the nuisance knobs you profile away</td></tr>
+  </table>
+  <p>Read aloud: <em>"the probability of all the data = multiply over events, of (sum over processes of: how many × how-the-shape-bends-with-the-knobs × baseline density), times the springs on the knobs."</em> That's the entire model.</p>
+
+  <div class="foot">
+    <p><b>The one win from this lesson:</b> you can now read that equation in English, and you know that
+    <b>Δ(x|α) — the morphing — is the thing every method is fighting over.</b></p>
+    <p>Back to <a href="0001-nsbi-systematics-field-map.html">Lesson 1</a> (it should make sense now) ·
+       quick lookups in the <a href="../reference/nsbi-systematics-glossary.html">glossary</a>.</p>
+    <p><b>Ask your teacher.</b> Tell me <em>which specific terms still feel fuzzy</em> and I'll go slower on those —
+    or I can draw the τ-energy-scale example as an actual before/after picture if a visual would help.</p>
+  </div>
+
+</div></body></html>

@@ -1,0 +1,387 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{enumitem}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black,citecolor=blue!50!black]{hyperref}
+
+\newtcolorbox{takeaway}[1][]{colback=yellow!12,colframe=orange!70!black,
+  title={#1},fonttitle=\bfseries,boxrule=0.6pt,arc=2pt,left=4pt,right=4pt,top=3pt,bottom=3pt}
+\newtcolorbox{keybox}[1][]{colback=blue!4,colframe=blue!40!black,
+  title={#1},fonttitle=\bfseries,boxrule=0.6pt,arc=2pt,left=4pt,right=4pt,top=3pt,bottom=3pt}
+
+\newcommand{\kl}{\ensuremath{\kappa_\lambda}}
+\newcommand{\mhh}{\ensuremath{m_{HH}}}
+\newcommand{\bbtt}{\ensuremath{b\bar b\tau\tau}}
+\newcommand{\ptt}{\ensuremath{p_{\mathrm T}}}
+\newcommand{\A}{\textsc{a}} % ATLAS tag
+\newcommand{\Cms}{\textsc{c}} % CMS tag
+\newcommand{\pA}[1]{\textcolor{gray}{\small[ATLAS p.\,#1]}}
+\newcommand{\pC}[1]{\textcolor{gray}{\small[CMS p.\,#1]}}
+\setlist{itemsep=2pt,topsep=3pt}
+
+\title{\vspace{-2.5em}New challenges for an NSBI measurement of \kl\ in HH$\to\bbtt$,\\
+relative to the first NSBI measurement (ATLAS off-shell $H\to ZZ\to4\ell$)}
+\author{\normalsize\itshape working note --- draft for discussion}
+\date{20 June 2026}
+
+\begin{document}
+\maketitle
+\vspace{-1.6em}
+
+\begin{takeaway}[Scope \& one-line conclusion]
+This compares the systematics and background handling of the \textbf{first full NSBI measurement}
+(ATLAS off-shell $H\to ZZ\to4\ell$; note HIGG-2023-01 = arXiv:2412.01600, Sandesara \emph{et al.}) with what a
+\textbf{\kl\ measurement in HH$\to\bbtt$} must do (baselined on CMS AN-18-121, Amendola \emph{et al.}). The NSBI
+\emph{skeleton} transfers directly; the new difficulty is almost entirely in the \emph{inputs}: \bbtt\ has a far
+messier final state, several \textbf{data-driven backgrounds with no per-event MC density} (QCD, jet$\to\tau$
+fakes), an \textbf{irreducible same-final-state single-Higgs background}, an order of magnitude more (and larger)
+\textbf{experimental systematics that deform the very observable (\mhh) carrying the \kl\ signal}, and a
+\textbf{\kl-dependent theory uncertainty}. None of these are NSBI-specific --- they hit any method --- but several
+sit awkwardly inside a per-event density-ratio framework in ways the clean, all-MC off-shell analysis never faced.
+Page references to both notes are given inline.
+\end{takeaway}
+
+\section{The two measurements and the shared NSBI skeleton}
+\textbf{ATLAS off-shell} \pA{1,5}: measures the off-shell signal strength $\mu_{\text{off-shell}}$ (hence the Higgs
+width) in $gg\to(H^*\to)ZZ\to4\ell$, using $139\,\mathrm{fb}^{-1}$. The physics is a \emph{coupling that morphs an
+interference shape} (triangle--box in $ggZZ$). \textbf{CMS HH$\to\bbtt$} \pC{3,4}: searches for non-resonant HH via
+ggF+VBF in \bbtt\ ($\mathcal B=7.3\%$), $137.6\,\mathrm{fb}^{-1}$, three $\tau\tau$ channels
+($\tau_e\tau_h,\tau_\mu\tau_h,\tau_h\tau_h$, plus boosted), extracting \kl\ (and $k_{2V},k_V$). $\sigma_{ggF}^{HH}=
+31.05^{+2.2}_{-5.0}\%$ fb, $\sigma_{VBF}^{HH}=1.726$ fb \pC{4}.
+
+\noindent\textbf{What transfers (the skeleton).} The ATLAS recipe (Sec.\,5) is reusable wholesale: a
+reference-hypothesis $P_{\mathrm{ref}}$ so all NNs estimate ratios to a fixed point; a search-oriented
+\emph{mixture model} for signal/interference/background; nuisance parameters in both the rate and the per-event
+density; a profile-likelihood test statistic in a custom \textsc{jax}+\textsc{iminuit} fit; and an
+interference-aware impact definition \pA{89,90}. The off-shell interference structure
+$(\mu-\sqrt\mu)\,S+\sqrt\mu\,\mathrm{SBI}+(1-\sqrt\mu)\,B$ \pA{81} maps onto the \kl\ morphing basis
+$\{\kl^2,\kl,1\}$ (since $gg\to HH=\kl\cdot\mathrm{triangle}+\mathrm{box}$). \emph{The challenges below are about the
+inputs to this skeleton, not the skeleton itself.}
+
+\section{Physics / parameter-of-interest challenges}
+\begin{itemize}
+\item \textbf{The POI lives in a shape, and that shape is \mhh.} \kl\ sensitivity is concentrated in the \mhh\
+  spectrum (triangle--box interference), strongest in the resolved regime $\mhh\in[250,400]$ GeV. CMS encodes the
+  \kl\ dependence by \emph{reweighting} the signal MC --- a 2D $(\mhh,|\cos\theta^*|)$ LO reweighting and a
+  dedicated NLO reweighting for the final extraction \pC{6}. In NSBI this becomes the $R(x|\kl)$ factor.
+\item \textbf{Multiple correlated POIs / EFT directions.} Beyond \kl\ the analysis also probes $k_{2V},k_V$ and
+  HEFT operators ($c_2,c_{2g},c_g$) \pC{4}; the off-shell measurement is effectively one POI. More POIs $\Rightarrow$
+  a higher-dimensional morphing.
+\item \textbf{$k_{2V}$ sensitivity lives in the high-\mhh\ VBF tail --- where binning hurts most.} The $HHVV$
+  contact term grows with energy unless $k_{2V}=1$, so VBF-HH $k_{2V}$ sensitivity is concentrated in the
+  high-\mhh\ tail; current analyses use only $\sim$4--5 bins there. This is precisely the regime where coarse
+  binning discards the most information, so the unbinned NSBI gain is largest on the $k_{2V}$ (and the low-\mhh\
+  \kl) shape directions. ($k_{2V}$ is now the best-measured ``inaccessible'' coupling --- the 2026 ATLAS+CMS
+  combination gives $k_{2V}\in[0.73,1.3]$.)
+\item \textbf{Interference impact ambiguity (shared, but worse).} Both have interference, so the
+  finite-difference NP-impact definition is ambiguous; ATLAS replaces it with a local implicit-function-theorem
+  impact \pA{90}. \kl\ needs the same fix.
+\end{itemize}
+
+\section{Final state and reconstruction}
+The off-shell $4\ell$ final state is \emph{exquisitely clean}: four leptons, fully reconstructed, with tiny
+energy-scale systematics and no jets/MET/$\tau$/$b$-tagging in the core. \bbtt\ is the opposite:
+\begin{itemize}
+\item \textbf{$b$-jets} (JES/JER, $b$-tagging) + \textbf{hadronic $\tau$} ($\tau$-ID, $\tau$ energy scale) +
+  \textbf{MET} (the $\tau$ neutrinos). The $\tau\tau$ mass is \emph{not} fully reconstructed --- it requires an
+  algorithm (SVfit); shifting $\tau$ energy shifts MET \emph{and} SVfit coherently \pC{93}.
+\item \textbf{Three channels} with different background compositions and systematics, plus a boosted regime.
+\end{itemize}
+Consequence: the observable $x$ for \bbtt\ is softer and carries many more systematic ``handles'' than $4\ell$.
+
+\section{Background handling --- the largest qualitative difference}
+\begin{keybox}[The crux]
+Off-shell backgrounds are \textbf{all MC-based and clean} (one dominant irreducible $q\bar q ZZ$ continuum, modelled
+in simulation, plus EW). \bbtt\ backgrounds are a \textbf{zoo, several of them data-driven}, and \emph{data-driven
+backgrounds have no per-event MC probability density} --- which is the object NSBI needs. This is the single
+hardest conceptual mismatch between \bbtt\ and the off-shell NSBI template.
+\end{keybox}
+
+\noindent\textbf{ATLAS off-shell (Sec.\,2.5, Sec.\,5).} The dominant background is the irreducible $q\bar q\to
+ZZ\to4\ell$ continuum, which \emph{interferes} with the signal and is carried in the mixture model as a component
+$\mu_{q\bar qZZ}$ (three floating NPs) constrained \emph{in situ} by a dedicated $n_{\text{jets}}$ discriminant in a
+control region \pA{81}. Plus a small EW component. Everything is MC, so every process has a per-event density the
+NSBI ratios can target.
+
+\noindent\textbf{CMS \bbtt\ (Sec.\,7).} A heterogeneous set, with the two largest estimated \emph{from data}:
+\begin{itemize}
+\item \textbf{QCD multijet --- data-driven ABCD} \pC{61,62}. Four regions in (charge $\times$ $\tau$-isolation);
+  shape from region C (data minus other-MC), yield from $C\times B/D$. The QCD \emph{normalisation} uncertainty
+  ranges \textbf{5--100\%} by category (Table 30, \pC{92}); its \emph{shape} uncertainty (alternative B-vs-C
+  templates, symmetrised) is \textbf{one of the highest-ranking nuisances} in the most sensitive
+  $\tau_h\tau_h$ channel \pC{91,96,97}.
+\item \textbf{Drell--Yan ($Z$+jets) --- MC normalised by 18 data-driven scale factors} \pC{63}. A simultaneous fit
+  of $M(\mu\mu)$ across \textbf{18 control regions} (3 $b$-jet multiplicities $\times$ 6 $Z$-\ptt\ bins), giving 18
+  normalisation SFs ($\sim$0.6--1.7) \emph{and} 18 shape templates (scaled $\pm$) propagated with their covariance
+  \pC{65,94}.
+\item \textbf{$t\bar t$ --- MC shape + data-driven normalisation SF} \pC{79}. A dedicated CR (inverted elliptical
+  $(\mhh)$ mass cut, Eq.\,22) with $<7\%$ contamination; \textsc{combine} fit with Barlow--Beeston gives
+  $\text{ttSF}\approx0.91$--$0.99$ \pC{81,82}; the shape is taken from MC (no shape dependence observed).
+\item \textbf{Jet$\to\tau$ fakes --- data-driven} \pC{94,95}. $>93\%$ of the events with a jet faking a $\tau$;
+  fake-rate uncertainty per region (barrel 24/13/11\%, endcap 28/18/25\% by year, Table 33), applied as an
+  event weight.
+\item \textbf{Single Higgs --- irreducible, same final state} \pC{82}. ggH, VBF$H$, $VH$, $t\bar tH$ with $H\to
+  b\bar b$ or $\tau\tau$ mimic the signal; modelled from MC. (Note: $t\bar tH$/$VH$ couplings make this a
+  \emph{coupling-dependent} background.)
+\item \textbf{Di-/tri-boson, $W$+jets, single-$t$, $V$+2jets --- MC} \pC{82}.
+\end{itemize}
+
+\begin{takeaway}[Why this is a new, NSBI-specific difficulty]
+\begin{enumerate}[leftmargin=1.4em]
+\item \textbf{No density for data-driven backgrounds.} QCD (ABCD) and jet$\to\tau$ fakes are estimated as
+  \emph{yields/weights from data control regions}, not as simulated events with a per-event probability. NSBI's
+  per-event likelihood ratio $P_X(x)/P_{\mathrm{ref}}(x)$ is undefined for them. Folding an ABCD/fake estimate into
+  an \emph{unbinned} per-event likelihood is an open problem the off-shell analysis never had to solve (its one big
+  background was MC). Options (all imperfect): treat QCD/fakes only in a binned auxiliary term; build a surrogate
+  density from the control-region data; or restrict NSBI to the MC-modelled part and bin the rest.
+\item \textbf{The QCD shape systematic is a top-ranked nuisance} \pC{91} --- and it is intrinsically
+  \emph{asymmetric/ill-defined} (one alternative template used for both up and down), forcing a symmetrisation
+  hack \pC{96,97}. Carrying that into a per-event morphing is non-trivial.
+\item \textbf{Single Higgs is an irreducible, coupling-dependent background} in the same final state --- it must be
+  modelled \emph{and} morphed consistently with the signal couplings, with its own (correlated) theory systematics.
+\item \textbf{Many background-normalisation NPs are themselves data-fit results} (18 DY SFs with a covariance,
+  ttSF, QCD $B/D$) --- these are constrained \emph{in situ} in the binned CMS fit; reproducing that constraint
+  inside an unbinned NSBI fit requires the CRs to be represented in the per-event likelihood too.
+\end{enumerate}
+\end{takeaway}
+
+\subsection*{A workaround: flow-based data-driven backgrounds (ABCDnn)}
+The ``no per-event density'' problem is the sharpest objection to NSBI here, but it is \emph{not} a dead end ---
+there is a demonstrated solution. \textbf{ABCDnn} (Choi, Lim, Oh, arXiv:2008.03636) generalises the ABCD method
+with a \emph{neural autoregressive flow} that learns the full multi-dimensional CR$\to$SR transformation,
+conditioned on the discriminating observables. Where standard ABCD gives only a scalar SR yield
+($N_D=N_B N_C/N_A$), ABCDnn gives a full \emph{differential} background distribution $p_{\rm QCD}(x)$ --- which can
+then be turned into a density ratio $r_{\rm QCD}(x)=p_{\rm QCD}(x)/p_{\rm ref}(x)$ by training a classifier between
+flow-generated events and the pooled reference, so it enters the NSBI likelihood \emph{on the same footing} as the
+MC-derived ratios.
+
+\noindent\textbf{The concrete production example} (S.~An, Dutta/Paulini, CMU PhD thesis 2025, Ch.\,5): the CMS
+\emph{all-hadronic four-top} search, Run-2 ($137\,\mathrm{fb}^{-1}$, 13 TeV) + Run-3 ($62\,\mathrm{fb}^{-1}$,
+13.6 TeV), reaching an \textbf{observed (expected) significance of $3.95\,(1.65)\,\sigma$}, $\mu=2.7^{+1.1}_{-0.9}$.
+Its single most important design choice is a \textbf{yield/shape split} of the dominant $t\bar t$+jets and QCD
+backgrounds:
+\begin{itemize}
+\item \emph{Yield} $\leftarrow$ \textbf{ExtendedABCD}: standard ABCD in $(N_{\rm jets},N_{b})$ \emph{fails} here
+  (the factorisation breaks at high multiplicity --- off by $\sim$18--19.5\% in closure); adding two extra
+  sidebands restores it to $\sim$1--7\% (their $\hat F_D=(F_BF_C/F_A)^2(F_X/F_BF_Y)$, Table 5.1--5.2). The lesson:
+  \emph{get the normalisation from a robust closed-form estimator with enough sidebands, not from the flow.}
+\item \emph{Shape} $\leftarrow$ \textbf{ABCDnn} (a neural autoregressive flow): it learns a transformation that
+  \emph{morphs the $t\bar t$ MC into the data-driven $t\bar t$+QCD estimate} (target $=$ data $-$ signal $-$ minor
+  bkg per CR), trained by minimising \textbf{Maximum Mean Discrepancy} and \emph{conditioned on the CR position
+  $(N_{\rm jets},N_b)$}, then applied to $t\bar t$ MC in the SR. Notably it never uses QCD MC (too few SR events) ---
+  the flow turns pure-$t\bar t$ MC into an effective $t\bar t$+QCD mixture.
+\end{itemize}
+Three training tricks they found necessary (worth copying): \textbf{loss-weighted CR sampling} (sample harder CRs
+more often, $\propto e^{\rm loss}$, so every region is learned uniformly); \textbf{continuous $(N_{\rm jets},N_b)$
+conditioning} instead of one-hot labels, so the flow \emph{interpolates smoothly} across CRs --- this is what makes
+the CR$\to$SR \emph{extrapolation} well-behaved; and a \textbf{warm-up} (pre-train near identity, RealNVP-style) for
+stable convergence.
+
+\noindent\textbf{Application to \bbtt:} the \textbf{jet$\to\tau$ fakes} are the natural target --- a fake-factor
+method is conceptually an ABCD with $\tau$-ID inversion as the second axis, so an ABCDnn conditioned on
+$(p_{\rm T}^\tau,\eta^\tau)$ could learn the full fake-$\tau$ kinematic shape instead of the current coarse 2D
+fake-factor binning; the QCD multijet is the other target; and for $t\bar t$ the flow can serve as a data-driven
+shape cross-check. Following the four-top lesson, keep the \textbf{yield/shape split}: take the fake-$\tau$/QCD
+\emph{normalisation} from the existing fake-factor/ABCD machinery (which CMS already trusts, \pC{61,94}) and use
+ABCDnn only for the differential \emph{shape}, then convert that shape to a per-event ratio $r(x)$ for the
+likelihood. A fully realised \bbtt-NSBI would use \emph{ABCDnn shapes (with ABCD/fake-factor yields) for QCD/fakes,
+MC ratios for the MC-modelled components ($Z$+jets, $t\bar t$, single-$H$, diboson), and one unbinned NSBI
+likelihood combining both} --- removing the main caveat that NSBI ``depends on MC where MC is wrong.''
+
+\noindent\textbf{But the generic caveats remain:} (i) \emph{extrapolation distance} --- the CR$\to$SR map strains for
+tight SRs far from the sidebands in tagger/isolation space (multiple overlapping CRs validate it but cost stats);
+(ii) \emph{uncertainty propagation} --- the four-top analysis does \emph{not} bootstrap the flow; it splits the
+uncertainty into three data-driven nuisances (thesis Sec.\,6.1, Table 6.1): the \emph{finite-CR-statistics} piece
+is a $\ln$N normalisation NP propagated through the ABCD formula (``statistics of extendedABCD,'' 4--26\%); the
+\emph{normalisation-modelling} piece is a $\ln$N NP from a validation-region (VR) data-vs-prediction closure
+(weighted-mean deviation $1-\langle f\rangle$ $+$ weighted RMS of $f=N_{\rm data}/N_{\rm pred}$, 6--44\%); and the
+\emph{ABCDnn shape} uncertainty is a shape NP implemented as a \emph{linear shift of the discriminant}, with the
+shift size chosen by \emph{minimising a quantitative data/pred-agreement metric} in the VR (floor 1\%, correlated
+across $H_T$, uncorrelated across years). The whole uncertainty-\emph{estimation} procedure is itself validated in a
+dedicated orthogonal ``closure-test region'' that checks pred$+$syst covers truth in the SR. \emph{Caveat for NSBI:}
+this VR-closure shape nuisance (``shift the discriminant'') is a \emph{binned-fit} construct; in an unbinned NSBI it
+becomes yet another per-event morphing nuisance on the ratio $r(x)$ --- i.e.\ the same learned-morphing problem,
+now applied to the data-driven component; (iii) \emph{signal contamination in CRs}
+--- if signal leaks into the control region the flow learns ``background $+$ signal'' and biases the SR low,
+requiring iterative CR definitions with signal subtraction (this caveat is \emph{mild} for \bbtt: the HH signal
+is tiny in the fake-$\tau$/QCD control regions, just as the SM four-top signal was negligible in its CRs); (iv) \emph{no theory handle} --- the flow gives a shape
+but no ME$+$PS$+$PDF decomposition, so generator-level theory uncertainties on the background cannot be propagated
+and are replaced by a data-driven CR$\to$SR closure systematic.
+
+\noindent\textbf{The one caveat specific to using ABCDnn \emph{for NSBI} (the real gap).} In the four-top thesis
+the flow models only a \emph{low-dimensional} target --- the event-level BDT discriminant plus $H_T$ (two
+variables) --- because the downstream fit is a \emph{binned template} fit of that discriminant. NSBI needs the
+opposite: the \emph{full per-event density} over the whole feature vector, so the data-driven shape can become a
+per-event ratio $r(x)$. So the four-top result proves flows can deliver a data-driven background \emph{shape of a
+summary observable}; extending that to the full-dimensional per-event density an unbinned NSBI consumes is a genuine
+step beyond what is demonstrated --- a higher-dimensional flow, harder to train and validate. The conservative
+intermediate is to let ABCDnn produce the data-driven shape of the \emph{NSBI discriminant} (the per-event
+log-ratio summed over components), i.e.\ treat QCD/fakes as a binned component of an otherwise-unbinned likelihood
+--- exactly the ``keep QCD binned, NSBI-fy the MC components'' compromise.
+
+\noindent\emph{Net: ABCDnn downgrades the data-driven-background problem from ``open'' to ``solved-with-caveats''
+for a \emph{binned} discriminant shape; the fully-unbinned version is a worthwhile but unproven sub-project for a
+\bbtt-NSBI pilot.}
+
+\section{Systematics handling}
+\textbf{What is genuinely shared} (equal for both, and equally fallible): the \emph{sources and $\pm1\sigma$ sizes}
+of the NPs; the \emph{object-level propagation} (shift the object and all dependents --- e.g.\ $\tau\Rightarrow$
+MET$\Rightarrow$SVfit --- and recompute the discriminant, \pC{93}); the \emph{factorisation over NPs} and
+$\pm1\sigma$ \emph{interpolation}; \emph{Gaussian-constrained profiling}; and the \emph{\kl-dependent theory}
+treatment. ATLAS builds the per-event systematic weight as $P_X(x,\alpha)=w_X(x,\alpha)\,P_X(x,0)$ with
+$w_X(x,\alpha)=\prod_m w_X(x,\alpha_m)$, each single-NP weight interpolated poly-exp between $\pm1\sigma$ classifier
+estimates \pA{83,84}. CMS does the per-\emph{bin} analogue (re-run the DNN on varied inputs $\to$ template).
+
+\medskip\noindent\textbf{What is harder for \kl/\bbtt:}
+\begin{enumerate}[leftmargin=1.4em]
+\item \textbf{\kl--systematic shape degeneracy.} The dominant experimental systematics (JES, $\tau$ES, MET, signal
+  parton shower) deform \emph{the same \mhh\ shape} that carries \kl. In $4\ell$ the big systematics (theory) are
+  largely \emph{separable} from the signal shape; in \bbtt\ they are not. Decorrelation is therefore impossible
+  (it would erase the signal), forcing the ``model-it'' route --- so the accuracy of the morphing
+  $\Delta(x|\alpha)$ \emph{directly sets} the \kl\ uncertainty. (A Fisher-information toy gives, schematically,
+  a $\sim$13$\times$ systematic inflation from $\mhh$ alone collapsing to $\sim$1.3$\times$ with the full feature
+  set --- the degeneracy is broken by dimensionality, not avoided.)
+\item \textbf{An order of magnitude more, and larger, experimental NPs} \pC{90--97}: JES split into a reduced set
+  of \textbf{11 sources} with a year-correlation scheme \pC{95}; \textbf{$\tau$ES} \ptt-dependent with 4 decay-mode
+  components \pC{94}; \textbf{$b$-tag} 5 components (hf, lf, hfstats, lfstats, cferr) \pC{96}; \textbf{DeepTau}
+  vsJet (5 \ptt\ bins) + vsEle (2 $\eta$ bins) \pC{95,96}; trigger SFs, JER, PU-jet-ID, L1 prefiring, $e/\mu\to\tau$
+  fake ES. The off-shell analysis has comparatively few, small (lepton) experimental NPs. Each NP is another
+  per-event weight to learn ($\sim$2000 NNs already in off-shell $=2\times$NP$\times$process; \bbtt\ grows this).
+\item \textbf{Data-driven background systematics that don't fit the density-ratio picture}: the QCD norm (5--100\%)
+  and high-ranking QCD shape \pC{91,92,96,97}, the 18 DY SF shape/norm templates \pC{94}, the jet$\to\tau$ fake-rate
+  uncertainties (11--28\%, Table 33) \pC{95}, the VBF dipole-recoil PS uncertainty (20--70\%, Table 32) \pC{93}.
+  These are template/weight constructs, not deformations of an MC density.
+\item \textbf{\kl-dependent theory uncertainty (POI$\times$systematic entanglement).} The HH scale/PDF/$m_t$
+  uncertainties are folded into a normalisation NP \texttt{THU\_HH} $=+4\%/-18\%$ at the SM point that becomes a
+  \emph{\kl-dependent} uncertainty across the scan \pC{91}. The off-shell $\mu$ does not entangle with its theory
+  uncertainty this way. Capturing it requires non-factorisable (POI-coupled) morphing.
+\item \textbf{Factorisation is more likely to break.} $w_X=\prod_m w_X(\alpha_m)$ assumes NPs are independent
+  sources \pA{83}; but JES and $\tau$ES \emph{both} feed \mhh\ ($=m(b\bar b+\tau\tau)$), so a genuine cross-term
+  exists in \bbtt\ that is benign in clean $4\ell$.
+\item \textbf{MC-statistical uncertainty of the learned ratios.} ATLAS propagates it as one NP via the
+  NN-ensemble spread \pA{86,87}; CMS uses Barlow--Beeston per bin. With far smaller \emph{systematic-variation}
+  samples in \bbtt, this term is more important (the nominal MC, $\approx$500k--750k/\kl-point, is ample for
+  training; the binding constraint is the least-populated $\pm1\sigma$ sample).
+\end{enumerate}
+
+\medskip\noindent\textbf{Two systematics that NSBI actually handles \emph{better} than templates.} Worth stating
+the upside too: (a) \emph{parton-shower / generator} uncertainties (Pythia vs.\ Herwig, ISR/FSR) are a natural fit
+--- a \textbf{CARL/DCTR}-style reweighting network learns the per-event weight between alternative showers, which is
+then profiled as a nuisance; this is strictly more powerful than the current ``shape envelope over generator
+variations'' and is the in-likelihood cousin of the RS3L robust-representation idea. (b) $b$-tag / $\tau$-ID scale
+factors can be \emph{absorbed} into the density ratio and calibrated in situ against a standard candle (the
+$VZ(c\bar c)$/$Z\to b\bar b$ peak trick), turning the POG SF program into an external cross-check rather than the
+primary constraint. So the systematics ledger is not all cost: \emph{the morphing-heavy ones (JES/$\tau$ES on
+\mhh) are the burden; the modelling ones (shower, flavour-tagging) are where NSBI's per-event treatment is an
+asset.}
+
+\section{Statistics and inference}
+\begin{itemize}
+\item \textbf{Data signal yield is tiny and intrinsic.} $\sigma\times\mathcal B\sim2.5$ fb $\Rightarrow$
+  $\mathcal O(10$--$100)$ selected signal events (Run-2 to HL-LHC), under large backgrounds --- vs the off-shell
+  tail at $\sim$15\% of $\sigma$. This is unchanged by MC and keeps the measurement systematics-comparable. (It is
+  also the regime where NSBI's per-event information helps \emph{most}.)
+\item \textbf{MC/training stats are ample} ($\approx$500k--750k per \kl\ point), so the morphing/ratio NNs are
+  well-trained --- the ``under-determined morphing'' worry applies to the \emph{systematic-variation} samples, not
+  the nominal.
+\item \textbf{Validation \& coverage.} CMS inherits decades-validated \textsc{combine} (asymptotics + toys +
+  Barlow--Beeston). NSBI needs a custom \textsc{jax}/\textsc{iminuit} fit with an explicit Neyman construction and
+  ratio-quality diagnostics (C2ST-like) built and validated from scratch \pA{64,89}.
+\end{itemize}
+
+\section{Synthesis: could the NSBI \kl\ result be \emph{worse} than the CMS fit?}
+Reading what CMS \emph{actually} does removes a strawman: CMS does \textbf{not} bin \mhh; it bins a
+\textbf{multivariate DNN score} (shape systematics propagated by re-running the DNN on varied inputs, \pC{93}). So
+CMS already carries the same multi-dimensional systematic information NSBI does --- \textbf{NSBI is not ``exposed to
+more systematics'' than the real CMS baseline.} Against CMS-as-done, the comparison reduces to:
+\begin{itemize}
+\item \textbf{What NSBI buys:} \emph{unbinning} (no information lost to binning the score) and a \emph{\kl-optimal}
+  per-event ratio (CMS's DNN is one fixed discriminant, not optimal at every \kl). These are the off-shell
+  $\sim$2$\times$ / FAIR-Universe $\sim$20\% gains.
+\item \textbf{What NSBI costs:} a \emph{learned} morphing layer (NSBI must \emph{train} the per-event systematic
+  weight; CMS \emph{counts} its re-run-DNN template, exact up to MC stat) and the \emph{custom coverage
+  validation}. The danger of ``worse than CMS'' is the \emph{learned layer being mis-calibrated / under-validated}
+  --- producing a tighter-but-mis-covering interval --- not a heavier systematics burden.
+\item \textbf{The genuinely new \bbtt\ problem is the data-driven backgrounds} (Sec.\,4): if QCD/fakes cannot be
+  given a faithful per-event density, the unbinned NSBI may have to bin them anyway, partially eroding its
+  advantage in exactly the most sensitive channel.
+\end{itemize}
+Protections (so the worst case is ``$\approx$ CMS,'' not ``worse and unknown''): honest morphing uncertainty
+(GP-style); explicit coverage validation; and \textbf{binning the NSBI discriminant as a built-in cross-check}
+(the binned fit is a coarsening of NSBI, so a regression is detectable and you fall back).
+
+\begin{takeaway}[Two honest scope caveats on the gain]
+\textbf{(1) NSBI does not improve the SM-HH \emph{observation significance}.} A non-interfering
+signal-vs-background rate is already near-saturated by a good classifier, so NSBI buys little on ``did we see HH?'';
+its gain is in the \emph{parameter constraint} on \kl/$k_{2V}$ (the shape directions). The HH \emph{discovery}
+timeline ($3\sigma$ expected only at $\sim$3 ab$^{-1}$) is set by luminosity, not by the inference method.
+\textbf{(2) Not every degeneracy is shape-type.} The $\kappa_t\!\leftrightarrow\!\kl$ and $k_V\!\leftrightarrow\!
+k_{2V}$ correlations are broken mainly by \emph{rates} ($t\bar tH$, single-$H$), which a binned combination also
+exploits --- so NSBI's per-event advantage there is sub-dominant. NSBI's edge is concentrated on the
+\emph{shape and correlated-operator} directions (low-\mhh\ \kl\ interference, high-\mhh\ $k_{2V}$ tail, the
+correlated SMEFT operators $O_{tG},O_{H\Box},O_{HD},O_H$), not the rate-broken ones (cf.\ Bahl \emph{et al.},
+arXiv:2509.05409, whose $\sim$2$\times$ di-boson gain is itself measured against a baseline that already combines
+channels).
+\end{takeaway}
+
+\section{Summary of new challenges}
+\begin{table}[h]\centering\small
+\begin{tabular}{@{}p{0.26\textwidth}p{0.32\textwidth}p{0.34\textwidth}@{}}
+\toprule
+ & \textbf{ATLAS off-shell $4\ell$} & \textbf{\kl\ in HH$\to\bbtt$ (new challenge)} \\
+\midrule
+POI & $\mu_{\text{off-shell}}$ (1 POI) & \kl\ ($+k_{2V},k_V$, EFT); shape in \mhh \\
+Final state & 4 leptons, fully reco, clean & $b$-jets+$\tau_h$+MET; SVfit; 3 channels \\
+Backgrounds & one MC $q\bar qZZ$ (interfering), CR-constrained & QCD (ABCD), DY (18-CR SFs), $t\bar t$ (CR-SF), \textbf{jet$\to\tau$ fakes}, single-$H$, diboson \\
+Data-driven bkg in NSBI & none needed & \textbf{QCD \& fakes have no per-event density} \\
+Experimental systematics & few, small (leptons) & many, large (JES$\times$11, $\tau$ES, $b$-tag$\times$5, DeepTau, \ldots) \\
+Syst.\ vs signal shape & largely separable & \textbf{JES/$\tau$ES deform \mhh\ (degenerate with \kl)} \\
+Theory--POI coupling & none & \textbf{\kl-dependent \texttt{THU\_HH} $+4/-18\%$} \\
+Factorisation of NPs & safe & JES$\times\tau$ES cross-term in \mhh \\
+Signal yield & $\sim$15\% of $\sigma$ & $\mathcal O(10$--$100)$ events (fb-scale) \\
+MC training stats & --- & ample ($\approx$500--750k/\kl); watch $\pm1\sigma$ samples \\
+Stats framework & custom (built) & must port the custom fit; CMS has \textsc{combine} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{takeaway}[Bottom line]
+The NSBI \emph{method} ports cleanly from off-shell to \kl. The new challenges are in the \emph{inputs}, and rank
+roughly: (1) \textbf{data-driven backgrounds} (QCD, jet$\to\tau$ fakes) with no per-event density --- the most
+awkward fit with NSBI, but \emph{solved-with-caveats} by flow-based estimation (\textbf{ABCDnn}, Sec.\,4); (2) the
+\textbf{\kl--systematic shape degeneracy} (JES/$\tau$ES on \mhh) plus a much larger experimental-systematics
+surface, which makes \emph{morphing accuracy + honesty} the limiting factor; (3) the \textbf{\kl-dependent theory}
+and \textbf{factorisation cross-terms} (non-factorisable morphing); (4) \textbf{irreducible single-Higgs}. None are
+NSBI-specific \emph{except} the data-driven-background mismatch and the learned-morphing layer; the rest are equally
+CMS's problems, handled with the same NPs. Two scope caveats: NSBI's gain is in the \emph{\kl/$k_{2V}$ parameter
+constraint} (shape directions), \emph{not} the SM-HH observation significance (rate-saturated, luminosity-set);
+and the genuine per-event edge is on \emph{shape/correlated-operator} directions, not the rate-broken
+$\kappa_t\!\leftrightarrow\!\kl$ / $k_V\!\leftrightarrow\!k_{2V}$ ones.
+\end{takeaway}
+
+\begin{thebibliography}{9}\small
+\bibitem{atlas} ATLAS Collaboration (J.~Sandesara \emph{et al.}), \emph{Measurement of the Off-Shell Higgs Boson in
+  $H\to ZZ\to4\ell$ using Simulation-Based Inference}, ATLAS note HIGG-2023-01 (2024) = arXiv:2412.01600,
+  Rep.\ Prog.\ Phys.\ 88 (2025). Page refs herein are to the note. Key: mixture model \& systematics Sec.\,5
+  (pp.\,80--90); per-event factorised weights (pp.\,83--84); MC-stat NP (pp.\,86--87); JAX fit \& impact
+  (pp.\,89--90).
+\bibitem{cms} CMS Collaboration (C.~Amendola \emph{et al.}), \emph{Search for Higgs boson pairs produced through
+  gluon and vector boson fusion in the \bbtt\ final state with Run-II data}, CMS AN-18-121 (2022). Key: signal
+  reweighting Sec.\,3.1 (p.\,6); background estimation Sec.\,7 (pp.\,61--85; QCD ABCD pp.\,61--62, DY 18 CRs
+  pp.\,63--78, $t\bar t$ CR-SF pp.\,79--82); systematics Sec.\,9 (pp.\,90--97).
+\bibitem{abcdnn} S.~Choi, J.~Lim, H.~Oh, \emph{Data-driven Estimation of Background Distribution through Neural
+  Autoregressive Flows (ABCDnn)}, arXiv:2008.03636 (2020). Production application: CMS all-hadronic four-top search,
+  Run-2+3 (ExtendedABCD yield + ABCDnn shape for $t\bar t$+jets/QCD; obs.\ $3.95\,\sigma$, $\mu=2.7^{+1.1}_{-0.9}$)
+  --- S.~An (advisors M.~Paulini, V.~Dutta), Carnegie Mellon PhD thesis (2025), CMU KiltHub \#29950337;
+  MMD-trained NAF, conditioned on $(N_{\rm jets},N_b)$, modelling the BDT$+H_T$ shape. No public CMS-PAS located.
+\bibitem{bahl} A.~Bahl, T.~Plehn, N.~Schmal, \emph{global SMEFT fit of four di-boson processes with per-event
+  likelihoods}, arXiv:2509.05409 (2025) --- the $\sim$2$\times$ per-event gain on correlated-operator directions.
+\bibitem{comb} ATLAS+CMS HH combination, arXiv:2602.23991 / CMS-PAS-HIG-25-014 (early 2026):
+  $k_{2V}\in[0.73,1.3]$, $\kl\in[-0.71,6.1]$, $\mu_{HH}<2.5$ (95\% CL).
+\end{thebibliography}
+
+\end{document}
