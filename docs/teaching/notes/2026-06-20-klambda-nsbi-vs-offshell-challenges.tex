@@ -64,9 +64,11 @@ preliminary phenomenological study (see the Progress box).}
 
 \begin{keybox}[Progress --- preliminary phenomenological result (Ghosh, Klute \& Pan, 22 Jun 2026)]
 {\small A first \bbtt\ NSBI study (code in \texttt{NSBI-pheno/dihiggs\_bbtautau}) has completed several items
-below. \emph{It is explicitly phenomenological --- \textsc{powheg}$+$\textsc{delphes}, no experimental
-systematics, fast-sim --- so the statistics and physics-method items are largely done, while the systematics,
-in-situ-CR and data-driven-background items remain open.} \textbf{Headline:} an unbinned 10-feature NSBI likelihood
+below. \emph{The method and sensitivity are validated on \textbf{CMS full-simulation} samples (\textsc{powheg} NLO
+signal), but \textbf{without experimental-systematic nuisances in the fit}; a publishable phenomenological version
+additionally needs a \textsc{delphes} fast-sim reproduction (in progress --- item~\#27, and the note's described
+setup). So the statistics and physics-method items are largely done, while the systematics, in-situ-CR,
+data-driven-background and Delphes-sample items remain open.} \textbf{Headline:} an unbinned 10-feature NSBI likelihood
 lifts the binned-\mhh\ secondary minimum near \kl$\,\sim\,$3--4 and \textbf{narrows the 68\% interval by
 $\sim$an order of magnitude}, raising the \kl$=0$ rejection from $1.1\sigma$ (binned \mhh) to $\mathbf{2.75\sigma}$
 at $450\,\mathrm{fb}^{-1}$ and to $\mathbf{7.1\sigma}$ at the HL-LHC ($3000\,\mathrm{fb}^{-1}$, vs $2.8\sigma$
@@ -150,7 +152,9 @@ CRs. \dw reproduce the CMS in-situ SFs within 10--20\%, no double-counting, corr
 \item \stPart\ \priZ\,\eff{M} \textbf{Asimov \& closure: morphing bias under injected shifts and generator/Delphes
 mismatch.} Inject known $\pm1\sigma$ on JES/$\tau$ES/QCD/MC-stat and re-fit; fit data from chain $X$ with a model
 trained on $Y$ (Pythia$\leftrightarrow$Herwig; Delphes$\leftrightarrow$full-sim). \dw recover \kl\ to $<0.05$, pulls
-$\sim N(0,1)$, sim-closure bias $<0.1$ (flag full-sim retraining if $>10\%$). \sref{\S5,\,\S6}
+$\sim N(0,1)$, sim-closure bias $<0.1$ (flag full-sim retraining if $>10\%$). \textcolor{orange!75!black}{\emph{\small(Prelim.:
+Asimov $+$ 500-toy closure done on \textbf{full-sim}; the \textsc{delphes}$\leftrightarrow$full-sim closure is the open
+piece, paired with sample production [\#27].)}} \sref{\S5,\,\S6}
 \item \stDone\ \priZ\,\eff{M} \textbf{Neyman construction \& coverage validation on MC-truth toys.} 1000$+$ toys; build the
 belt at \kl$\in\{-1,0,1,3,5\}$. \dw empirical coverage $\ge67\%$, $|$bias$|<0.1$ at SM; any failure traced to a
 specific NP/component. \textcolor{green!45!black}{\emph{\small(Prelim.: 500 toys at \kl$=1$ give pulls
@@ -219,6 +223,16 @@ bit-identical reruns; the per-NP-vs-conditional trade-off documented. \sref{gene
 (confirmatory). Scratch vs $t\bar t$-kinematics-pretrain vs HH-kinematics-pretrain; F-score \kl$=0$ vs 5 by \mhh\
 region. \dw signal-vs-$t\bar t$ pretraining closes $\ge30\%$ of the FM deficit, else confirm scratch remains the
 baseline. \sref{established null}
+
+\item \stPart\ \priO\,\eff{M} \textbf{Produce \& validate \textsc{delphes} \bbtt\ samples for the
+phenomenological-paper version.} The sensitivity is currently validated on \textbf{CMS full-simulation} samples; a
+publishable pheno paper needs a \textsc{delphes} fast-sim reproduction. Validate the tuned CMS \textsc{delphes} card
+($b$-tag, $\tau$-ID/DeepTau, MET, lepton response) against the full-sim object performance and the
+reconstructed-vs-generated \mhh\ response, then regenerate signal $+$ backgrounds and re-fit. \dw
+\textsc{delphes}-vs-full-sim closure on key observables (especially \mhh\ below 400\,GeV) within the per-event-weight
+tolerance; the \kl\ interval reproduced to $<0.1\sigma$. \textcolor{orange!75!black}{\emph{\small(Prelim.: a
+standalone \textsc{delphes} card-validation pipeline is built; full sample production for the pheno paper is in
+progress. Pairs with \#13.)}} \sref{\S3,\,general}
 \end{enumerate}
 
 \section{The two measurements and the shared NSBI skeleton}
@@ -775,12 +789,14 @@ GeV, TeV --- giga-/tera-electronvolt (energy/mass units).
   $k_{2V}\in[0.73,1.3]$, $\kl\in[-0.71,6.1]$, $\mu_{HH}<2.5$ (95\% CL).
 \bibitem{gkp} A.~Ghosh, M.~Klute, J.~Pan, \emph{Focused Neural Simulation-Based Inference for the Higgs
   Self-Coupling in the $b\bar b\tau\tau$ Channel}, working note (22 Jun 2026); code:
-  \texttt{NSBI-pheno/dihiggs\_bbtautau}. Phenomenological \textsc{powheg}$+$\textsc{delphes} study; signal
-  $gg\to HH$ at NLO with $\kappa_\lambda\in\{0,1,5\}$ (three-point quadratic morphing basis); reference
-  $\kappa_\lambda=5$; ten event-level observables; full background model with weighted fake-$\tau$; unbinned
-  extended likelihood vs binned \mhh, plus a focused test statistic. Results: \kl$=0$ rejection $2.75\sigma$
-  ($450\,\mathrm{fb}^{-1}$) $\to 7.1\sigma$ (HL-LHC); 68\% interval $\sim$10$\times$ tighter than the binned fit;
-  500-toy coverage validated. \emph{No experimental systematics (phenomenological).}
+  \texttt{NSBI-pheno/dihiggs\_bbtautau}. Signal $gg\to HH$ from \textsc{powheg} at NLO with
+  $\kappa_\lambda\in\{0,1,5\}$ (three-point quadratic morphing basis); reference $\kappa_\lambda=5$; ten event-level
+  observables; full background model with weighted fake-$\tau$; unbinned extended likelihood vs binned \mhh, plus a
+  focused test statistic. Detector response: \textbf{CMS full simulation} for the current validation, with a
+  \textsc{delphes} fast-sim reproduction planned for the published phenomenological version (the setup the note
+  describes). Results: \kl$=0$ rejection $2.75\sigma$ ($450\,\mathrm{fb}^{-1}$) $\to 7.1\sigma$ (HL-LHC); 68\%
+  interval $\sim$10$\times$ tighter than the binned fit; 500-toy coverage validated. \emph{No experimental-systematic
+  nuisances in the fit.}
 \end{thebibliography}
 
 \end{document}
