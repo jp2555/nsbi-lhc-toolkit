@@ -97,6 +97,22 @@
   bin QCD/fakes as an auxiliary likelihood term; per-event morph only the MC components (embedded-DY, tt̄, single-H,
   diboson). <span class="tag">(design proposal, not published)</span></p>
 
+  <h2>The bridge — classifier-to-reference (CARL)</h2>
+  <p>Turn <i>any</i> sample-producing estimate into the per-event ratio NSBI needs, without writing a density:
+  train a binary classifier (background sample vs reference P_ref); with balanced classes the optimal score gives</p>
+  <div class="eq">r(x) = p<sub>bg</sub>(x)/p<sub>ref</sub>(x) = s(x) / (1 − s(x))
+    <small>feed it: ABCDnn → flow samples · fake-factor → weighted AR sample (w<sub>i</sub>=FF<sub>i</sub>) · embedding → event sample</small></div>
+  <p class="tag"><b>Guardrails:</b> calibrate s(x) (isotonic/Platt) · weighted BCE for FF weights, sign-flip for NLO
+  negatives · one common P_ref for all components · C2ST closure + support checks. Easy middle; the work is upstream
+  (faithful high-dim sample) and downstream (per-event systematic morphing of r(x)). Source: CARL
+  <a href="https://arxiv.org/abs/1506.02169">1506.02169</a>.</p>
+
+  <h2>Embedding (Z→ττ) — the third sample-producer</h2>
+  <p>Real Z→μμ data event → remove muons → insert simulated τ (μ kinematics) that decay → merge. Data: pileup, jets,
+  UE, detector. Sim: only the τ decay + response. <b class="no">bbττ caveat:</b> b-jets come from the μμ event →
+  does <b>not</b> model genuine Z→ττ+heavy-flavor (use MC+corrections for Z+bb). Semi-data-driven (μ/τ-ID, trigger,
+  radiative SFs still applied). Output = a sample, not p(x). <span class="tag">Source: <a href="https://arxiv.org/abs/1903.01216">1903.01216</a></span></p>
+
   <div class="foot">
     Key sources: ABCDnn <a href="https://arxiv.org/abs/2008.03636">2008.03636</a> ·
     NAF <a href="https://arxiv.org/abs/1804.00779">1804.00779</a> ·

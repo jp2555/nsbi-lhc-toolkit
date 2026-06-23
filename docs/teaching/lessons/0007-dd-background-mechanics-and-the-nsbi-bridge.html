@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 7 — Data-driven background mechanics, and the bridge to NSBI</title>
+<style>
+  :root{--ink:#1a1a1a;--mut:#6b6b6b;--rule:#dcdcd6;--accent:#7a2d2d;--bg:#fcfcf9;--box:#f3f3ec;
+        --good:#1f6b3b;--bad:#9a3030;--blue:#234e70;
+        /* aliases so the embedded SVGs resolve to this palette */
+        --text-primary:#1a1a1a;--text-secondary:#6b6b6b;--border-color:#dcdcd6;--bg-secondary:#f3f3ec;--bg-primary:#fcfcf9;}
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);margin:0;font-size:18px;line-height:1.55;
+       font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;}
+  .wrap{max-width:47rem;margin:0 auto;padding:3rem 1.4rem 5rem;}
+  h1{font-size:1.7rem;line-height:1.18;margin:.2rem 0 .3rem;}
+  h2{font-size:1.18rem;margin:2.3rem 0 .5rem;color:var(--accent);}
+  .kicker{font-variant:small-caps;letter-spacing:.12em;color:var(--mut);font-size:.82rem;}
+  .sub{color:var(--mut);font-style:italic;margin:.1rem 0 1.3rem;}
+  p{margin:.55rem 0;} a{color:var(--accent);} em{font-style:italic;}
+  .lead{font-size:1.05rem;}
+  ul{margin:.5rem 0;padding-left:1.2rem;} li{margin:.3rem 0;}
+  .eq{background:var(--box);border:1px solid var(--rule);border-radius:7px;padding:.8rem 1rem;margin:1rem 0;text-align:center;font-size:1.0rem;}
+  .eq small{display:block;color:var(--mut);font-size:.78rem;font-style:italic;margin-top:.4rem;}
+  figure{margin:1.2rem 0;} figure svg{width:100%;height:auto;display:block;}
+  figcaption{font-size:.8rem;color:var(--mut);font-style:italic;margin-top:.3rem;text-align:center;}
+  table{border-collapse:collapse;width:100%;font-size:.8rem;margin:1rem 0;}
+  th,td{border:1px solid var(--rule);padding:.5rem .55rem;text-align:left;vertical-align:top;}
+  th{background:var(--box);} td:first-child{font-weight:700;}
+  .steal{background:#eef3ef;border:1px solid #cfe0cf;border-radius:8px;padding:.7rem 1rem;margin:1rem 0;}
+  .steal b{color:var(--good);}
+  .note{background:#fbf4ee;border:1px solid #e6cdb3;border-radius:8px;padding:.9rem 1.1rem;margin:1.3rem 0;}
+  .hard{color:var(--bad);font-weight:600;}
+  .pill{display:inline-block;background:var(--box);border:1px solid var(--rule);border-radius:20px;padding:.05rem .6rem;font-size:.74rem;color:var(--mut);margin-right:.3rem;}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:.85em;background:#f0f0ea;padding:0 .25em;border-radius:3px;}
+  .quiz{background:#fbfbf7;border:1px solid var(--rule);border-radius:8px;padding:1rem 1.1rem;margin:1.2rem 0;}
+  .quiz .q{font-weight:600;margin:.8rem 0 .4rem;}
+  .quiz button{display:block;width:100%;text-align:left;margin:.25rem 0;padding:.45rem .6rem;border:1px solid var(--rule);
+    background:#fff;border-radius:6px;cursor:pointer;font:inherit;font-size:.86rem;}
+  .quiz button:hover{background:var(--box);}
+  .quiz button.ok{background:#e7f1e9;border-color:#9ec9a8;} .quiz button.no{background:#f6e7e7;border-color:#d6a3a3;}
+  .quiz .fb{font-size:.82rem;color:var(--mut);margin:.3rem 0 .2rem;min-height:1rem;}
+  .foot{margin-top:2.4rem;border-top:1px solid var(--rule);padding-top:1rem;color:var(--mut);font-size:.86rem;}
+  @media(max-width:640px){body{font-size:17px}}
+  @media print{body{background:#fff}a{border:0}figure,table{break-inside:avoid}.quiz button{background:#fff}}
+</style>
+</head>
+<body><div class="wrap">
+
+  <div class="kicker">Teaching · NSBI · Lesson 7</div>
+  <h1>Data-driven background mechanics —<br>and the bridge to your NSBI fit</h1>
+  <p class="sub">The mechanics companion to <a href="0006-data-driven-backgrounds-and-abcdnn.html">Lesson 6</a>:
+  how each data-driven method actually constructs its estimate, why none of them hands you a per-event density, and
+  the one trick (classifier-to-reference) that turns any of them into the ratio your NSBI likelihood consumes.</p>
+
+  <p class="lead">Three methods, three different objects out — and one universal adapter. Keep the spine in view:
+  <strong>ABCD → a histogram; fake-factor → a weighted sample; embedding → a sample.</strong> NSBI needs
+  <code>r(x)=p(x)/p<sub>ref</sub>(x)</code>. The bridge (§5) is how you get there from any of them.</p>
+
+  <h2>1 · ABCD (QCD multijet) — a counting construction</h2>
+  <p>Two variables assumed <em>independent for the background</em> (e.g. di-τ charge OS/SS × τ isolation
+  tight/anti) carve four orthogonal regions; D (OS+tight) is signal-like, so signal contaminates only D and the
+  three sidebands stay ~pure QCD.</p>
+  <figure>
+  <svg viewBox="0 0 720 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="a1 a2" font-family="Iowan Old Style, Palatino, Georgia, serif">
+    <title id="a1">ABCD regions in the charge vs isolation plane</title>
+    <desc id="a2">A 2x2 grid; region D (opposite-sign, tight) holds signal plus QCD, regions A, B, C are signal-depleted QCD, and N_D = N_B times N_C over N_A.</desc>
+    <style>
+      .lab{fill:var(--ink)} .mut{fill:var(--mut)} .cell{fill:var(--box);stroke:var(--rule);stroke-width:1.5}
+      .sigcell{fill:#f6ece9;stroke:var(--accent);stroke-width:2.5}
+      .big{font-size:30px;font-weight:700} .sm{font-size:13px} .hd{font-size:14px;font-variant:small-caps;letter-spacing:.06em}
+      .eqx{font-size:19px} .it{font-style:italic}
+    </style>
+    <text x="300" y="58" text-anchor="middle" class="hd lab">tight τ-ID</text>
+    <text x="540" y="58" text-anchor="middle" class="hd lab">anti-isolated</text>
+    <text x="420" y="34" text-anchor="middle" class="sm mut it">τ isolation  →  fakes drift right</text>
+    <text x="40" y="170" text-anchor="middle" class="hd lab">OS</text>
+    <text x="40" y="330" text-anchor="middle" class="hd lab">SS</text>
+    <text x="22" y="252" text-anchor="middle" class="sm mut it" transform="rotate(-90 22 252)">di-τ charge  ↓  fakes ≈ 50/50</text>
+    <rect class="sigcell" x="120" y="80" width="360" height="172" rx="8"/>
+    <text x="138" y="118" class="big" fill="var(--accent)">D</text>
+    <text x="138" y="140" class="sm lab">OS · tight</text>
+    <text x="138" y="240" class="sm" fill="var(--accent)">signal + QCD  ← what you fit</text>
+    <g fill="var(--accent)"><circle cx="300" cy="120" r="5"/><circle cx="330" cy="135" r="5"/><circle cx="315" cy="155" r="5"/><circle cx="345" cy="118" r="5"/><circle cx="360" cy="148" r="5"/><circle cx="328" cy="172" r="5"/><circle cx="295" cy="145" r="5"/><circle cx="355" cy="168" r="5"/><circle cx="375" cy="132" r="5"/><circle cx="312" cy="190" r="5"/></g>
+    <g fill="var(--blue)" opacity="0.5"><circle cx="430" cy="120" r="4"/><circle cx="445" cy="160" r="4"/><circle cx="420" cy="195" r="4"/></g>
+    <rect class="cell" x="500" y="80" width="200" height="172" rx="8"/>
+    <text x="516" y="118" class="big lab">C</text><text x="516" y="140" class="sm lab">OS · anti-iso</text><text x="516" y="240" class="sm" fill="var(--blue)">QCD (depleted)</text>
+    <g fill="var(--blue)" opacity="0.7"><circle cx="600" cy="120" r="4"/><circle cx="630" cy="140" r="4"/><circle cx="615" cy="165" r="4"/><circle cx="650" cy="125" r="4"/><circle cx="635" cy="185" r="4"/><circle cx="600" cy="195" r="4"/><circle cx="665" cy="160" r="4"/></g>
+    <rect class="cell" x="120" y="262" width="360" height="172" rx="8"/>
+    <text x="138" y="300" class="big lab">B</text><text x="138" y="322" class="sm lab">SS · tight</text><text x="138" y="422" class="sm" fill="var(--blue)">QCD (depleted)</text>
+    <g fill="var(--blue)" opacity="0.7"><circle cx="320" cy="300" r="4"/><circle cx="345" cy="325" r="4"/><circle cx="300" cy="345" r="4"/><circle cx="360" cy="360" r="4"/></g>
+    <rect class="cell" x="500" y="262" width="200" height="172" rx="8"/>
+    <text x="516" y="300" class="big lab">A</text><text x="516" y="322" class="sm lab">SS · anti-iso</text><text x="516" y="422" class="sm" fill="var(--blue)">QCD-rich</text>
+    <g fill="var(--blue)" opacity="0.8"><circle cx="600" cy="300" r="4"/><circle cx="630" cy="318" r="4"/><circle cx="615" cy="345" r="4"/><circle cx="655" cy="305" r="4"/><circle cx="640" cy="372" r="4"/><circle cx="600" cy="390" r="4"/><circle cx="668" cy="350" r="4"/><circle cx="618" cy="398" r="4"/></g>
+    <text x="120" y="472" class="eqx lab">N<tspan baseline-shift="sub" font-size="13">D</tspan> = N<tspan baseline-shift="sub" font-size="13">B</tspan> · N<tspan baseline-shift="sub" font-size="13">C</tspan> / N<tspan baseline-shift="sub" font-size="13">A</tspan></text>
+    <text x="245" y="472" class="sm mut it">— predict QCD in D from the three sidebands (factorization)</text>
+    <circle cx="540" cy="467" r="5" fill="var(--accent)"/><text x="552" y="472" class="sm lab">signal ττ</text>
+    <circle cx="628" cy="467" r="5" fill="var(--blue)"/><text x="640" y="472" class="sm lab">QCD fake</text>
+  </svg>
+  <figcaption>Assumption: charge ⟂ isolation for QCD. Output: a yield + coarse binned shape — not a density.</figcaption>
+  </figure>
+
+  <h2>2 · Fake-factor (jet→τ<sub>h</sub>) — a reweighting construction</h2>
+  <p>Measure a tight-to-loose ratio for fakes in a fake-enriched determination region (after subtracting genuine
+  taus), then apply it as a <strong>per-event weight</strong> to a loose-ID control sample with signal-region
+  kinematics.</p>
+  <figure>
+  <svg viewBox="0 0 720 470" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="f1 f2" font-family="Iowan Old Style, Palatino, Georgia, serif">
+    <title id="f1">The fake-factor method</title>
+    <desc id="f2">FF measured in a determination region as tight over loose minus genuine taus, applied per event to the application region to predict signal-region fakes — yielding a weighted sample, not a density.</desc>
+    <style>
+      .lab{fill:var(--ink)} .mut{fill:var(--mut)} .box{fill:var(--box);stroke:var(--rule);stroke-width:1.5}
+      .hd{font-size:14px;font-weight:700} .sm{font-size:12px} .it{font-style:italic} .eqx{font-size:16px}
+      .arr{stroke:var(--mut);stroke-width:1.6;fill:none;marker-end:url(#fa)}
+    </style>
+    <defs><marker id="fa" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--mut)"/></marker></defs>
+    <text x="30" y="30" class="hd lab">1 · Measure the rate — Determination Region (fake-enriched)</text>
+    <rect class="box" x="30" y="44" width="300" height="150" rx="8"/>
+    <rect x="70" y="74" width="46" height="100" fill="var(--blue)"/><rect x="70" y="74" width="46" height="20" fill="var(--accent)" opacity="0.75"/><text x="93" y="188" text-anchor="middle" class="sm lab">loose</text>
+    <rect x="160" y="146" width="46" height="28" fill="var(--blue)"/><rect x="160" y="146" width="46" height="8" fill="var(--accent)" opacity="0.75"/><text x="183" y="188" text-anchor="middle" class="sm lab">tight</text>
+    <rect x="232" y="70" width="12" height="12" fill="var(--accent)" opacity="0.75"/><text x="248" y="80" class="sm lab">genuine τ</text>
+    <rect x="232" y="92" width="12" height="12" fill="var(--blue)"/><text x="248" y="102" class="sm lab">fakes</text>
+    <text x="232" y="132" class="sm it mut">subtract genuine</text><text x="232" y="148" class="sm it mut">τ, then ratio</text>
+    <path class="arr" d="M335 119 L405 119"/>
+    <rect class="box" x="410" y="60" width="280" height="118" rx="8" fill="#eef1f6" stroke="#c4d0e0"/>
+    <text x="550" y="86" text-anchor="middle" class="eqx lab">FF = N<tspan baseline-shift="sub" font-size="11">tight</tspan> / (N<tspan baseline-shift="sub" font-size="11">loose</tspan> − N<tspan baseline-shift="sub" font-size="11">gen</tspan>)</text>
+    <text x="550" y="108" text-anchor="middle" class="sm mut it">a per-jet probability ratio</text>
+    <polyline points="455,160 485,160 485,150 525,150 525,138 565,138 565,130 615,130 615,124 650,124" fill="none" stroke="var(--blue)" stroke-width="2"/>
+    <text x="550" y="173" text-anchor="middle" class="sm mut">FF vs (τ p_T, decay mode, n_j) — low-dim, binned</text>
+    <text x="30" y="232" class="hd lab">2 · Apply per event — Application Region (loose ID, SR-like kinematics)</text>
+    <rect class="box" x="30" y="246" width="300" height="150" rx="8"/>
+    <g fill="var(--blue)"><circle cx="80" cy="290" r="6"/><circle cx="130" cy="320" r="6"/><circle cx="100" cy="355" r="6"/><circle cx="180" cy="300" r="6"/><circle cx="220" cy="340" r="6"/><circle cx="260" cy="295" r="6"/><circle cx="160" cy="365" r="6"/><circle cx="285" cy="350" r="6"/></g>
+    <text x="180" y="386" text-anchor="middle" class="sm mut it">real data events you reweight</text>
+    <path class="arr" d="M335 321 L405 321"/><text x="370" y="312" text-anchor="middle" class="sm mut">× FF(xᵢ)</text>
+    <rect class="box" x="410" y="246" width="280" height="150" rx="8"/>
+    <text x="550" y="268" text-anchor="middle" class="hd lab" font-size="13">Predicted fakes in SR (tight)</text>
+    <g fill="var(--blue)" opacity="0.85"><circle cx="455" cy="300" r="3"/><circle cx="500" cy="330" r="8"/><circle cx="475" cy="360" r="4"/><circle cx="545" cy="305" r="6"/><circle cx="585" cy="345" r="3"/><circle cx="625" cy="300" r="9"/><circle cx="535" cy="372" r="5"/><circle cx="655" cy="355" r="4"/></g>
+    <text x="550" y="388" text-anchor="middle" class="sm lab it">= a weighted sample {(xᵢ, wᵢ)} — dot size ∝ FF</text>
+    <rect x="30" y="416" width="660" height="40" rx="7" fill="#fbf4ee" stroke="#e6cdb3"/>
+    <text x="46" y="441" class="sm lab"><tspan font-weight="700" fill="var(--accent)">Not</tspan> a density p(x): a reweighted sample. For NSBI, convert it (neural fake-factor = density ratio FF(x), arXiv:2511.06972).</text>
+  </svg>
+  <figcaption>Assumption: fake composition stable DR→SR. Output: per-event weights on a real sample.</figcaption>
+  </figure>
+
+  <h2>3 · Embedding (Z→ττ) — a hybrid construction</h2>
+  <p>The most unlike the other two: take a real <strong>Z→μμ</strong> data event, surgically remove the two muons,
+  and replace them with <em>simulated</em> τ leptons carrying the muons' momenta — which then decay. The pileup,
+  jets, underlying event and detector conditions are <em>real data</em>; only the τ decay and its detector response
+  are simulated.<span class="pill">cites: arXiv:1903.01216</span></p>
+  <figure>
+  <svg viewBox="0 0 720 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="e1 e2" font-family="Iowan Old Style, Palatino, Georgia, serif">
+    <title id="e1">The tau-embedding technique</title>
+    <desc id="e2">A real Z to mu mu data event has its muons removed; simulated tau leptons with the muons kinematics are inserted and decayed, then merged back, giving a hybrid Z to tau tau event whose environment is data and whose tau decay is simulation.</desc>
+    <style>
+      .lab{fill:var(--ink)} .mut{fill:var(--mut)} .box{fill:var(--box);stroke:var(--rule);stroke-width:1.5}
+      .hd{font-size:13px;font-weight:700} .sm{font-size:11.5px} .it{font-style:italic}
+      .arr{stroke:var(--mut);stroke-width:1.6;fill:none;marker-end:url(#ea)}
+    </style>
+    <defs><marker id="ea" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--mut)"/></marker></defs>
+    <rect class="box" x="20" y="40" width="190" height="150" rx="8"/>
+    <text x="115" y="62" text-anchor="middle" class="hd lab">Z→μμ data event</text>
+    <g fill="var(--accent)"><circle cx="70" cy="100" r="6"/><circle cx="160" cy="100" r="6"/></g>
+    <text x="70" y="120" text-anchor="middle" class="sm" fill="var(--accent)">μ⁻</text><text x="160" y="120" text-anchor="middle" class="sm" fill="var(--accent)">μ⁺</text>
+    <g fill="var(--blue)" opacity="0.55"><circle cx="50" cy="150" r="4"/><circle cx="95" cy="165" r="4"/><circle cx="135" cy="155" r="4"/><circle cx="180" cy="168" r="4"/><circle cx="115" cy="140" r="4"/></g>
+    <text x="115" y="184" text-anchor="middle" class="sm mut it">real PU · jets · b-jets · UE</text>
+    <path class="arr" d="M214 115 L256 115"/><text x="235" y="106" text-anchor="middle" class="sm mut">remove μ</text>
+    <rect class="box" x="260" y="40" width="190" height="150" rx="8"/>
+    <text x="355" y="62" text-anchor="middle" class="hd lab">cleaned event</text>
+    <g fill="var(--blue)" opacity="0.55"><circle cx="290" cy="150" r="4"/><circle cx="335" cy="165" r="4"/><circle cx="375" cy="155" r="4"/><circle cx="420" cy="168" r="4"/><circle cx="355" cy="140" r="4"/></g>
+    <text x="355" y="110" text-anchor="middle" class="sm mut it">real environment</text>
+    <text x="355" y="126" text-anchor="middle" class="sm mut it">kept; μ slots empty</text>
+    <path class="arr" d="M454 115 L496 115"/><text x="475" y="100" text-anchor="middle" class="sm mut">insert τ</text><text x="475" y="128" text-anchor="middle" class="sm mut">(sim, μ kin.)</text>
+    <rect class="box" x="500" y="40" width="200" height="150" rx="8" fill="#f6ece9" stroke="var(--accent)"/>
+    <text x="600" y="62" text-anchor="middle" class="hd lab">hybrid Z→ττ event</text>
+    <g fill="var(--accent)"><circle cx="555" cy="100" r="5"/><circle cx="560" cy="118" r="3"/><circle cx="548" cy="116" r="3"/><circle cx="645" cy="100" r="5"/><circle cx="650" cy="118" r="3"/><circle cx="638" cy="116" r="3"/></g>
+    <text x="600" y="142" text-anchor="middle" class="sm" fill="var(--accent)">τ decay = simulation</text>
+    <g fill="var(--blue)" opacity="0.55"><circle cx="535" cy="165" r="4"/><circle cx="580" cy="172" r="4"/><circle cx="620" cy="165" r="4"/><circle cx="660" cy="172" r="4"/></g>
+    <text x="600" y="186" text-anchor="middle" class="sm mut it">environment = data</text>
+    <rect x="20" y="206" width="680" height="96" rx="8" fill="#fbf4ee" stroke="#e6cdb3"/>
+    <text x="36" y="228" class="hd lab" fill="var(--accent)">Three things to remember</text>
+    <text x="36" y="249" class="sm lab">• <tspan font-weight="700">bbττ caveat:</tspan> the b-jets come from the μμ event → embedding does NOT model genuine Z→ττ+bb (use MC + corrections for Z+heavy-flavor).</text>
+    <text x="36" y="269" class="sm lab">• <tspan font-weight="700">Semi-data-driven:</tspan> still needs muon/τ-ID &amp; trigger scale factors + QED radiative corrections as event weights.</text>
+    <text x="36" y="289" class="sm lab">• <tspan font-weight="700">Output:</tspan> a SAMPLE of hybrid events (empirical template), not an evaluable density p(x).</text>
+  </svg>
+  <figcaption>Data for the hard-to-model parts (jets, pileup, UE); simulation only for the τ decay (with spin correlations).</figcaption>
+  </figure>
+
+  <h2>4 · The common thread</h2>
+  <p>Stand back and the three methods agree on the one thing that matters for you:</p>
+  <table>
+    <tr><th>Method</th><th>Background</th><th>Output</th><th>Evaluable p(x)?</th></tr>
+    <tr><td>ABCD</td><td>QCD multijet</td><td>yield + histogram</td><td><span class="hard">no</span></td></tr>
+    <tr><td>fake-factor</td><td>jet→τ<sub>h</sub> fakes</td><td>weighted sample</td><td><span class="hard">no</span></td></tr>
+    <tr><td>embedding</td><td>Z→ττ (genuine τ)</td><td>sample of events</td><td><span class="hard">no</span></td></tr>
+  </table>
+  <p>Each gives a <em>yield, a histogram, or a (weighted) sample</em> — never a function you can evaluate at an
+  arbitrary point x. That single fact is the whole reason the next step exists.</p>
+
+  <h2>5 · The bridge — classifier-to-reference (CARL)</h2>
+  <p>NSBI needs <code>r<sub>c</sub>(x)=p<sub>c</sub>(x)/p<sub>ref</sub>(x)</code> for every component. You get it
+  <em>without writing down any density</em>: train a binary classifier to separate a <em>sample</em> of the
+  component from a sample of the reference. With balanced classes and a proper loss, the optimal score
+  <code>s(x)=p<sub>c</sub>/(p<sub>c</sub>+p<sub>ref</sub>)</code>, so
+  <code>r<sub>c</sub>(x)=s(x)/(1−s(x))</code>.<span class="pill">cites: arXiv:1506.02169 (CARL)</span></p>
+  <figure>
+  <svg viewBox="0 0 720 480" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="b1 b2" font-family="Iowan Old Style, Palatino, Georgia, serif">
+    <title id="b1">Bridge from a data-driven sample to the NSBI per-event ratio</title>
+    <desc id="b2">ABCDnn flow samples, the weighted fake-factor sample, and embedding samples all feed one classifier versus the reference; the calibrated score s gives r = s over one-minus-s, which enters the NSBI mixture. Requires calibration, weighted training, a common reference, and a C2ST closure check.</desc>
+    <style>
+      .lab{fill:var(--ink)} .mut{fill:var(--mut)} .box{fill:var(--box);stroke:var(--rule);stroke-width:1.5}
+      .blue{fill:#eef1f6;stroke:#c4d0e0;stroke-width:1.5}
+      .hd{font-size:13px;font-weight:700} .sm{font-size:12px} .it{font-style:italic} .eqx{font-size:17px}
+      .arr{stroke:var(--mut);stroke-width:1.7;fill:none;marker-end:url(#bm)}
+    </style>
+    <defs><marker id="bm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--mut)"/></marker></defs>
+    <text x="30" y="28" class="hd lab" font-size="15">Samples in  →  per-event ratio out</text>
+    <text x="30" y="58" class="sm mut it">data-driven background as a SAMPLE</text>
+    <rect class="box" x="30" y="68" width="180" height="40" rx="7"/><text x="44" y="84" class="hd lab">ABCDnn</text><text x="44" y="101" class="sm mut">events sampled from flow</text>
+    <rect class="box" x="30" y="118" width="180" height="40" rx="7"/><text x="44" y="134" class="hd lab">fake-factor</text><text x="44" y="151" class="sm mut">weighted AR sample (wᵢ=FFᵢ)</text>
+    <rect class="box" x="30" y="168" width="180" height="40" rx="7"/><text x="44" y="184" class="hd lab">embedding</text><text x="44" y="201" class="sm mut">embedded event sample</text>
+    <rect class="box" x="30" y="225" width="180" height="36" rx="7" stroke-dasharray="4 3"/><text x="120" y="248" text-anchor="middle" class="hd lab">reference  P_ref(x)</text>
+    <path class="arr" d="M214 88 C 250 110, 250 150, 286 158"/><path class="arr" d="M214 138 L286 162"/><path class="arr" d="M214 188 C 250 178, 250 168, 286 166"/><path class="arr" d="M214 243 C 252 220, 252 185, 286 174"/>
+    <rect class="blue" x="290" y="120" width="160" height="96" rx="9"/>
+    <text x="370" y="150" text-anchor="middle" class="hd lab">binary classifier</text><text x="370" y="170" text-anchor="middle" class="sm mut">bkg sample  vs  P_ref</text>
+    <text x="370" y="198" text-anchor="middle" class="eqx" fill="var(--blue)">→  s(x)</text>
+    <path class="arr" d="M454 168 L500 168"/>
+    <rect class="box" x="504" y="138" width="186" height="60" rx="9"/>
+    <text x="597" y="166" text-anchor="middle" class="eqx lab">r(x) = s(x) / (1 − s(x))</text><text x="597" y="186" text-anchor="middle" class="sm mut it">per-event density ratio to P_ref</text>
+    <path class="arr" d="M597 200 L597 250"/>
+    <rect class="box" x="360" y="256" width="330" height="66" rx="9" fill="#eef3ef" stroke="#cfe0cf"/>
+    <text x="525" y="282" text-anchor="middle" class="hd lab">NSBI mixture likelihood</text>
+    <text x="525" y="304" text-anchor="middle" class="eqx lab">ν(x|κ_λ) = Σ_c  c_κ · ν_c · r_c(x) · p_ref(x)</text>
+    <rect x="30" y="346" width="660" height="104" rx="8" fill="#fbf4ee" stroke="#e6cdb3"/>
+    <text x="46" y="370" class="hd lab" fill="var(--accent)">What makes it trustworthy</text>
+    <text x="46" y="392" class="sm lab">• <tspan font-weight="700">Calibration:</tspan> s/(1−s) is the true ratio only if s(x) is calibrated → isotonic/Platt.</text>
+    <text x="46" y="412" class="sm lab">• <tspan font-weight="700">Weights/signs:</tspan> weighted BCE for FF weights; sign-flip for NLO negative weights.</text>
+    <text x="46" y="432" class="sm lab">• <tspan font-weight="700">One P_ref for all components</tspan> &nbsp; • <tspan font-weight="700">C2ST closure</tspan> + support/coverage checks.</text>
+  </svg>
+  <figcaption>The universal adapter: samples in → ratio out. Each background becomes "just another component" once converted.</figcaption>
+  </figure>
+
+  <div class="steal"><b>Why this homogenizes the fit:</b> once each data-driven background is a ratio to the
+  <em>same</em> P<sub>ref</sub>, the likelihood doesn't care that QCD came from ABCDnn and tt̄ came from MC — they
+  enter the mixture in the same currency. Your preliminary result already runs this machinery for the MC components
+  (calibrated per-event ratio classifiers, isotonic calibration, label-flip for negative weights, a single distant
+  κ<sub>λ</sub>=5 reference).</div>
+
+  <div class="note"><b>The honest framing.</b> The classifier-to-reference step is the <em>easy, solved</em> middle.
+  The work is on the two ends: <span class="hard">upstream</span>, getting a faithful <em>high-dimensional</em>
+  sample of the data-driven background (the ABCDnn-in-10-D problem); and <span class="hard">downstream</span>,
+  propagating systematics as a per-event <em>morphing</em> of r(x) (the learned-morphing burden from
+  <a href="0004-systematics-for-kappa-lambda.html">Lesson 4</a>). The bridge isn't the bottleneck — it's the
+  well-lit middle of a path whose two ends are where the real risk lives.</div>
+
+  <!-- QUIZ -->
+  <h2>Check yourself <span style="font-weight:400;font-size:.8rem;color:var(--mut)">(retrieval &gt; re-reading)</span></h2>
+  <div class="quiz" id="quiz">
+    <div class="q">1 · τ-embedding takes which part from simulation?</div>
+    <div data-correct="2">
+      <button>the pileup, jets, and underlying event</button>
+      <button>the Z boson production and kinematics</button>
+      <button>the τ decay and detector response</button>
+      <button>the full event including the muons</button>
+    </div><div class="fb"></div>
+
+    <div class="q">2 · In bbττ, embedding does not model —</div>
+    <div data-correct="0">
+      <button>genuine Z→ττ with heavy-flavor jets</button>
+      <button>the simulated τ lepton decay products</button>
+      <button>the real data pileup conditions accurately</button>
+      <button>the dimuon trigger selection efficiency correctly</button>
+    </div><div class="fb"></div>
+
+    <div class="q">3 · The classifier-to-reference trick returns r(x) as —</div>
+    <div data-correct="3">
+      <button>the raw classifier score s of x</button>
+      <button>one minus the classifier score s</button>
+      <button>the product of score and reference</button>
+      <button>the score ratio s over one-minus-s</button>
+    </div><div class="fb"></div>
+
+    <div class="q">4 · ABCD, fake-factor and embedding share the limitation —</div>
+    <div data-correct="1">
+      <button>they all require enormous simulation samples</button>
+      <button>none yields an evaluable per-event density</button>
+      <button>none can be normalized using data</button>
+      <button>they all ignore kinematic feature correlations</button>
+    </div><div class="fb"></div>
+  </div>
+
+  <h2>Read this next (primary sources)</h2>
+  <p>For the bridge: <a href="https://arxiv.org/abs/1506.02169"><strong>Cranmer, Pavez &amp; Louppe,
+  “Approximating Likelihood Ratios with Calibrated Discriminative Classifiers” (arXiv:1506.02169)</strong></a> —
+  the density-ratio-by-classification result, calibration included. For embedding:
+  <a href="https://arxiv.org/abs/1903.01216">arXiv:1903.01216</a> (CMS embedding technique). For fakes-into-NSBI:
+  <a href="https://arxiv.org/abs/2511.06972">arXiv:2511.06972</a> (neural fake-factor as a density ratio).</p>
+
+  <div class="note" style="background:#f3f3ec;border-color:var(--rule)">
+    <b>Ask your teacher.</b> Unsure why a weighted sample isn't a density, why calibration is load-bearing, or how
+    the embedded Z+HF gap is patched? Ask me. For real-world wisdom on FF systematics and embedding corrections, the
+    <strong>CMS Tau POG</strong> and the <strong>HH→bbττ subgroup</strong> are the rooms; publicly,
+    <a href="https://indico.cern.ch/category/11413/">ML4Jets</a> for the learned-background methods.
+  </div>
+
+  <div class="foot">
+    <span class="pill">Lesson 7</span>
+    Series: <a href="0001-nsbi-systematics-field-map.html">1</a> ·
+    <a href="0002-decoding-the-jargon.html">2</a> ·
+    <a href="0003-methods-expanded-and-recommendation.html">3</a> ·
+    <a href="0004-systematics-for-kappa-lambda.html">4</a> ·
+    <a href="0005-offshell-nsbi-recipe-for-kappa-lambda.html">5</a> ·
+    <a href="0006-data-driven-backgrounds-and-abcdnn.html">6 DD backgrounds</a> ·
+    <b>7 DD mechanics + bridge</b><br>
+    Reference: <a href="../reference/data-driven-backgrounds-cheatsheet.html">Data-driven backgrounds cheat-sheet</a> ·
+    <a href="../reference/nsbi-systematics-glossary.html">NSBI systematics glossary</a><br>
+    Sources: arXiv:1506.02169, 1903.01216, 2511.06972, 2008.03636, 2206.09401, 2204.12957, 2502.04156.
+  </div>
+
+<script>
+  document.querySelectorAll('#quiz [data-correct]').forEach(function(group){
+    var correct = +group.getAttribute('data-correct');
+    var fb = group.nextElementSibling, btns = group.querySelectorAll('button');
+    btns.forEach(function(b, i){
+      b.addEventListener('click', function(){
+        btns.forEach(function(x){ x.disabled = true; });
+        if(i === correct){ b.classList.add('ok'); fb.textContent = '✓ Correct.'; fb.style.color = '#1f6b3b'; }
+        else { b.classList.add('no'); btns[correct].classList.add('ok');
+               fb.textContent = '✗ The highlighted answer is right.'; fb.style.color = '#9a3030'; }
+      });
+    });
+  });
+</script>
+
+</div></body></html>
