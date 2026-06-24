@@ -525,6 +525,58 @@ the \kl-dependence of the net THU emerges \emph{automatically}, preserving facto
 (hence ``open''): the \emph{component-differential} theory bands (the LHC HH WG tabulates only the total
 $+4/{-}18\%$), and any NSBI closure test of per-component theory morphing.
 
+\medskip\noindent\textbf{Best-case CI \emph{width} vs.\ the binned fit (a complementary axis).} The matrix above
+asks \emph{can we do it}; this asks \emph{what it buys on the interval width if we do} --- assuming the morphing is
+calibrated and coverage correct (i.e.\ setting aside item~6's correctness question). Two baselines must be kept
+apart. \emph{Relative to the stat-only NSBI number} (the preliminary $2.75\sigma\!\to\!7.1\sigma$), honestly
+including systematics widens the interval for \emph{both} NSBI and the binned fit --- the stat-only figure was an
+underestimate. \emph{Relative to the binned fit with the same NPs}, however, there is a clean result: binning a
+(multivariate) discriminant is a deterministic \emph{coarsening} of the per-event likelihood, so by the
+data-processing inequality it cannot carry \emph{more} information, and profiling nuisances preserves the ordering
+(the profiled POI information is a Schur complement, which is operator-monotone). Hence \textbf{best-case NSBI
+CI $\le$ binned CI, systematics included} --- properly handling a systematic can only \emph{shrink NSBI's advantage
+toward parity}, never reverse it (a reversal requires a modelling/coverage failure, excluded here).
+
+\smallskip\noindent\emph{Mechanism of the shrinkage.} Profiling a systematic costs POI information in proportion to
+how much the systematic's effect \emph{aligns with the POI's} in the space actually used. NSBI's gain lives in the
+feature dimensions beyond \mhh; a systematic that also lives there \emph{and} points like \kl\ gives part of that
+gain back, while one confined to \mhh\ (already captured by binning) or orthogonal to the extra features does not.
+
+\begin{table}[h]\centering\small
+\begin{tabular}{@{}p{0.15\textwidth}p{0.30\textwidth}p{0.30\textwidth}p{0.13\textwidth}@{}}
+\toprule
+\textbf{Challenge} & \textbf{Binned (best case)} & \textbf{NSBI (best case)} & \textbf{Net effect on width advantage}\\
+\midrule
+1 \kl--syst.\ \mhh\ degeneracy & profiling JES/$\tau$ES eats \kl\ info (acute in \mhh; a binned-DNN recovers some) & extra features \emph{break} the degeneracy ($\sim$12.8$\times\!\to\!$1.3$\times$ inflation) & \textbf{largest win}\\
+2 $\sim$40 experimental NPs & each NP profiled per bin; width grows with count & same NPs, per-event; grows similarly & preserved (equal cost)\\
+3 data-driven bkg systematics & per-bin nuisance on the template & full per-event $S/B$ \emph{if} high-dim ABCDnn $+$ per-event morphing & preserved best-case; \emph{eroded} if the DD bkg must be binned\\
+4 \kl-coupled theory & \kl-dependent lnN/shape; widens at the $\sigma$-minimum & shared --- a signal-\emph{prediction} band, not reduced by per-event power & $\approx$ neutral (shared floor)\\
+5 factorisation cross-term & re-run the DNN with both NPs shifted & non-factorised (quadratic) morphing & preserved (both handle it)\\
+6 MC-stat of learned ratios & Barlow--Beeston template MC-stat & estimation variance of the \emph{learned} morphing (finite $\pm1\sigma$) & \textbf{genuine give-back}\\
+a shower via CARL/DCTR & conservative 2-point \emph{envelope} & profiled, data-constrained learned NP & \textbf{win} (narrows the envelope)\\
+b absorb $b$-tag/$\tau$-ID SFs & external POG prior & in-situ standard-candle constraint & \textbf{win} (in-situ $>$ prior)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\emph{Two caveats.} (i) \textbf{Item~6 is the one genuine width give-back} even with perfect coverage: the
+morphing is a \emph{learned} object estimated from the (smallest) $\pm1\sigma$ samples, so it carries a real
+estimation variance that a re-run-the-DNN template partly avoids --- sample-starved $\pm1\sigma$ sets are where NSBI
+can pay \emph{more} width (mitigate with more variation MC or an information-pooling GP morphing). (ii) The
+\emph{realistic} binned baseline is a binned \emph{DNN score}, not 1-D \mhh: the proven $\sim$2.5$\times$ gain was
+measured against binned \mhh, so NSBI's margin over a good binned-DNN is smaller, and the part that survives
+unconditionally is the pure \emph{unbinning} increment (no information lost to binning the score).
+
+\begin{takeaway}[Where the width gain survives]
+Best-case, NSBI is never \emph{wider} than binned; the advantage is just non-uniform. \textbf{Biggest wins:} \#1
+(degeneracy broken by dimensionality) and the upsides (a,b) (conservative \emph{envelopes/priors} become
+\emph{in-likelihood} constraints). \textbf{Shared / neutral:} \#4 (irreducible signal-theory cost), \#2, \#5 (same
+NP cost, both pay it). \textbf{The one give-back:} \#6 (finite-sample MC-stat of the learned morphing). So the
+headline gain is most robust where it comes from a \emph{real} information advantage (unbinning $+$
+degeneracy-breaking $+$ in-fit constraint of over-conservative systematics), and it erodes only where the systematic
+is irreducible-to-both (\#4) or must be \emph{learned} from too-small samples (\#6).
+\end{takeaway}
+
 \section{Statistics and inference}
 \begin{itemize}
 \item \textbf{Data signal yield is tiny and intrinsic.} $\sigma\times\mathcal B\sim2.5$ fb $\Rightarrow$
