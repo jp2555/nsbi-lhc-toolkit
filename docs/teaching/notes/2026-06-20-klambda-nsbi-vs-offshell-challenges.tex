@@ -469,6 +469,47 @@ primary constraint. So the systematics ledger is not all cost: \emph{the morphin
 \mhh) are the burden; the modelling ones (shower, flavour-tagging) are where NSBI's per-event treatment is an
 asset.}
 
+\medskip\noindent\textbf{Literature maturity \& risk (where each challenge actually stands).} A targeted sweep of the
+2024--2026 literature shows that \emph{none} of the six difficulties above is cleanly ``numerical'' (method exists,
+just measure how bad): the \bbtt\ regime consistently exceeds where any per-event method has been demonstrated. The
+largest published demonstrations of \emph{learned} NP morphing are $\sim$3 calibration NPs on \emph{simulated} data
+(GOLLUM; Schöfbeck \emph{et al.}, PRD 112 052006) and $\sim$50 NPs on real but \emph{clean} $4\ell$ data (ATLAS,
+2412.01600). Nothing exercises the actual \bbtt\ regime: $\sim$40 \emph{shape-degenerate} experimental NPs deforming
+a \emph{reconstructed} \mhh\ across three channels with data-driven backgrounds.
+
+\begin{table}[h]\centering\small
+\begin{tabular}{@{}p{0.225\textwidth}p{0.43\textwidth}p{0.12\textwidth}p{0.05\textwidth}@{}}
+\toprule
+\textbf{Challenge (item above)} & \textbf{Literature maturity} & \textbf{Class} & \textbf{Risk}\\
+\midrule
+1 \kl--syst.\ shape degeneracy & poly-exp morphing exists (ATLAS, GOLLUM); per-event closure under \emph{simultaneous} JES$\times\tau$ES on \mhh\ unreported & hybrid & high\\
+2 order-of-mag.\ more NPs ($\sim$40) & $\le$50 NPs on clean $4\ell$ (ATLAS); $\le$3 calib.\ NPs on sim data (GOLLUM); cross-terms $+$ calibration at this scale unproven & hybrid & high\\
+3 data-driven bkg systematics & components exist (ABCDnn, neural FF, GOLLUM) but \emph{never combined} per-event; neural FF (2511.06972) explicitly defers systematics & hybrid (borderline open) & high\\
+4 \kl-dependent (POI-coupled) theory & \emph{proposed only} --- no POI-coupled per-event morphing anywhere; off-shell structurally avoids it & \textbf{open} & high\\
+5 factorisation cross-term (NP$\times$NP) & per-event \emph{toy} only (GOLLUM, sim data); $\tau$ES$\to$MET$\to$SVfit$\to$\mhh\ recompute untested & hybrid & med\\
+6 MC-stat of learned ratios & real (ATLAS) but a \emph{published correctness critique} (Shyamsundar, 2505.19156) & hybrid & high\\
+a PS/generator via CARL/DCTR & components exist; never demonstrated end-to-end as a profiled NSBI nuisance & hybrid & med\\
+b absorb $b$-tag/$\tau$-ID SFs & building blocks only; no per-event SF-absorption $+$ in-situ standard candle shown & hybrid & med\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{takeaway}[Open vs.\ numerical --- the verdict]
+\textbf{One challenge is conceptually open} (no literature to tackle it): \#4, the \kl-dependent / POI-coupled theory
+morphing $w_\theta(x;\kl,\alpha_\theta)$. The standard factorised scheme keeps every NP weight \emph{POI-independent}
+($w_m(x;\alpha_m)$), and off-shell avoids the problem entirely ($\mu$ does not couple to its theory band because its
+signal \emph{shape} is a fixed mixture). Note \#4 (POI$\times$NP) is distinct from \#5 (NP$\times$NP): GOLLUM solves
+the latter on a toy but does \emph{not} reach the former. \#3 (per-event systematics of a \emph{data-driven} density)
+is the borderline second --- every component exists but none combine. The other six are \emph{hybrid}: a method
+exists in an easier setting, so each ``pilot'' is a \emph{method-selection gate}, not pure quantification.
+\textbf{Most dangerous to the headline} (a \emph{tighter} interval that must still \emph{cover}): \#6 --- Shyamsundar
+(2505.19156) argues via a toy that the ATLAS double-bootstrap MC-stat estimator does \emph{not} capture the
+finite-MC uncertainty, so settle this before quoting a number; and \#2 --- the $\sim$40-NP scale may force a
+conditional surrogate (GOLLUM/R4) or GP morphing (R3) over $\sim$thousands of classifiers. \textbf{Suggested gates
+first:} \#4 (does a POI$\times$NP ansatz work, on a toy) and \#6 (which MC-stat estimator is correct); then the \#2
+scaling gate; then \#3/\#1/\#5 closures; the upsides (a,b) are field-first demonstrations.
+\end{takeaway}
+
 \section{Statistics and inference}
 \begin{itemize}
 \item \textbf{Data signal yield is tiny and intrinsic.} $\sigma\times\mathcal B\sim2.5$ fb $\Rightarrow$
@@ -797,6 +838,17 @@ GeV, TeV --- giga-/tera-electronvolt (energy/mass units).
   describes). Results: \kl$=0$ rejection $2.75\sigma$ ($450\,\mathrm{fb}^{-1}$) $\to 7.1\sigma$ (HL-LHC); 68\%
   interval $\sim$10$\times$ tighter than the binned fit; 500-toy coverage validated. \emph{No experimental-systematic
   nuisances in the fit.}
+\bibitem{gollum} R.~Schöfbeck \emph{et al.}, \emph{Unbinned measurements with machine-learned systematic
+  uncertainties} (GOLLUM): method MLST 6 015007 (2025), tested PRD 112 052006 (2025). Per-event parametric NP
+  morphing to arbitrary order, factorizable \emph{and} NP$\times$NP non-factorizable; tested on FAIR Universe
+  ($\sim$3 calibration NPs, simulated single-lepton data). Treats NPs as POI-\emph{independent}.
+\bibitem{shyam} P.~Shyamsundar, \emph{Comment on ``An implementation of neural simulation-based inference for
+  parameter estimation in ATLAS''}, arXiv:2505.19156 (2025). Argues, via a toy counterexample, that the ATLAS
+  double-bootstrap estimator of the finite-simulation (MC-stat) uncertainty does not capture it --- a correctness
+  critique, not merely an under-validation. Bears on item~6.
+\bibitem{neuralff} \emph{Neural Fake Factor Estimation} (data-based density-ratio inference), arXiv:2511.06972,
+  JHEP 04 (2026) 188. Per-event continuous fake factor as a learned density ratio (NSBI-compatible); \emph{defers}
+  fake-rate systematics to future work. Bears on items~3 and the data-driven backgrounds of Sec.~4.
 \end{thebibliography}
 
 \end{document}
