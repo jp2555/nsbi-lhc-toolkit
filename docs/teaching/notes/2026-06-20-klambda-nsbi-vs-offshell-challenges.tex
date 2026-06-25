@@ -455,7 +455,13 @@ estimates \pA{83,84}. CMS does the per-\emph{bin} analogue (re-run the DNN on va
 \item \textbf{MC-statistical uncertainty of the learned ratios.} ATLAS propagates it as one NP via the
   NN-ensemble spread \pA{86,87}; CMS uses Barlow--Beeston per bin. With far smaller \emph{systematic-variation}
   samples in \bbtt, this term is more important (the nominal MC, $\approx$500k--750k/\kl-point, is ample for
-  training; the binding constraint is the least-populated $\pm1\sigma$ sample).
+  training; the binding constraint is the least-populated $\pm1\sigma$ sample). \emph{Candidate estimators} (the
+  choice to settle before quoting a number): the ATLAS NN-ensemble-spread/double-bootstrap (argued \emph{incorrect}
+  by Shyamsundar, 2505.19156); and the analytic-frequentist \textbf{wifi ensembles} (Benevedes \& Thaler,
+  2506.00113) --- a basis-function expansion whose weight covariance propagates in closed form to a per-event
+  uncertainty band on $r(x)$, with demonstrated coverage on an SBI density-ratio example and \emph{no bootstrap},
+  so it is attractive on both correctness \emph{and} the ensemble/compute cost (untested on
+  interference/morphing/weighted-MC).
 \end{enumerate}
 
 \medskip\noindent\textbf{Two systematics that NSBI actually handles \emph{better} than templates.} Worth stating
@@ -487,7 +493,7 @@ a \emph{reconstructed} \mhh\ across three channels with data-driven backgrounds.
 3 data-driven bkg systematics & components exist (ABCDnn, neural FF, GOLLUM) but \emph{never combined} per-event; neural FF (2511.06972) explicitly defers systematics & hybrid (borderline open) & high\\
 4 \kl-dependent (POI-coupled) theory & \emph{proposed only} --- no POI-coupled per-event morphing anywhere; off-shell structurally avoids it & \textbf{open} & high\\
 5 factorisation cross-term (NP$\times$NP) & per-event \emph{toy} only (GOLLUM, sim data); $\tau$ES$\to$MET$\to$SVfit$\to$\mhh\ recompute untested & hybrid & med\\
-6 MC-stat of learned ratios & real (ATLAS) but a \emph{published correctness critique} (Shyamsundar, 2505.19156) & hybrid & high\\
+6 MC-stat of learned ratios & real (ATLAS) but a \emph{published correctness critique} (Shyamsundar, 2505.19156); leading candidate fix = analytic-frequentist \emph{wifi ensembles} (2506.00113) & hybrid & high\\
 a PS/generator via CARL/DCTR & components exist; never demonstrated end-to-end as a profiled NSBI nuisance & hybrid & med\\
 b absorb $b$-tag/$\tau$-ID SFs & building blocks only; no per-event SF-absorption $+$ in-situ standard candle shown & hybrid & med\\
 \bottomrule
@@ -504,7 +510,8 @@ is the borderline second --- every component exists but none combine. The other 
 exists in an easier setting, so each ``pilot'' is a \emph{method-selection gate}, not pure quantification.
 \textbf{Most dangerous to the headline} (a \emph{tighter} interval that must still \emph{cover}): \#6 --- Shyamsundar
 (2505.19156) argues via a toy that the ATLAS double-bootstrap MC-stat estimator does \emph{not} capture the
-finite-MC uncertainty, so settle this before quoting a number; and \#2 --- the $\sim$40-NP scale may force a
+finite-MC uncertainty, so settle this before quoting a number (leading candidate replacement: the
+analytic-frequentist \emph{wifi}-ensemble estimator, 2506.00113); and \#2 --- the $\sim$40-NP scale may force a
 conditional surrogate (GOLLUM/R4) or GP morphing (R3) over $\sim$thousands of classifiers. \textbf{Suggested gates
 first:} \#4 (does a POI$\times$NP ansatz work, on a toy) and \#6 (which MC-stat estimator is correct); then the \#2
 scaling gate; then \#3/\#1/\#5 closures; the upsides (a,b) are field-first demonstrations.
@@ -913,6 +920,12 @@ GeV, TeV --- giga-/tera-electronvolt (energy/mass units).
   parameter estimation in ATLAS''}, arXiv:2505.19156 (2025). Argues, via a toy counterexample, that the ATLAS
   double-bootstrap estimator of the finite-simulation (MC-stat) uncertainty does not capture it --- a correctness
   critique, not merely an under-validation. Bears on item~6.
+\bibitem{wifi} S.~Benevedes, J.~Thaler, \emph{Frequentist Uncertainties on Neural Density Ratios with wifi
+  Ensembles}, arXiv:2506.00113 (2025). Trains basis functions $f_i(x)$ and propagates the weight covariance
+  \emph{analytically} (no bootstrap) to an asymptotic frequentist uncertainty band on a learned density ratio;
+  empirically correct coverage on a q/g SBI example. Leading candidate estimator for item~6 --- addresses both the
+  correctness critique \emph{and} the ensemble/bootstrap compute multiplier; per-event band also feeds the honest
+  morphing-uncertainty of item~9/\#15. Untested on interference/morphing/weighted-MC.
 \bibitem{neuralff} \emph{Neural Fake Factor Estimation} (data-based density-ratio inference), arXiv:2511.06972,
   JHEP 04 (2026) 188. Per-event continuous fake factor as a learned density ratio (NSBI-compatible); \emph{defers}
   fake-rate systematics to future work. Bears on items~3 and the data-driven backgrounds of Sec.~4.
