@@ -1,0 +1,51 @@
+# ============================================================================
+# TEMPLATE — fill every <PLACEHOLDER> on Perlmutter, then validate (see below).
+# Control file for the EveNet kappa_lambda data-efficiency sweep (HH->bbtautau).
+# Consumed by scripts/make_klambda_configs.py to emit per-(config x dataset_size x seed)
+# EveNet train configs + a train-evenet.sh of shifter commands.
+# Mirrors Exotic-Higgs-Study/configs/workflow.yaml, stripped to classification-only.
+# ============================================================================
+
+working_dir: <PATH_TO>/EveNet-Full        # cloned EveNet-Full (contains scripts/train.py)
+image: 'docker:avencast1994/evenet:1.5'   # shifterimg -v pull this first
+account: <NERSC_ACCOUNT>                   # e.g. m5019
+
+# Templates filled per combo. train_klambda.yaml ships here; predict_yaml is OPTIONAL
+# (point it at EveNet-Full/Exotic-Higgs predict.yaml to also emit predict configs).
+train_yaml: train_klambda.yaml
+predict_yaml: null                        # e.g. <PATH_TO>/Exotic-Higgs-Study/configs/predict.yaml
+
+# Shared sub-configs (reuse EveNet-Full / Exotic-Higgs copies; INPUTS must match pretrain).
+event_info: event_info_klambda.yaml
+network:    <PATH_TO>/Exotic-Higgs-Study/configs/network.yaml
+resonance:  <PATH_TO>/Exotic-Higgs-Study/configs/resonance.yaml
+
+# Output / data roots (preprocess.py writes parquet + normalization.pt under <STORE>).
+store_dir: <STORE>                        # e.g. /pscratch/sd/j/jing/klambda_evenet
+data_parquet_dir: <STORE>/evenet-train    # train parquet (from preprocess.py)
+
+# -------- the 3-way contrast --------
+# The freeze flag lives in the OPTIONS file (Training.GlobalEmbedding.freeze.type).
+#   finetune: pretrained weights, backbone trainable  -> options_pretrain.yaml (freeze: none)
+#   frozen:   pretrained weights, backbone FROZEN      -> options_frozen.yaml  (freeze: full)
+#             ==> create options_frozen.yaml: cp EveNet-Full options_pretrain.yaml and set
+#                 Training.GlobalEmbedding.freeze.type: full
+#   scratch:  no pretrained weights                    -> options.yaml
+pretrain_choice:
+  finetune:
+    path: <STORE>/pretrain-weights/checkpoints.20M.a4.last.ckpt
+    option: <PATH_TO>/EveNet-Full/share/options/options_pretrain.yaml
+  frozen:
+    path: <STORE>/pretrain-weights/checkpoints.20M.a4.last.ckpt
+    option: <PATH_TO>/options_frozen.yaml        # <-- you create this (freeze.type: full)
+  scratch:
+    path: null
+    option: <PATH_TO>/EveNet-Full/share/options/options.yaml
+
+# Data-efficiency axis + repeats (Money Plot 1/2 x-axis and error bands).
+dataset_size_choice: [0.01, 0.03, 0.1, 0.3, 1.0]
+seeds: [0, 1, 2, 3, 4]
+
+# Validate after filling (inside shifter docker:avencast1994/evenet:1.5):
+#   python -c "from evenet.control.global_config import global_config as g; \
+#              g.load_yaml('config_farm/<one-generated>.yaml'); print('ok')"

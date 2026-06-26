@@ -1,0 +1,70 @@
+# ============================================================================
+# TEMPLATE — EveNet global train config for the kappa_lambda BINARY task.
+# make_klambda_configs.py deep-copies this and overrides per combo:
+#   options.default (freeze via options file), options.Dataset.dataset_limit,
+#   normalization_file, platform.data_parquet_dir, pretrain_model_load_path,
+#   model_checkpoint_save_path, logger.wandb.run_name, (epochs for small fractions).
+# Classification-only: Assignment/Segmentation/Generation OFF (adapter emits classification).
+# Adapted from Exotic-Higgs-Study/configs/train.yaml — keep the structure; fill <PLACEHOLDER>.
+# ============================================================================
+
+event_info:
+  default: event_info_klambda.yaml          # absolutised by make_klambda_configs.py
+network:
+  default: network.yaml
+resonance:
+  default: resonance.yaml
+options:
+  default: options.yaml                      # overridden per combo (freeze flag lives here)
+  Dataset:
+    dataset_limit: 1.0                        # overridden by dataset_size
+    normalization_file: <STORE>/evenet-train/normalization.pt
+  Training:
+    Components:
+      Assignment:       { include: false }
+      Classification:   { include: true }
+      Segmentation:     { include: false }
+      GlobalGeneration: { include: false }
+      ReconGeneration:  { include: false }
+    ProgressiveTraining:
+      stages:
+        - epoch_ratio: 1.0
+          name: full_training
+          loss_weights:
+            assignment:            [0.0, 0.0]
+            classification:        [1.0, 1.0]
+            classification-noised: [0.0, 0.0]
+            generation:            [0.0, 0.0]
+            generation-recon:      [0.0, 0.0]
+            regression:            [0.0, 0.0]
+          train_parameters:
+            ema_decay:      [0.999, 0.999]
+            noise_prob:     [1.0, 1.0]
+            reco_attn_mask: [0.0, 0.0]
+          transition_ratio: 0.0
+    epochs: 50
+    patience: 20
+    seed: 0                                   # overridden per seed (VERIFY EveNet reads this key)
+    model_checkpoint_load_path: null
+    model_checkpoint_save_path: <STORE>/checkpoints
+    pretrain_model_load_path: <STORE>/pretrain-weights/checkpoints.20M.a4.last.ckpt
+platform:
+  batch_size: 2048
+  data_parquet_dir: <STORE>/evenet-train
+  number_of_workers: 4
+  prefetch_batches: 2
+  resources_per_worker:
+    CPU: 30
+    GPU: 1
+logger:
+  wandb:
+    project: kappa_lambda_FM
+    entity: <WANDB_ENTITY>
+    name: evenet-klambda
+    run_name: placeholder                     # overridden per combo
+    tags: ["kappa_lambda", "EveNet", "data-efficiency", "HH-bbtautau"]
+    simplified: false
+  local:
+    save_dir: <STORE>/log
+    name: evenet
+    version: "kl-1"
