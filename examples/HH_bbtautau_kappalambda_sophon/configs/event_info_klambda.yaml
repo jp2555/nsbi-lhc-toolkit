@@ -1,0 +1,80 @@
+# EveNet event_info for the HH->bbtautau kappa_lambda BINARY ratio task.
+# Adapted from Exotic-Higgs-Study/configs/event_info_30.yaml. The classifier score
+#   softmax(classification/klambda)[..., 1]   IS the per-event MVA -> r(x) via the LR trick
+# (convert with the existing eval_to_ratios.py).
+#
+# INPUTS are byte-identical to EveNet's pretrain.yaml so the 20M pretrained backbone weights
+# bind. Assignment/segmentation are OFF for the first pass (the adapter emits classification
+# only) -- the EVENT/PERMUTATIONS block is kept minimal-but-complete for the loader.
+#
+# VALIDATE ON PERLMUTTER before a run (shifter docker:avencast1994/evenet:1.5):
+#   python -c "from evenet.control.global_config import global_config as g; g.load_yaml('<global.yaml>'); print('ok')"
+
+INPUTS:
+  SEQUENTIAL:
+    Source:
+      energy: log_normalize
+      pt: log_normalize
+      eta: normalize
+      phi: normalize_uniform
+      btag: none
+      isLepton: none
+      charge: none
+  GLOBAL:
+    Conditions:
+      met: log_normalize
+      met_phi: normalize
+      nLepton: none
+      nbJet: none
+      nJet: none
+      HT: log_normalize
+      HT_lep: log_normalize
+      M_all: log_normalize
+      M_leps: log_normalize
+      M_bjets: log_normalize
+
+# Minimal HH resonance structure (used only if assignment is later enabled).
+EVENT:
+  hh:
+    h_bb:
+      - b1
+      - b2
+    h_tt:
+      - t1
+      - t2
+
+PERMUTATIONS:
+  hh:
+    EVENT:
+      - [ h_bb, h_tt ]
+    h_bb:
+      - [ b1, b2 ]
+    h_tt:
+      - [ t1, t2 ]
+
+REGRESSIONS:
+
+# Binary head: index 0 = reference, index 1 = kappa_lambda hypothesis
+# (matches inject/adapter --class-id; npz `classification` int indexes this list).
+CLASSIFICATIONS:
+  EVENT:
+    - klambda
+
+CLASSLABEL:
+  EVENT:
+    klambda:
+      - [ ref, kl_hyp ]
+
+RESONANCE_LABEL:
+  - ["null", "h"]
+
+PARTICLE_PROPERTIES:
+  - Mass
+  - Spin
+  - nProduct_BJet
+  - nProduct_Jet
+  - nProduct_Lepton
+  - Product_LeptonCharge
+
+GENERATIONS:
+  Conditions: {}
