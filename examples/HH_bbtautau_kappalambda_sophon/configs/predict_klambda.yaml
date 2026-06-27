@@ -1,0 +1,49 @@
+# EveNet predict config for the HH->bbtautau kappa_lambda task.
+# Adapted from Exotic-Higgs-Study/configs/predict.yaml. make_klambda_configs.py
+# can use this as `predict_yaml` in workflow_klambda.yaml to also emit per-combo
+# predict configs alongside the train configs.
+#
+# Output: <store>/predictions/<tag>/prediction.pt -- a list of dicts with
+#   d['classification']['classification/klambda'] -> logits (...,2)
+#   d['subprocess_id'], d['event_weight']
+# consumed by plot_data_efficiency.py.
+
+platform:
+  data_parquet_dir: <STORE>/evenet-test
+  number_of_workers: 1
+  resources_per_worker:
+    CPU: 30
+    GPU: 1
+  batch_size: 4096
+  prefetch_batches: 2
+  use_gpu: true
+
+options:
+  default: options.yaml                       # absolutised by make_klambda_configs.py
+
+  prediction:
+    output_dir: predictions/PLACEHOLDER       # overridden per combo to <store>/predictions/<tag>
+    filename: prediction.pt
+    extra_save:
+      - x
+      - event_weight
+      - subprocess_id
+    save_loss: false
+
+  Training:
+    epochs: 1                                  # ignored at predict time
+    model_checkpoint_load_path: PLACEHOLDER    # set per combo by make script
+    pretrain_model_load_path: null
+
+  Dataset:
+    dataset_limit: 1.0
+    normalization_file: <STORE>/evenet-train/normalization.pt
+
+network:
+  default: network.yaml
+
+event_info:
+  default: event_info_klambda.yaml
+
+resonance:
+  default: resonance_klambda.yaml

@@ -43,7 +43,7 @@ branch names from delphes_to_sophon_clouds.py.
 import argparse
 import numpy as np
 
-N_OBJ_MAX = 16
+N_OBJ_MAX = 18                     # EveNet preprocessor expects (N, 18, 7); sanity_checks.py:47
 SOURCE_FEATURES = ["energy", "pt", "eta", "phi", "btag", "isLepton", "charge"]
 CONDITION_FEATURES = ["met", "met_phi", "nLepton", "nbJet", "nJet",
                       "HT", "HT_lep", "M_all", "M_leps", "M_bjets"]
@@ -113,12 +113,21 @@ def _finalize(x, counts, met, met_phi, weight, class_id):
     x[..., 0] = np.clip(x[..., 0], 0.0, None)
     x[..., 1] = np.clip(x[..., 1], 0.0, None)
     conditions = build_conditions(x, mask, np.asarray(met), np.asarray(met_phi))
+    cls = np.full(len(x), int(class_id), dtype=np.int64)
+    # EveNet preprocessor + sanity_checks (preprocessing/sanity_checks.py:40-50) require:
+    #   x_mask (bool N,18), conditions_mask (bool N,1), num_vectors (float32),
+    #   num_sequential_vectors (float32). subprocess_id is needed at predict time to label
+    #   events in the dumped prediction.pt (consumed by plot_data_efficiency.py).
     return {
         "x": x,
+        "x_mask": mask.astype(np.bool_),
         "conditions": conditions,
-        "num_sequential_vectors": counts,
+        "conditions_mask": np.ones((len(x), 1), dtype=np.bool_),
+        "num_sequential_vectors": counts.astype(np.float32),
+        "num_vectors": (counts + 1).astype(np.float32),
         "event_weight": np.asarray(weight, dtype=np.float32),
-        "classification": np.full(len(x), int(class_id), dtype=np.int64),
+        "classification": cls,
+        "subprocess_id": cls,
     }
 
 

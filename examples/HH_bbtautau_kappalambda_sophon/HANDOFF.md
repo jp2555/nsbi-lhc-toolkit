@@ -12,7 +12,9 @@ NOT raw separation. Keep the kinematic-ceiling MLP/BDT as the bar. **Do NOT quot
 [`EVENET_INTEGRATION_PLAN.md`](EVENET_INTEGRATION_PLAN.md).
 
 ## State: what's done (all on branch `fm`, latest commit `833e2d1`)
-Built locally on a bare Mac (no torch/data) and **verified at the numpy/yaml layer only**:
+Built locally on a bare Mac (no torch/data) and **verified at the numpy/yaml layer only**;
+**2026-06-27 update:** the scratch leg of the smoke pipeline now runs end-to-end in a local pixi-GPU
+env (workspace sandbox, not Perlmutter). See "Smoke run — what works locally" below.
 
 | File | Role | Verified locally |
 |---|---|---|
@@ -35,6 +37,27 @@ Perlmutter, clone EveNet-Full + Exotic-Higgs-Study fresh (the harness mirrors Ex
 - **3-way contrast via the options file**: finetune=`options_pretrain.yaml`(freeze none), frozen=`options_frozen.yaml`(freeze full), scratch=`options.yaml`(pretrain null).
 - **wifi/MC-stat uncertainty (2506.00113) = DEFERRED** to a separate project (was explored: frozen-FM-as-wifi-basis; real but out of scope now).
 - **bbγγ = cheap later increment** (only the adapter's object-filling changes); deferred (cleaner m_HH but smaller FM headroom + no infra yet).
+
+## Smoke run — what works locally (2026-06-27)
+End-to-end pipeline validated **scratch-only** under `/workspace/evenet_smoke/`:
+- `delphes_to_evenet_npz.py --smoke` → 2 NPZ → `preprocess.py` → parquet under `evenet-train/` ✅
+- `scripts/train.py` (pixi env, no shifter): scratch trained at sizes 0.3 + 1.0 (1 seed, 2 epochs each) ✅
+- `scripts/predict.py` → `prediction.pt` with key `classification/klambda` (matches plot script) ✅
+- `plot_data_efficiency.py --store_dir /workspace/evenet_smoke` → `data_efficiency_smoke.png` ✅
+  - n=1 per point, AUC≈0.5 as expected (2-epoch smoke); plot machinery verified, physics-meaningful curves are the Perlmutter job.
+
+**Adapter fixes from the smoke run (committed)**: `delphes_to_evenet_npz.py` now
+emits `x_mask`, `conditions_mask`, `num_vectors` (float32), `num_sequential_vectors` (float32),
+and `subprocess_id`. `N_OBJ_MAX` bumped 16 → 18 to match EveNet's preprocessor.
+
+**Local env quirks (for any future local-smoke session)**:
+- `scripts/train.py` asserts `WANDB_API_KEY` — set `WANDB_API_KEY=dummy WANDB_MODE=offline`.
+- wandb 0.28.0 imports `sentry_sdk` + `gitpython` (missing from pixi env): `python -m pip install --user sentry_sdk gitpython`.
+- Run from `EveNet-Full/` with `PYTHONPATH=/workspace/evenet_local/EveNet-Full` (predict.py uses `from scripts.engine ...`).
+
+**Local blockers that don't apply on Perlmutter**:
+- `hf download Avencast/EveNet` 403's on the AWS CDN from the sandbox — pretrained ckpt could
+  NOT be fetched, so **finetune/frozen legs are not validated locally**. Step 1 below stands.
 
 ## Next actions on Perlmutter (detail in EVENET_INTEGRATION_PLAN.md §5–§7)
 1. `shifterimg -v pull docker:avencast1994/evenet:1.5`; `hf download Avencast/EveNet --local-dir $STORE/pretrain-weights`.

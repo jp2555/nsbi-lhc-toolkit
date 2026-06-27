@@ -1,0 +1,28 @@
+# Resonance / topology definitions for the HH->bbtautau kappa_lambda task.
+# event_info_klambda.yaml declares EVENT.hh.h_bb=[b1,b2] and EVENT.hh.h_tt=[t1,t2];
+# EveNet's EventInfo builds topology keys via build_topology_key -> "h_bb/bb" and "h_tt/tt".
+# Those keys must resolve against this resonance file (under a pairing_topology_category
+# such as DiObjectDecay), otherwise EventInfo.__init__ -> compute_segment_tags KeyError's
+# on missing topology even when Assignment/Segmentation are disabled.
+#
+# Used by configs/workflow_klambda.yaml resonance: <this file>.
+
+DiObjectDecay:
+
+  h_bb/bb:
+    Mass: 125
+    Spin: 0
+    nProduct_BJet: 2
+    nProduct_Jet: 2
+    nProduct_Lepton: 0
+    Product_LeptonCharge: 0
+    segment_tag: 1
+
+  h_tt/tt:
+    Mass: 125
+    Spin: 0
+    nProduct_BJet: 0
+    nProduct_Jet: 2
+    nProduct_Lepton: 0
+    Product_LeptonCharge: 0
+    segment_tag: 2
