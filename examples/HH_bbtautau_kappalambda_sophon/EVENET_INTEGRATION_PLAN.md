@@ -100,6 +100,11 @@ Low-mass with ~1–2k signal events: EveNet holds, scratch fails. Fine-tune > sc
 Gates and kill criteria: EVENET_FEASIBILITY_NOTE.pdf §8. Everything below runs on Perlmutter;
 steps 2–3 are plain numpy/uproot (login node fine), 4–6 use the shifter image.
 
+**Driver script:** `./run_option_a.sh {smoke|setup|check <f.root>|convert|preprocess|configs|`
+`train|train-local|predict|eval}` stages all of the below (env: `NANO`, `BTAG_WP`, `ACCOUNT`;
+optional `TAU_ENCODING=corner` for the G1 A/B, `TASK=syst` for Money Plot 2, `KL_HYP=0|5`).
+The manual commands are kept for reference:
+
 ```bash
 STORE=<your store>; NANO=<CMS NanoAOD base>          # kl0/ kl1/ kl5/ sample dirs
 
