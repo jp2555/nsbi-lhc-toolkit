@@ -1,0 +1,760 @@
+% =====================================================================
+% EveNet feasibility note for low-statistics NSBI in HH->bbtautau/bbgammagamma
+% Working-note conventions: British -ise spellings, first-occurrence
+% abbreviation expansion, \toverify{} flags for unverified content.
+% Build: pdflatex twice (TOC + refs). No shell-escape, no external assets.
+% =====================================================================
+\documentclass[11pt]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{microtype}
+\emergencystretch=1.5em
+\usepackage[colorlinks=true,linkcolor=blue!60!black,citecolor=blue!60!black,urlcolor=blue!60!black]{hyperref}
+
+% ---- macros (match fm_nsbi_note conventions) ----
+\newcommand{\kl}{\ensuremath{\kappa_\lambda}}
+\newcommand{\bbtt}{\ensuremath{b\bar b\,\tau^+\tau^-}}
+\newcommand{\bbgg}{\ensuremath{b\bar b\,\gamma\gamma}}
+\newcommand{\tauh}{\ensuremath{\tau_h}}
+\newcommand{\Nft}{\ensuremath{N_{\mathrm{ft}}}}
+\newcommand{\mhh}{\ensuremath{m_{HH}}}
+\newcommand{\mtt}{\ensuremath{m_{\tau\tau}}}
+\newcommand{\mgg}{\ensuremath{m_{\gamma\gamma}}}
+\newcommand{\toverify}[1]{\textcolor{red}{[verify: #1]}}
+
+\title{Feasibility of EveNet for Low-Statistics NSBI in
+$HH\to\bbtt$ and $HH\to\bbgg$:\\
+Coverage Analysis, Tests, and Decision Plan}
+\author{Working note --- \bbtt\ \kl\ NSBI project}
+\date{10 July 2026 \\[2pt] \small v1 --- synthesised from arXiv:2601.17126, arXiv:2606.14870,
+and the local EveNet integration harness (branch \texttt{fm})}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+We assess whether the EveNet event-level foundation model (FM)~\cite{Hsu:2026evenet}
+can be fine-tuned to train high-precision, compute-efficient density-ratio
+classifiers for a \kl\ measurement via neural simulation-based inference (NSBI)
+in $HH\to\bbtt$ and $HH\to\bbgg$, with emphasis on the low-statistics regimes:
+sparse signal Monte Carlo (MC) per coupling point (P1) and sparse
+systematic-variation MC (P2). The central finding: \emph{neither hadronic taus
+nor prompt photons exist in EveNet's object vocabulary or pre-training corpus},
+and no supported extension path is documented. However, a three-tier analysis
+(vocabulary / corpus / transferable structure) combined with an
+information-flow analysis of the NSBI ratio decomposition shows the gap is
+concentrated in identification information that approximately cancels in
+exactly the low-statistics ratio components where FM data-efficiency is
+needed. We therefore recommend proceeding with the already-built fine-tuning
+harness (Option~A), upgraded with an ``unoccupied-corner'' type encoding and
+calibration-closure metrics, before considering vocabulary surgery
+(Option~B) or a new $\tau/\gamma$-aware FM (Option~C). A staged decision plan
+with explicit gates and kill criteria is given, together with a ranked list of
+open questions. The single largest scientific unknown --- whether fine-tuned FM
+classifiers remain calibrated enough for density-ratio use --- is untested in
+the literature and is answerable at near-zero marginal cost within our sweep.
+\end{abstract}
+
+\tableofcontents
+
+% =====================================================================
+\section{Scope and problem statement}
+\label{sec:scope}
+
+\paragraph{Task.} Measure the Higgs self-coupling modifier \kl\ via NSBI:
+train classifiers whose outputs convert to per-event density ratios
+$r(x;\kl,\kl')$ between process hypotheses, combined into an unbinned
+likelihood. Signal discrimination between \kl\ hypotheses is driven by the
+\mhh\ lineshape and the triangle--box interference (non-monotone in \kl,
+with a near-degeneracy around $\kl\approx 2.45$), i.e.\ by event-level
+kinematics rather than any single-object property.
+
+\paragraph{Channels.} Primary: $HH\to\bbtt$ (2 $b$-jets, 2 taus
+--- here focused on hadronic taus \tauh\ --- plus missing transverse
+energy, MET, from neutrinos). Secondary increment: $HH\to\bbgg$
+(2 $b$-jets, 2 prompt photons, no intrinsic MET from the photon leg).
+
+\paragraph{The two low-statistics problems.}
+\begin{description}[leftmargin=2.2em]
+\item[P1] Sparse signal MC per coupling basis point:
+  $\mathcal{O}(200\mathrm{k})$ events per $\kl\in\{0,1,5\}$, produced with
+  Powheg $\to$ Pythia8 $\to$ Delphes $\Rightarrow$ high-variance ratio
+  estimators.
+\item[P2] Sparse systematic-variation MC $\Rightarrow$ difficulty
+  parameterising $s(x;\kl,\theta)$ in nuisance parameters $\theta$;
+  variation samples are typically $10\times$--$100\times$ smaller than
+  nominal.
+\end{description}
+
+\paragraph{Quality gates already adopted by the analysis.}
+Integral closure $<1\%$ per basis process and shape closure at the 5\% level
+(\texttt{CLOSURE\_TOL}$\,=0.05$, treated as fixed --- a 5\% bias is already
+significant). Any FM-based classifier must pass the \emph{same} gates as the
+from-scratch baseline; area-under-curve (AUC)-type wins alone are
+insufficient for likelihood-ratio use.
+
+\paragraph{Compute framing.} NSBI multiplies training runs:
+(processes) $\times$ (systematic variations) $\times$ (ensemble members)
+$\times$ (\kl\ grid). Any FM must win on \emph{value per compute} across this
+multiplicity, not on a single-classifier benchmark.
+
+% =====================================================================
+\section{Evidence base}
+\label{sec:evidence}
+
+\subsection{The Sophon null and the horizon/objective decomposition}
+\label{sec:sophon}
+
+Fine-tuning the single-jet tagger backbone Sophon
+\toverify{Sophon arXiv ID; believed 2405.12972}~\cite{Li:2024sophon} for
+$\kl=0$-vs-$5$ discrimination did \emph{not} beat from-scratch training
+(scratch $\geq$ finetune $>$ frozen), and a cheap kinematic-ceiling
+BDT/MLP matched all three. Diagnosis (per
+\texttt{FOUNDATION\_MODEL\_BRIEF.md}): two independent mismatches,
+\begin{enumerate}[label=(\roman*)]
+\item \textbf{horizon} --- single-jet pretext vs.\ event-level physics
+  (the \kl\ signal is a multi-object correlation), and
+\item \textbf{objective} --- discrete flavour classification vs.\ a
+  continuous, interference-driven ratio.
+\end{enumerate}
+EveNet is the cleanest available experiment for \emph{disentangling} these:
+it is event-level but \emph{not} coupling-aware. An EveNet null would imply
+the objective mismatch is binding; an EveNet win would implicate the horizon
+mismatch as the cause of the Sophon null. This disentangling logic is the
+primary scientific motivation for the EveNet test, independent of the
+$\tau/\gamma$ question.
+
+\subsection{Controlled pre-training-objective study (arXiv:2606.14870)}
+\label{sec:elsharkawy}
+
+Elsharkawy et al.~\cite{Elsharkawy:2026} compare pre-training objectives on a
+fixed backbone (OmniLearned Point--Edge Transformer, PET; 100k/7M/51M
+parameters) pre-trained on JetClass (100M jets; MadGraph5+Pythia8+Delphes
+3.4.3)~\cite{Qu:2022part}, fine-tuned on top tagging with
+$\Nft\in\{10^3,10^4,10^5,1.2\times10^6\}$ and on JetNet generation. Findings
+(labels F1--F4 as in the companion FM/NSBI note):
+
+\begin{description}[leftmargin=2.2em]
+\item[F1] \textbf{Classifier+MPM wins the low-label regime.} At
+  $\Nft=10^4$ the classifier + masked-particle-modelling (MPM) hybrid is the
+  top configuration at every model size (by their Data-Efficiency Score);
+  with plentiful labels ($\Nft=1.2$M) pure classifier pre-training is best.
+  ``Low-label'' means few labelled downstream training events; in
+  simulation-based HEP every event is labelled for free, so for us it simply
+  means \emph{low-statistics fine-tuning samples}. Our P2 samples
+  ($10^3$--$10^4$) sit squarely in the winning regime; our 200k/\kl-point
+  signal samples sit near the boundary where the advantage starts narrowing.
+\item[F2] \textbf{Generative pre-training does not transfer to
+  classification.} Pure flow-matching pre-training matches or underperforms
+  from-scratch at all sizes.
+\item[F3] \textbf{Classification and generation are orthogonal.}
+  Flow matching must be in the pre-training mix to obtain downstream
+  generative advantage, and vice versa.
+\item[F4] \textbf{Pre-training validation loss is an imperfect downstream
+  proxy} (Pearson $r\approx-0.75$); downstream performance peaks
+  \emph{before} pre-training converges. Checkpoint selection is an open
+  problem --- for NSBI it becomes a \emph{calibration-selection} problem.
+\end{description}
+
+Two additional results matter directly for the present decision:
+\begin{itemize}
+\item \textbf{Pre-training data volume is nearly irrelevant at low labels.}
+  In their $10^5\!\to\!10^8$ pre-training-set scan (Micro model), scaling
+  slopes with scarce downstream labels are essentially flat
+  ($\bar m = 1.4$, vs.\ $\bar m = 182.5$ with abundant labels); only
+  standalone MPM retains a positive slope. \emph{Objective choice, not
+  corpus size, drives the low-label gain.} This substantially reduces the
+  corpus-production cost of any continued-pre-training option
+  (Sec.~\ref{sec:options}).
+\item \textbf{Two evidence gaps.} (a) \emph{Calibration is never tested}:
+  all classification metrics are rejection-type ($1/\varepsilon_b$ at
+  $\varepsilon_s=0.3$). Whether a fine-tuned FM classifier converts to an
+  unbiased density ratio is unknown. (b) \emph{No genuinely out-of-domain
+  transfer is tested}: JetClass$\to$top-tagging is class-overlapping (tops
+  are in the pre-training corpus); no downstream task involves object types
+  absent from pre-training. Both gaps sit exactly on our critical path.
+\end{itemize}
+
+\subsection{EveNet (arXiv:2601.17126): what it is}
+\label{sec:evenet}
+
+\subsubsection{Input schema}
+Per-object token = 7 features:
+$(E,\,p_T,\,\eta,\,\phi,\,\texttt{btag},\,\texttt{isLepton},\,\texttt{charge})$,
+with $E,p_T$ log-normalised. Global (per-event) conditioning = 10 features:
+$(\mathrm{MET},\,\mathrm{MET}_\phi,\,n_\ell,\,n_b,\,n_j,\,H_T,\,H_T^\ell,\,
+M_{\mathrm{all}},\,M_{\ell\ell},\,M_{bb})$. \textbf{MET is not a token} ---
+it enters only through the global block. There is \emph{no type-embedding
+vocabulary}: object identity is carried entirely by the three discrete flags.
+There is no \texttt{isTau}, no \texttt{isPhoton}, no \texttt{isMET}, and no
+extensible type table. The schema is fixed jointly by the
+\texttt{event\_info} YAML used in preprocessing \emph{and} training; changing
+it changes the input dimension of the \texttt{GlobalEmbedding}/input blocks
+and breaks strict checkpoint compatibility.
+
+\subsubsection{Pre-training corpus}
+$\sim$33 billion simulated events, $\sim$500M retained after preselection.
+Processes (their Table~1): QCD multijet (2--4$j$); $t\bar t$
+(hadronic/1L/2L $+0,1j$); $t\bar tW$, $t\bar tZ$; $W$+jets, $Z$+jets
+($0,1,2j$); dibosons $WW$, $ZZ$, $WZ$; and SM $H\to WW^*$ (0L/1L/2L).
+Chain: MadGraph5\_aMC@NLO $\to$ Pythia $\to$ Delphes with a \emph{generic}
+detector card (explicitly neither CMS nor ATLAS). ``Leptons'' throughout
+means electrons or muons.
+\textbf{No prompt-photon process (no $H\to\gamma\gamma$, $\gamma$+jets,
+$t\bar t\gamma$) and no hadronic-tau final state appears in the corpus.}
+Hadronic taus appear in the paper only as an event \emph{veto} in the
+$X\to YH$ selection, never as input tokens.
+
+\subsubsection{Pre-training objectives}
+Two-stage, diffusion-time-conditioned:
+\begin{itemize}
+\item \textbf{Stage 1 (SSL only):} masked-particle reconstruction via
+  diffusion inpainting (mask a subset of tokens; denoise conditioned on the
+  rest), $\mathcal{L}=\lVert v - v_{\mathrm{pred}}\rVert_2^2$, masking
+  probability ramped during training.
+\item \textbf{Stage 2 (multi-task):} classification (process discrimination,
+  noise-weighted $\alpha^2(t)\,\mathrm{CE}$, decay-channel variations
+  \emph{absorbed within} each class), SSL generation, and \emph{supervised
+  generation = neutrino reconstruction} (denoise injected tokens for
+  undetectable components conditioned on observed objects). Losses summed
+  directly, no gradient surgery. Segmentation and assignment heads exist but
+  are fine-tune-only.
+\end{itemize}
+\textbf{No systematics-aware or coupling/nuisance-parameterised component
+exists in the pre-training objective.}
+
+\subsubsection{Fine-tuning interface and demonstrated results}
+Three initialisations are compared throughout: \emph{Scratch},
+\emph{SSL} (Stage-1 weights), \emph{Full} (Stage-1+2). Standard recipe:
+joint fine-tune with backbone learning rate $=10\%$ of head learning rate;
+optional adapters between transformer blocks (trainable parameters
+$\sim$20M$\to$8M). Demonstrated tasks:
+\begin{enumerate}[label=(\alph*)]
+\item \textbf{$X\to YH\to b\bar b\,WW^*\to b\bar b\,\ell\nu qq'$}
+  (CMS Open Data full-sim, 121 mass points, 1k--10k signal events each):
+  Full $>$ Scratch by $\sim$50\% in significance-improvement characteristic
+  (SIC); $>$ XGBoost by $\sim$20\%, $>$ TabPFN by $\sim$10\%;
+  $\sim3\times$ faster convergence.
+\item \textbf{Exotic $H\to aa\to 4b$} ($m_a=30$\,GeV; explicitly absent from
+  the corpus): SIC 4.1 (Full) vs.\ 1.6 (Scratch) vs.\ 1.4 (SPANet); at
+  \emph{5\% of training data} SIC 1.7, exceeding both baselines at full
+  data; pairing efficiency 58\% vs.\ 26\%.
+\item \textbf{$t\bar t$ dilepton spin correlations} (scan 1.5\%--150\% of
+  2.83M events): at 1.5\%, $\Delta D = 1.85\%$ (Full) vs.\ 2.68\% (Scratch);
+  lepton--quark pairing 48\% vs.\ 24\%; extraction reported stable under
+  JES-type shifts.
+\item \textbf{$\Upsilon\to\mu\mu$ rediscovery in real CMS Open Data} (weak
+  supervision, $\sim$12k events): median significance $7.6\pm0.4\sigma$
+  (Full) vs.\ $1.45\sigma$ (Scratch) vs.\ $6.4\sigma$ published benchmark
+  --- the starkest low-statistics pre-training win.
+\end{enumerate}
+Cautionary result: \emph{mass-parameterised} fine-tuning showed
+``systematically reduced sensitivity'' (their explanation: kinematic
+diversity across the mass grid limits parameter sharing). This warns
+against a \kl-parameterised head as the first NSBI design; our
+per-basis-point + linear-combination construction sidesteps it.
+
+\subsubsection{Architecture, compute, availability}
+PET encoder, 18.8M parameters (hidden 256, 16 layers, 16 heads, 10 local
+$k$NN layers); task heads 1.3--8.7M. Pre-trained on 512 A100s (Perlmutter),
+LION + EMA, PyTorch~2.6 + Lightning + Ray. Code is public at
+\texttt{github.com/UW-EPE-ML/EveNet\_Public}; checkpoints are public at
+\texttt{huggingface.co/Avencast/EveNet}
+(\texttt{checkpoints.20M.a4.last.ckpt} and \texttt{SSL.20M.last.ckpt});
+a \texttt{network-100M.yaml} scaled template
+exists in the repository. Scope restriction: resolved regime only (no
+boosted/large-$R$ topologies). Robustness to the generic-Delphes$\to$CMS
+full-sim domain shift is demonstrated \emph{empirically}, not by
+construction.
+
+% =====================================================================
+\section{The $\tau/\gamma$ coverage gap: three-tier analysis}
+\label{sec:threetier}
+
+``Does EveNet cover $\tau/\gamma$ final states?'' decomposes into three
+separable questions with different remediation costs:
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}p{3.2cm}p{5.6cm}p{2.2cm}p{3.4cm}@{}}
+\toprule
+\textbf{Tier} & \textbf{Finding} & \textbf{Verdict} & \textbf{Remedy if binding} \\
+\midrule
+Vocabulary (can the schema represent \tauh/$\gamma$?) &
+No type table exists; identity = 3 flags
+(\texttt{btag}, \texttt{isLepton}, \texttt{charge}).
+No $\tau/\gamma$ flag. MET never a token. &
+Gap real, but shallower than feared (Sec.~\ref{sec:encoding}) &
+Corner encoding (free) or input-widening surgery (cheap--medium) \\
+\addlinespace
+Corpus (did pre-training see $\tau/\gamma$ physics?) &
+Zero prompt-photon processes; zero \tauh\ final states;
+\tauh\ used only as an event veto. &
+Gap real &
+Continued pre-training on $\tau/\gamma$-enriched corpus (medium; volume
+requirement reduced by the flat low-label scaling result of
+\cite{Elsharkawy:2026}) \\
+\addlinespace
+Transferable structure (does the learned representation help anyway?) &
+All demonstrated out-of-corpus successes ($H\to aa\to4b$, $X\to YH$,
+fast-sim$\to$full-sim, sim$\to$data) are \emph{new topologies of known
+object types}. The truly out-of-vocabulary case is untested anywhere in
+the literature. &
+\textbf{Open --- the decisive question} &
+Not remediable by construction; must be \emph{measured} (Gate G0,
+Sec.~\ref{sec:plan}) \\
+\bottomrule
+\end{tabular}
+\caption{Three-tier decomposition of the $\tau/\gamma$ coverage gap.}
+\label{tab:tiers}
+\end{table}
+
+\noindent
+The trap to avoid is collapsing these into a binary ``EveNet doesn't do taus
+$\Rightarrow$ build our own FM.'' Tiers 1--2 are established facts with cheap
+or medium remedies; tier 3 is an empirical question our existing harness can
+answer directly.
+
+% =====================================================================
+\section{Why the gap is likely non-binding: ratio-component information asymmetry}
+\label{sec:asymmetry}
+
+The NSBI likelihood decomposes into per-process density ratios, and the
+$\tau/\gamma$ \emph{identification} information is asymmetrically distributed
+across them:
+
+\begin{description}[leftmargin=2.2em]
+\item[Signal--signal ratios $r(x;\kl,\kl')$.] Numerator and denominator
+  share an \emph{identical final state}. Type-identification quantities
+  (DeepTau-like scores, decay modes, photon ID) are (to good approximation)
+  common factors that cancel in the ratio. The \kl\ dependence lives in the
+  \mhh\ lineshape and triangle--box interference --- functions of the object
+  four-vectors, which the stock token $(E,p_T,\eta,\phi)$ carries
+  \emph{exactly}.
+\item[Signal-vs-background discriminators.] Here $\tau$-ID/$\gamma$-ID
+  genuinely matter (fake rejection against $t\bar t$, QCD, $\gamma$+jets).
+  But these components are \emph{MC-rich} --- $t\bar t$ is the most abundant
+  sample in the analysis --- so they are not where FM data-efficiency is
+  needed, and existing full-feature classifiers can be retained for them.
+\item[Systematic-variation ratios (nominal/varied, P2).] Variation samples
+  share the nominal final state; type-ID again approximately cancels, and
+  energy-scale-type shape effects are kinematic and token-visible.
+\end{description}
+
+\noindent\textbf{Consequence.} The ratio components where the FM's low-label
+advantage is needed (P1 signal ratios, P2 variation ratios) are precisely the
+components where the missing $\tau/\gamma$ vocabulary costs the least. The
+stock-schema workaround already encoded in the harness (\tauh\ $\to$ generic
+jet) is approximately lossless \emph{for the specific low-statistics question
+the FM is being asked to answer}, with the losses concentrated in MC-rich
+background rejection.
+
+\paragraph{Honest caveats.}
+\begin{enumerate}[label=(\roman*)]
+\item ``Fully preserved'' applies to \emph{visible} kinematics. In \bbtt,
+  tau neutrinos smear visible \mhh; SVfit/FastMTT \mtt\ --- which partially
+  recovers the neutrino momenta --- has no slot in the stock schema and
+  \emph{is} genuinely lost. Mitigations: MET (the aggregate neutrino
+  footprint) is in the global conditioning, and EveNet's Stage-2 pre-training
+  explicitly included \emph{neutrino reconstruction as a supervised denoising
+  task} --- the backbone was trained to infer invisible components from
+  visible tokens + MET. Whether this recovers what FastMTT provides is an
+  empirical question the sweep answers (open question Q5).
+\item The cancellation argument is approximate: selection efficiencies and
+  fake contamination differ slightly between \kl\ hypotheses through
+  kinematic correlations with ID variables. Second-order, but the closure
+  gates will price it.
+\item For \bbgg\ the preservation argument is \emph{stronger} than for
+  \bbtt: photons produce no neutrinos, so visible kinematics = full
+  kinematics and \mgg\ is exactly computable from the tokens. Conversely the
+  FM \emph{headroom} is smaller (the \mhh\ observable is already cleaner),
+  which is why \bbgg\ is sequenced as an increment, not the primary test.
+\end{enumerate}
+
+% =====================================================================
+\section{Encoding strategies within the fixed schema}
+\label{sec:encoding}
+
+\subsection{Status quo: anonymous-jet encoding}
+The current adapter (\texttt{scripts/delphes\_to\_evenet\_npz.py}) emits
+\tauh\ as a generic jet: (\texttt{btag}, \texttt{isLepton},
+\texttt{charge}) $= (0,0,0)$. Kinematics exact; $\tau$ identity, charge, and decay mode
+discarded; the network must infer $\tau$-ness from kinematics alone.
+Documented, deliberate, checkpoint-safe.
+
+\subsection{Unoccupied-corner encoding (proposed, zero surgery)}
+The three flags span a $2\times2\times3=12$-point discrete lattice; every
+token's \emph{type} is a lattice corner. In EveNet's pre-training corpus only
+four corners ever occur:
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Corner} (\texttt{btag}, \texttt{isLep}, \texttt{chg}) &
+\textbf{Corpus occupant} & \textbf{Proposed reassignment} & \textbf{Status} \\
+\midrule
+$(0,0,0)$   & light jet        & --- & occupied \\
+$(1,0,0)$   & $b$-jet          & --- & occupied \\
+$(0,1,\pm1)$& $e^\pm/\mu^\pm$  & --- & occupied \\
+$(0,0,\pm1)$& \emph{never seen} & \textbf{\tauh} (``charged jet''), with
+  measured charge & vacant \\
+$(0,1,0)$   & \emph{never seen} & \textbf{$\gamma$} (``neutral lepton'') & vacant \\
+$(1,1,\cdot)$, $(1,0,\pm1)$ & \emph{never seen} & reserved & vacant \\
+\bottomrule
+\end{tabular}
+\caption{The flag lattice: occupied vs.\ vacant corners, and the proposed
+$\tau/\gamma$ assignments. Values are in-range for the pre-trained
+normalisers; the checkpoint loads unchanged.}
+\label{tab:corners}
+\end{table}
+
+\noindent
+This gives the network a \emph{distinguishable} type signal for \tauh\
+(recovering its measured charge, currently discarded) and $\gamma$ inside the
+existing 7 dimensions --- no weight surgery, full checkpoint compatibility,
+a one-line adapter change per object type.
+
+\subsection{Risks of the corner encoding (candidate failure mechanisms)}
+\label{sec:cornerrisks}
+The backbone has no prior \emph{about} vacant corners; ``strictly more
+information at the data level'' does not guarantee a better classifier after
+a \emph{finite} fine-tune. Candidate mechanisms by which it could hurt,
+all measurable by an A/B test (Gate G1):
+\begin{enumerate}[label=(R\arabic*)]
+\item \textbf{Out-of-distribution embedding:} inputs at never-seen flag
+  combinations land the token embedding in unexercised regions of
+  representation space; early fine-tuning could be slower or less stable
+  (mitigated by the backbone-LR$=10\%$ recipe).
+\item \textbf{Shortcut/overfit capacity at very low \Nft:} an extra clean
+  discrete bit gives the network memorisation shortcuts; at
+  $\Nft\sim10^3$ this could \emph{worsen} generalisation relative to the
+  anonymous encoding.
+\item \textbf{Attention misrouting:} pre-trained heuristics keyed on
+  $\texttt{charge}\neq0\Rightarrow$ lepton may initially misroute \tauh\
+  tokens through lepton-like attention patterns (transient, but could
+  matter in short fine-tunes).
+\end{enumerate}
+
+\subsection{What cannot be encoded without surgery}
+$\tau$-ID score (DeepTau-like), decay mode, photon-ID quality, and
+FastMTT/SVfit \mtt\ have no slot. Adding any of them widens the token (or the
+global block) and breaks direct checkpoint loading --- that is Option~B
+territory (Sec.~\ref{sec:options}). Overwriting one of the 10 global
+conditions with \mtt\ is technically possible but abuses a pre-trained
+normaliser and is not recommended.
+
+% =====================================================================
+\section{Current integration state (branch \texttt{fm})}
+\label{sec:harness}
+
+Already built and locally verified, in
+\texttt{examples/HH\_bbtautau\_kappalambda\_sophon/}:
+
+\begin{itemize}
+\item \textbf{Adapter} \texttt{scripts/delphes\_to\_evenet\_npz.py}:
+  Delphes ROOT $\to$ NPZ with \texttt{x} of shape $(N,16,7)$ (zero-padded,
+  $p_T$-sorted), \texttt{conditions} $(N,10)$, sequential-count mask,
+  event weights (NLO signs preserved), binary class label. Non-negativity
+  clipping matches EveNet's \texttt{log1p} scaling. \texttt{--smoke} mode
+  fabricates schema-valid events without \texttt{uproot}.
+\item \textbf{Systematic injector} \texttt{scripts/inject\_systematic.py}:
+  analytic distortions of jet tokens --- \texttt{jes} (constant scale
+  $\times(1+\alpha)$) and \texttt{jes\_mhh}
+  ($\alpha\tanh((M_{\mathrm{all}}-m_0)/w)$, a shape systematic correlated
+  with the \kl\ observable) --- with globals recomputed. Closure is exact by
+  construction, so P2 value is \emph{measurable} without real variation MC.
+  Known TODO: JES$\to$MET propagation deliberately omitted in v1.
+\item \textbf{Sweep generator} \texttt{scripts/make\_klambda\_configs.py}:
+  3 modes (finetune / frozen / scratch) $\times$ 5 dataset fractions
+  $(0.01,0.03,0.1,0.3,1.0)$ $\times$ 5 seeds $=75$ configurations +
+  launcher script; adapted from the EveNet Exotic-Higgs study template.
+\item {\sloppy \textbf{Configs}: \texttt{workflow\_klambda.yaml} (control
+  file; paths are placeholders) and \texttt{event\_info\_klambda.yaml},
+  whose INPUTS block is byte-identical to EveNet's \texttt{pretrain.yaml}
+  so the 20M backbone binds (assignment/permutation heads present but
+  off).\par}
+\item \textbf{Evaluation} \texttt{scripts/plot\_data\_efficiency.py}:
+  weighted AUC vs.\ training fraction, mean$\pm$std over seeds, with
+  kinematic-ceiling overlay. \emph{Currently AUC-only} --- the closure-metric
+  upgrade (Gate G0.5) is the key missing piece.
+\item \textbf{Runtime}: Perlmutter shifter image
+  \texttt{avencast1994/evenet:1.5}; checkpoints via
+  \texttt{hf download Avencast/EveNet}.
+\end{itemize}
+
+\noindent Engineering TODOs carried from the harness handoff: create
+\texttt{options\_frozen.yaml}; verify the prediction key
+\texttt{classification/klambda}; load-test the configs inside the shifter
+image before launching the 75 jobs; and verify Delphes branch names
+against real files.
+
+% =====================================================================
+\section{Options and costs}
+\label{sec:options}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}p{2.6cm}p{3.8cm}p{4.2cm}p{3.6cm}@{}}
+\toprule
+& \textbf{A. Fine-tune stock EveNet} (+ corner encoding) &
+\textbf{B. Vocabulary surgery + continued pre-training} &
+\textbf{C. New $\tau/\gamma$-aware FM} \\
+\midrule
+What it is &
+Existing 75-config harness; optional corner encoding
+(Sec.~\ref{sec:encoding}) &
+Widen token to 8--9 dims (\texttt{isTau}/\texttt{isPhoton} or $\tau$-ID
+score); zero-init new input columns (function-preserving at init);
+continue SSL+classification pre-training on a $\tau/\gamma$-enriched
+Delphes corpus ($Z\to\tau\tau$, $H\to\tau\tau$, $\gamma$+jets,
+$H\to\gamma\gamma$, $t\bar t\gamma$, HH grid) &
+Full pre-training from scratch with $\tau/\gamma$ in vocabulary and
+corpus \\
+\addlinespace
+Weight reuse & Full & Full except first linear layer & None \\
+\addlinespace
+New corpus & None &
+Modest: F-volume result of \cite{Elsharkawy:2026} (flat low-label
+scaling) suggests $\mathcal{O}(10^7)$ events from the existing Delphes
+pipeline plausibly suffices &
+EveNet-scale was 33B raw / 500M retained;
+$\mathcal{O}(10^2$--$10^3)\times$ A--B \\
+\addlinespace
+Compute & Fine-tune only: hours--days on Perlmutter &
++ continued pre-training of an 18.8M model: days--weeks &
+Months + generation campaign (EveNet used 512 A100s) \\
+\addlinespace
+Key risk & $\tau/\gamma$ information ceiling (bounded by
+Sec.~\ref{sec:asymmetry}) &
+No established HEP recipe for continued pre-training; representation
+drift; schema fork diverges from upstream &
+Duplicates $\sim$1 year of engineering; \textbf{and if A nulls, C likely
+nulls too} (Sec.~\ref{sec:plan}) \\
+\bottomrule
+\end{tabular}
+\caption{The three strategic options.}
+\label{tab:options}
+\end{table}
+
+\noindent
+On Option C, note also the existence of TauFM~\cite{TauFM:2025} (jet-FM-based
+$\tau$ reconstruction) as adjacent prior art, and that the EveNet group
+invites process contributions and ships a 100M-parameter template ---
+if Option C is ever reached, upstream collaboration dominates a solo rebuild.
+
+% =====================================================================
+\section{Staged decision plan}
+\label{sec:plan}
+
+Cheapest-information-first. Each gate has an explicit pass condition and a
+kill/branch interpretation.
+
+\begin{description}[leftmargin=2.6em,style=nextline]
+\item[G0 --- Run the existing sweep (Option A, stock or corner schema).]
+  \emph{Pass:} finetune $>$ scratch beyond the compute penalty
+  \textbf{and} beats the kinematic-ceiling baseline on value-per-compute.
+  \emph{Interpretation of a null:} event-level pre-training did not fix the
+  Sophon null $\Rightarrow$ the \emph{objective} mismatch is binding
+  (Sec.~\ref{sec:sophon}); no amount of $\tau$-vocabulary repairs an
+  objective mismatch, so \textbf{a null here also condemns Option C in its
+  like-for-like form} --- the missing $\tau$-ID is not what limits
+  \kl-separation (Sec.~\ref{sec:asymmetry}); the surviving FM directions
+  would be coupling-aware pretexts, not coverage extensions.
+\item[G0.5 --- Add calibration/closure metrics to the sweep evaluation.]
+  Integral closure $<1\%$ per basis process and shape closure at
+  \texttt{CLOSURE\_TOL}$=0.05$, alongside AUC, for every (mode, fraction,
+  seed) cell. Near-zero marginal cost; fills the literature's largest gap
+  (Sec.~\ref{sec:elsharkawy}); publishable in either direction; directly
+  feeds the low-statistics-systematics ``money plot'' goal.
+  \emph{Branch:} if FM fine-tunes win AUC but fail closure where scratch
+  passes, the FM inductive bias is biasing the ratio --- a new, reportable
+  failure mode, and a hard blocker for NSBI adoption regardless of G0.
+\item[G1 --- Corner-encoding A/B test (\tauh: anonymous vs.\ $(0,0,\pm1)$).]
+  One adapter flag; run at two dataset fractions $\times$ 5 seeds.
+  \emph{Pass:} corner $\geq$ anonymous at all fractions (watch R2 of
+  Sec.~\ref{sec:cornerrisks} at the lowest fraction).
+\item[G2 --- \bbgg\ increment.] Photons via $(0,1,0)$; only the adapter's
+  object-filling changes. Tests whether the corner trick generalises to a
+  second unseen type, on the channel where the kinematic-preservation
+  argument is strongest.
+\item[G3 --- Option B surgery (only if corners measurably saturate).]
+  Zero-init input widening + continued SSL pre-training; corpus sized
+  modestly per the flat-volume result. \emph{Pass:} beats the corner
+  encoding by more than the added compute.
+\item[G4 --- Option C (only if transfer is proven valuable \emph{and}
+  surgery demonstrably fails).] Prefer collaboration with the EveNet
+  group over a solo build.
+\end{description}
+
+\noindent\textbf{Standing constraint:} no $\sigma_{\kl}$ significance claims
+from any branch until the upstream NSBI MC-statistics estimator critique
+\cite{Shyamsundar:2025} is settled (the wifi-ensemble programme
+\cite{Wifi:2025} is the candidate resolution and is deferred to a separate
+project).
+
+% =====================================================================
+\section{Open questions, ranked}
+\label{sec:openq}
+
+Priority tags [P0/P1/P2] and effort tags [S/M/L] follow the note-family
+convention.
+
+\begin{enumerate}[label=\textbf{Q\arabic*}.]
+\item \textbf{[P0, S] Calibration of fine-tuned FM classifiers.} Does a
+  pre-trained backbone help, hurt, or not affect ratio closure at fixed
+  AUC? Untested in \cite{Elsharkawy:2026} (rejection metrics only) and in
+  \cite{Hsu:2026evenet} (SIC only). Answered by G0.5.
+\item \textbf{[P0, S] Does event-level pre-training beat scratch at all
+  for a continuous interference-driven ratio?} The
+  horizon-vs-objective disentangling test (G0). All published EveNet wins
+  are discrete classification/anomaly tasks.
+\item \textbf{[P0, --- (blocking for claims)] MC-statistics estimator
+  critique} \cite{Shyamsundar:2025}: settle before quoting any
+  \kl\ significance from FM or non-FM pipelines.
+\item \textbf{[P1, S] Corner vs.\ anonymous encoding} (G1), including the
+  low-\Nft\ overfit risk R2.
+\item \textbf{[P1, S] P2 value measurement.} Data-efficiency of
+  nominal-vs-varied ratio learning under the analytic injector: does the FM
+  advantage \emph{grow} as variation-sample size shrinks (the money plot),
+  and does it survive the \texttt{jes\_mhh} shape systematic that is
+  correlated with the \kl\ observable?
+\item \textbf{[P1, M] Quantify the FastMTT/\mtt\ and $\tau$-ID loss.}
+  Compare the kinematic ceiling with and without \mtt/ID features to bound
+  what the stock schema forfeits in absolute terms; separately, test
+  whether EveNet's neutrino-reconstruction pretext implicitly recovers
+  \mtt-like information (probe the fine-tuned representation).
+\item \textbf{[P1, S] Parameterised-head caution.} EveNet's
+  mass-parameterised fine-tuning \emph{reduced} sensitivity; verify our
+  per-basis-point + linear-combination NSBI construction is unaffected, and
+  treat any \kl-parameterised head proposal as requiring its own gate.
+\item \textbf{[P2, M] Continued-pre-training recipe stability} (for G3):
+  zero-init widening, replay mixture of original-corpus processes vs.\
+  $\tau/\gamma$ additions, representation-drift monitoring. No established
+  HEP precedent.
+\item \textbf{[P2, S] Domain gap: generic Delphes card vs.\
+  \texttt{cms\_card\_v1}.} Empirically bridged in the paper
+  (generic$\to$CMS full-sim); verify on our samples, since our card is
+  Run-3-tuned (UParT/DeepTau baselines).
+\item \textbf{[P2, M] Value-per-compute accounting across the NSBI
+  multiplicity} (processes $\times$ systematics $\times$ ensembles
+  $\times$ \kl\ grid), including whether a \emph{single} fine-tuned
+  backbone can be shared across ratio components (amortisation would
+  strongly favour the FM).
+\end{enumerate}
+
+% =====================================================================
+\section{Summary verdict}
+\label{sec:verdict}
+
+\begin{itemize}
+\item \textbf{Coverage:} EveNet does \emph{not} cover $\tau$ or $\gamma$
+  final states --- no vocabulary slot, no corpus processes, no supported
+  extension path. This is established fact, not conjecture
+  (Sec.~\ref{sec:evenet}).
+\item \textbf{Feasibility anyway:} the gap is concentrated in
+  identification information that approximately cancels in the
+  low-statistics ratio components (signal--signal and nominal--varied)
+  where FM data-efficiency is actually needed; the \kl-carrying
+  kinematics survive the stock schema exactly, up to the visible-kinematics
+  caveat (\mtt\ loss, partially mitigated by the neutrino-reconstruction
+  pretext) (Sec.~\ref{sec:asymmetry}).
+\item \textbf{Do not build a new FM now, and do not start with surgery.}
+  The existing harness is the correct next instrument: it runs the
+  disentangling experiment (G0) whose null would condemn a like-for-like
+  Option C anyway, and --- upgraded with closure metrics (G0.5) --- it
+  resolves the literature's largest untested assumption for FM-based NSBI
+  at near-zero marginal cost.
+\item \textbf{Cheap upgrades first:} the unoccupied-corner encoding
+  (\tauh\ as $(0,0,\pm1)$, $\gamma$ as $(0,1,0)$) recovers a type signal
+  with zero weight surgery and one adapter line; it strictly dominates the
+  anonymous-jet encoding at the data level, with finite-sample risks that
+  G1 measures directly.
+\item \textbf{Escalation is evidence-gated:} corners $\to$ zero-init
+  widening + modest continued pre-training (volume de-risked by the flat
+  low-label scaling result) $\to$ new/collaborative FM, each step only on
+  demonstrated saturation of the previous one.
+\end{itemize}
+
+% =====================================================================
+\begin{thebibliography}{99}\small
+
+\bibitem{Hsu:2026evenet}
+S.-C. Hsu et al.,
+``EveNet: A Foundation Model for Particle Collision Data Analysis,''
+arXiv:2601.17126 [hep-ex] (2026).
+Code: \texttt{github.com/UW-EPE-ML/EveNet\_Public};
+checkpoints: \texttt{huggingface.co/Avencast/EveNet}.
+
+\bibitem{Elsharkawy:2026}
+Y. Elsharkawy, J. Birk, V. Mikuni, W. Bhimji, G. Kasieczka, B. Nachman,
+``Pre-Training for Simulation-Based Science: A Study on Jet Foundation
+Model Training Objectives,''
+arXiv:2606.14870 (2026).
+
+\bibitem{Qu:2022part}
+H. Qu, C. Li, S. Qian,
+``Particle Transformer for Jet Tagging'' (ParT; introduces the JetClass
+dataset),
+arXiv:2202.03772 (2022).
+
+\bibitem{Li:2024sophon}
+C. Li et al.,
+``Accelerating Resonance Searches via Signature-Oriented Pre-training''
+(Sophon), \toverify{arXiv ID; believed 2405.12972} (2024).
+
+\bibitem{Harris:2024rs3l}
+P. Harris et al.,
+``Re-Simulation-based Self-Supervised Learning for Pre-Training Foundation
+Models'' (RS3L),
+arXiv:2403.07066; Phys.\ Rev.\ D 111 (2025) 032010.
+
+\bibitem{Golling:2024mpm}
+T. Golling et al.,
+``Masked Particle Modeling on Sets: Towards Self-Supervised High Energy
+Physics Foundation Models'' (MPM),
+arXiv:2401.13537 (2024).
+
+\bibitem{Birk:2024omnijet}
+J. Birk, A. Hallin, G. Kasieczka,
+``OmniJet-$\alpha$: The first cross-task foundation model for particle
+physics,''
+arXiv:2403.05618; Mach.\ Learn.: Sci.\ Technol.\ 5 (2024) 035031.
+
+\bibitem{Mikuni:2024omnilearn}
+V. Mikuni, B. Nachman,
+``OmniLearn: A Method to Simultaneously Facilitate All Jet Physics Tasks,''
+arXiv:2404.16091 (2024).
+
+\bibitem{Dillon:2021jetclr}
+B. M. Dillon et al.,
+``Symmetries, Safety, and Self-Supervision'' (JetCLR),
+arXiv:2108.04253; SciPost Phys.\ 12 (2022) 188.
+
+\bibitem{HEPJEPA:2025}
+``HEP-JEPA: A foundation model for collider physics using joint embedding
+predictive architecture,''
+arXiv:2502.03933 (2025).
+
+\bibitem{TauFM:2025}
+``Tau reconstruction with a jet foundation model,''
+arXiv:2503.19165 (2025).
+
+\bibitem{Shyamsundar:2025}
+P. Shyamsundar et al.,
+critique of MC-statistical uncertainty estimation in NSBI,
+arXiv:2505.19156 (2025).
+
+\bibitem{Wifi:2025}
+``Wifi ensembles'' MC-statistics resolution programme,
+arXiv:2506.00113 (2025).
+
+\end{thebibliography}
+
+\end{document}
