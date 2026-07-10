@@ -7,7 +7,7 @@
 #   ./run_option_a.sh setup                      # clone EveNet + download checkpoints
 #   ./run_option_a.sh ceiling                    # kinematic ceiling from the FEATURE ntuple (CPU)
 #   ./run_option_a.sh check <file.root>          # verify NanoAOD branch names before converting
-#   ./run_option_a.sh convert                    # NanoAOD -> NPZ (kl0, kl1, kl5) + jes_mhh inject
+#   ./run_option_a.sh convert                    # ntuples -> NPZ (kl0, kl1, kl5) + jes_mhh inject
 #   ./run_option_a.sh preprocess                 # EveNet preprocess (shifter) for the chosen pair
 #   ./run_option_a.sh configs                    # generate the 75 sweep configs + run scripts
 #   ./run_option_a.sh train                      # submit sbatch array (or train-local, sequential)
@@ -15,17 +15,23 @@
 #   ./run_option_a.sh eval                       # AUC money plot (ceiling overlaid) + closure gates
 #
 # INPUT NOTE: the flat feature ntuples (diHiggs_powheg_data.root: tree_sbi_lam*, 12
-# features) feed the CEILING ONLY -- EveNet needs object-level events (NanoAOD via
-# nanoaod_to_evenet_npz.py, or Delphes via delphes_to_evenet_npz.py) for convert/sweep.
+# features) feed the CEILING ONLY. The sweep (convert stage) takes object-level input,
+# dispatched on INPUT_FORMAT:
+#   crown   (default) the CROWN analysis ntuples convert_powheg_to_sbi.py reads
+#           (b-pair + tautau-leg four-vectors; published mt/et selection) -- set NTUPLES
+#   nanoaod raw CMS NanoAOD with kl0/ kl1/ kl5/ subdirs -- set NANO and BTAG_WP
+# ttbar (CROWN, same branch contract):
+#   python3 scripts/crown_to_evenet_npz.py --input '<globs>' --class-id 1 --output ...
 #
 # Required env (convert/preprocess/train):
-#   NANO=/path/to/cms_nanoaod          with kl0/ kl1/ kl5/ subdirs of *.root (object-level!)
-#   BTAG_WP=<float>                    era WP for BTAG_BRANCH from the BTV tables
+#   NTUPLES=/path/to/crown_ntuples     CROWN base dir (GluGluHHto2B2Tau_*kl-*/{mt,et}/*.root)
+#   NANO=/path/to/cms_nanoaod          only for INPUT_FORMAT=nanoaod (with BTAG_WP)
 #   ACCOUNT=<mXXXX>                    Slurm allocation (train stage only)
 # Optional env (defaults):
 #   STORE=$PSCRATCH/evenet-klambda     outputs (npz/, evenet-train/, checkpoints/, predictions/)
 #   EVENET_SRC=$HOME/EveNet_Public     EveNet code checkout (working_dir for train/predict)
 #   IMAGE=avencast1994/evenet:1.5      shifter image
+#   INPUT_FORMAT=crown                 or nanoaod (convert stage input format)
 #   TAU_ENCODING=anonymous             or corner (G1 A/B: writes npz under npz-$TAU_ENCODING/)
 #   KL_HYP=5                           hypothesis class vs the SM kl=1 reference (0 or 5)
 #   TASK=kl                            or syst (nominal-vs-jes_mhh, Money Plot 2)
@@ -40,6 +46,7 @@ STORE="${STORE:-${PSCRATCH:-/tmp}/evenet-klambda}"
 EVENET_SRC="${EVENET_SRC:-$HOME/EveNet_Public}"
 IMAGE="${IMAGE:-avencast1994/evenet:1.5}"
 TAU_ENCODING="${TAU_ENCODING:-anonymous}"
+INPUT_FORMAT="${INPUT_FORMAT:-crown}"
 KL_HYP="${KL_HYP:-5}"
 TASK="${TASK:-kl}"
 BTAG_BRANCH="${BTAG_BRANCH:-Jet_btagUParTAK4B}"
@@ -105,16 +112,26 @@ EOF
 }
 
 stage_convert() {
-    [ -n "${NANO:-}" ] || die "set NANO=/path/to/nanoaod (kl0/ kl1/ kl5/ subdirs)"
-    [ -n "${BTAG_WP:-}" ] || die "set BTAG_WP (era WP for $BTAG_BRANCH from the BTV tables)"
     mkdir -p "$NPZ"
     cd "$HERE"
     for kl in 0 1 5; do
         cls=1; [ "$kl" = "1" ] && cls=0            # kl=1 is the SM reference class
-        note "convert kl=$kl (class $cls, tau-encoding $TAU_ENCODING)"
-        $CONVERT_PY scripts/nanoaod_to_evenet_npz.py --input "$NANO/kl$kl/*.root" \
-            --class-id $cls --btag-wp "$BTAG_WP" --btag-branch "$BTAG_BRANCH" \
-            --tau-encoding "$TAU_ENCODING" --output "$NPZ/kl$kl.npz"
+        note "convert kl=$kl (class $cls, $INPUT_FORMAT, tau-encoding $TAU_ENCODING)"
+        if [ "$INPUT_FORMAT" = "crown" ]; then
+            [ -n "${NTUPLES:-}" ] || die "set NTUPLES=<CROWN base dir> (the directory \
+convert_powheg_to_sbi.py reads: GluGluHHto2B2Tau_*kl-*/{mt,et}/*.root)"
+            klp="${kl}p00"
+            $CONVERT_PY scripts/crown_to_evenet_npz.py \
+                --input "$NTUPLES/GluGluHHto2B2Tau_Par-c2-0p00-kl-$klp-kt-1p00_*PowhegBugFix*/mt/*.root" \
+                        "$NTUPLES/GluGluHHto2B2Tau_Par-c2-0p00-kl-$klp-kt-1p00_*PowhegBugFix*/et/*.root" \
+                --class-id $cls --tau-encoding "$TAU_ENCODING" --output "$NPZ/kl$kl.npz"
+        else
+            [ -n "${NANO:-}" ] || die "set NANO=/path/to/nanoaod (kl0/ kl1/ kl5/ subdirs)"
+            [ -n "${BTAG_WP:-}" ] || die "set BTAG_WP (era WP for $BTAG_BRANCH from the BTV tables)"
+            $CONVERT_PY scripts/nanoaod_to_evenet_npz.py --input "$NANO/kl$kl/*.root" \
+                --class-id $cls --btag-wp "$BTAG_WP" --btag-branch "$BTAG_BRANCH" \
+                --tau-encoding "$TAU_ENCODING" --output "$NPZ/kl$kl.npz"
+        fi
     done
     note "inject jes_mhh systematic on the nominal (Money Plot 2 input)"
     $CONVERT_PY scripts/inject_systematic.py --input "$NPZ/kl1.npz" \

@@ -100,10 +100,18 @@ Low-mass with ~1–2k signal events: EveNet holds, scratch fails. Fine-tune > sc
 Gates and kill criteria: EVENET_FEASIBILITY_NOTE.pdf §8. Everything below runs on Perlmutter;
 steps 2–3 are plain numpy/uproot (login node fine), 4–6 use the shifter image.
 
-**Driver script:** `./run_option_a.sh {smoke|setup|check <f.root>|convert|preprocess|configs|`
-`train|train-local|predict|eval}` stages all of the below (env: `NANO`, `BTAG_WP`, `ACCOUNT`;
+**Driver script:** `./run_option_a.sh {smoke|setup|ceiling|check <f.root>|convert|preprocess|`
+`configs|train|train-local|predict|eval}` stages all of the below (env: `NTUPLES`, `ACCOUNT`;
 optional `TAU_ENCODING=corner` for the G1 A/B, `TASK=syst` for Money Plot 2, `KL_HYP=0|5`).
-The manual commands are kept for reference:
+
+**Input resolution (2026-07-10):** the sweep input is the **CROWN analysis ntuples** — the
+same post-selection mt/et files `NSBI-pheno/dihiggs_bbtautau/convert_powheg_to_sbi.py`
+reads (they carry the b-pair + ττ-leg four-vectors; `scripts/crown_to_evenet_npz.py`
+builds the 4-token cloud + MET globals from them, ttbar shares the branch contract).
+The flat 12-feature files on pscratch (`diHiggs_powheg_data.root`) feed the `ceiling`
+stage only. If the CROWN ntuples live at KIT (`/work/jpan/bbtautau_2024`), run `convert`
+there and copy the **NPZs** to Perlmutter — they are far smaller than the ntuples.
+The manual commands are kept for reference (NanoAOD path via `INPUT_FORMAT=nanoaod`):
 
 ```bash
 STORE=<your store>; NANO=<CMS NanoAOD base>          # kl0/ kl1/ kl5/ sample dirs
