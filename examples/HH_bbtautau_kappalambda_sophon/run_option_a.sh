@@ -5,16 +5,21 @@
 # Usage:
 #   ./run_option_a.sh smoke                      # local sanity, no ROOT/GPU needed (any machine)
 #   ./run_option_a.sh setup                      # clone EveNet + download checkpoints
+#   ./run_option_a.sh ceiling                    # kinematic ceiling from the FEATURE ntuple (CPU)
 #   ./run_option_a.sh check <file.root>          # verify NanoAOD branch names before converting
 #   ./run_option_a.sh convert                    # NanoAOD -> NPZ (kl0, kl1, kl5) + jes_mhh inject
 #   ./run_option_a.sh preprocess                 # EveNet preprocess (shifter) for the chosen pair
 #   ./run_option_a.sh configs                    # generate the 75 sweep configs + run scripts
 #   ./run_option_a.sh train                      # submit sbatch array (or train-local, sequential)
 #   ./run_option_a.sh predict                    # sequential predictions (GPU node)
-#   ./run_option_a.sh eval                       # AUC money plot + closure gates
+#   ./run_option_a.sh eval                       # AUC money plot (ceiling overlaid) + closure gates
+#
+# INPUT NOTE: the flat feature ntuples (diHiggs_powheg_data.root: tree_sbi_lam*, 12
+# features) feed the CEILING ONLY -- EveNet needs object-level events (NanoAOD via
+# nanoaod_to_evenet_npz.py, or Delphes via delphes_to_evenet_npz.py) for convert/sweep.
 #
 # Required env (convert/preprocess/train):
-#   NANO=/path/to/cms_nanoaod          with kl0/ kl1/ kl5/ subdirs of *.root
+#   NANO=/path/to/cms_nanoaod          with kl0/ kl1/ kl5/ subdirs of *.root (object-level!)
 #   BTAG_WP=<float>                    era WP for BTAG_BRANCH from the BTV tables
 #   ACCOUNT=<mXXXX>                    Slurm allocation (train stage only)
 # Optional env (defaults):
@@ -27,6 +32,7 @@
 #   BTAG_BRANCH=Jet_btagUParTAK4B      NanoAOD b-tag discriminant branch
 #   CONVERT_PY=python3                 python with numpy+uproot for the adapter steps
 #   NGPU=1  TIME=04:00:00              per training task (sbatch array)
+#   FEATURES=.../diHiggs_powheg_data.root   prelim-result feature ntuple (ceiling stage)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -38,8 +44,10 @@ KL_HYP="${KL_HYP:-5}"
 TASK="${TASK:-kl}"
 BTAG_BRANCH="${BTAG_BRANCH:-Jet_btagUParTAK4B}"
 CONVERT_PY="${CONVERT_PY:-python3}"
+FEATURES="${FEATURES:-/pscratch/sd/j/jing/NSBI-irishep/dihiggs_bbtautau/diHiggs_powheg_data.root}"
 NPZ="$STORE/npz-$TAU_ENCODING"
 FARM="$HERE/config_farm-$TASK-$TAU_ENCODING"
+CEILING_JSON="$STORE/ceiling-kl$KL_HYP.json"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 note() { echo "== $*"; }
@@ -62,6 +70,16 @@ stage_smoke() {
         --output /tmp/oa_smoke_jes.npz --kind jes_mhh --alpha 0.05
     $CONVERT_PY scripts/eval_closure.py --self-test
     note "smoke OK"
+}
+
+stage_ceiling() {
+    [ -f "$FEATURES" ] || die "FEATURES=$FEATURES not found (feature ntuple)"
+    mkdir -p "$STORE"
+    cd "$HERE"
+    note "kinematic ceiling from $FEATURES (tree_sbi_lam1 vs tree_sbi_lam$KL_HYP)"
+    $CONVERT_PY scripts/feature_ceiling.py --input "$FEATURES" \
+        --tree-ref tree_sbi_lam1 --tree-hyp "tree_sbi_lam$KL_HYP" \
+        --out-prefix "${CEILING_JSON%.json}"
 }
 
 stage_setup() {
@@ -155,7 +173,8 @@ stage_predict() {
 
 stage_eval() {
     cd "$HERE"
-    note "G0: AUC money plot"
+    [ -n "${CEILING:-}" ] || { [ -f "$CEILING_JSON" ] && CEILING="$CEILING_JSON"; }
+    note "G0: AUC money plot (ceiling: ${CEILING:-none — run: ceiling})"
     python3 scripts/plot_data_efficiency.py --store_dir "$STORE" \
         --output "data_efficiency-$TASK-$TAU_ENCODING.png" \
         ${CEILING:+--ceiling "$CEILING"}
@@ -167,6 +186,7 @@ stage_eval() {
 case "${1:-}" in
     smoke)       stage_smoke ;;
     setup)       stage_setup ;;
+    ceiling)     stage_ceiling ;;
     check)       stage_check "${2:-}" ;;
     convert)     stage_convert ;;
     preprocess)  stage_preprocess ;;
@@ -175,5 +195,5 @@ case "${1:-}" in
     train-local) stage_train_local ;;
     predict)     stage_predict ;;
     eval)        stage_eval ;;
-    *) grep "^#" "$0" | sed -n '2,32p'; exit 1 ;;
+    *) awk 'NR>1 { if ($0 !~ /^#/) exit; print }' "$0"; exit 1 ;;
 esac
