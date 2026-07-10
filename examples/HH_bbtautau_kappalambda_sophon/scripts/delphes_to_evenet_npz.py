@@ -24,6 +24,15 @@ bb->tautau object mapping (STOCK schema -> preserves pretrained weights; see EVE
   * e / mu  -> Source object, isLepton=1, charge=+-1
   * MET     -> conditions[met, met_phi]
 
+--tau-encoding (G1 A/B test, EVENET_FEASIBILITY_NOTE sec 5):
+  anonymous  (default, stock) tau_h is an ordinary jet: (btag, isLepton, charge) = (0/1, 0, 0).
+  corner     tau_h occupies the vacant flag corner (0, 0, +-1): btag forced 0, charge from
+             Jet.Charge (sign; a rare q=0 falls back to +1 to stay off the light-jet corner).
+             Needs Delphes Jet.TauTag + Jet.Charge; checkpoint-compatible (same 7 columns).
+  Both encodings produce IDENTICAL kinematics and conditions (charge enters neither), so a
+  corner-vs-anonymous comparison isolates the type-signal effect. inject_systematic.py treats
+  isLepton<0.5 as "jet", i.e. tau_h tokens are JES-shifted identically in both encodings.
+
 CONSTRAINT enforced by EveNet's preprocessor: log-scaled columns (energy, pt, met, HT, HT_lep,
 M_all, M_leps, M_bjets) must be NON-NEGATIVE and finite. The builders below guarantee this.
 
@@ -115,7 +124,7 @@ def _finalize(x, counts, met, met_phi, weight, class_id):
 
 # --------------------------------------------------------------------------- real Delphes path
 _BRANCHES = [
-    "Jet.PT", "Jet.Eta", "Jet.Phi", "Jet.Mass", "Jet.BTag",
+    "Jet.PT", "Jet.Eta", "Jet.Phi", "Jet.Mass", "Jet.BTag", "Jet.TauTag", "Jet.Charge",
     "Electron.PT", "Electron.Eta", "Electron.Phi", "Electron.Charge",
     "Muon.PT", "Muon.Eta", "Muon.Phi", "Muon.Charge",
     "MissingET.MET", "MissingET.Phi", "Event.Weight",
@@ -136,7 +145,13 @@ def _scalar(x):
         return float(x)
 
 
-def _event_objects(arr, i):
+def tau_corner_charge(q):
+    """Charge column for a corner-encoded tau_h: sign(q), with q=0 -> +1 so the token
+    never collides with the light-jet corner (0, 0, 0)."""
+    return 1.0 if q >= 0 else -1.0
+
+
+def _event_objects(arr, i, tau_encoding="anonymous"):
     """Build the pt-sorted object list for event i: jets then leptons."""
     objs = []
     jpt = _get(arr, "Jet.PT", i, np.zeros(0))
@@ -144,11 +159,17 @@ def _event_objects(arr, i):
         jeta = _get(arr, "Jet.Eta", i); jphi = _get(arr, "Jet.Phi", i)
         jm = _get(arr, "Jet.Mass", i, np.zeros_like(jpt))
         jb = _get(arr, "Jet.BTag", i, np.zeros_like(jpt))
+        jtau = _get(arr, "Jet.TauTag", i, np.zeros_like(jpt))
+        jq = _get(arr, "Jet.Charge", i, np.zeros_like(jpt))
         jE = np.sqrt((jpt * np.cosh(jeta)) ** 2 + np.clip(jm, 0, None) ** 2)
         order = np.argsort(-jpt)
         for k in order:
-            objs.append((jE[k], jpt[k], jeta[k], jphi[k],
-                         1.0 if jb[k] > 0.5 else 0.0, 0.0, 0.0))
+            if tau_encoding == "corner" and jtau[k] > 0.5:
+                objs.append((jE[k], jpt[k], jeta[k], jphi[k],
+                             0.0, 0.0, tau_corner_charge(float(jq[k]))))
+            else:
+                objs.append((jE[k], jpt[k], jeta[k], jphi[k],
+                             1.0 if jb[k] > 0.5 else 0.0, 0.0, 0.0))
     leps = []
     for coll in ("Electron", "Muon"):
         pt = _get(arr, f"{coll}.PT", i)
@@ -164,16 +185,18 @@ def _event_objects(arr, i):
     return objs
 
 
-def convert_delphes(path, tree, class_id, step_size=20000):
+def convert_delphes(path, tree, class_id, step_size=20000, tau_encoding="anonymous"):
     import uproot
     xs, counts, mets, mphis, weights = [], [], [], [], []
     for arr in uproot.iterate(f"{path}:{tree}", step_size=step_size, library="ak",
                               filter_name=_BRANCHES):
         if "Jet.PT" not in arr.fields:
             raise KeyError(f"'Jet.PT' missing among {list(arr.fields)}; check Delphes leaf names.")
+        if tau_encoding == "corner" and "Jet.TauTag" not in arr.fields:
+            raise KeyError("--tau-encoding corner needs 'Jet.TauTag' (and 'Jet.Charge') leaves.")
         n = len(arr["Jet.PT"])
         for i in range(n):
-            row, c = _pack_event(_event_objects(arr, i))
+            row, c = _pack_event(_event_objects(arr, i, tau_encoding))
             xs.append(row); counts.append(c)
             met = _get(arr, "MissingET.MET", i); mphi = _get(arr, "MissingET.Phi", i)
             mets.append(_scalar(met) if met is not None else 0.0)
@@ -184,7 +207,7 @@ def convert_delphes(path, tree, class_id, step_size=20000):
 
 
 # --------------------------------------------------------------------------- smoke (no uproot)
-def make_smoke(n_events, class_id, seed=0):
+def make_smoke(n_events, class_id, seed=0, tau_encoding="anonymous"):
     rng = np.random.default_rng(seed)
     xs, counts, mets, mphis, weights = [], [], [], [], []
     for _ in range(n_events):
@@ -196,6 +219,12 @@ def make_smoke(n_events, class_id, seed=0):
             E = np.sqrt((pt * np.cosh(eta)) ** 2 + mass ** 2)
             btag = 1.0 if j < 2 else 0.0           # 2 b-jets per event
             objs.append((E, pt, eta, phi, btag, 0.0, 0.0))
+        for t in range(2):                          # 2 tau_h per event (bbtautau-like)
+            pt = float(rng.uniform(20, 200)); eta = float(rng.uniform(-2.3, 2.3))
+            phi = float(rng.uniform(-np.pi, np.pi)); mass = 1.777
+            E = np.sqrt((pt * np.cosh(eta)) ** 2 + mass ** 2)
+            q = tau_corner_charge(1.0 if t == 0 else -1.0) if tau_encoding == "corner" else 0.0
+            objs.append((E, pt, eta, phi, 0.0, 0.0, q))
         for _ in range(nlep):
             pt = float(rng.uniform(15, 150)); eta = float(rng.uniform(-2.5, 2.5))
             phi = float(rng.uniform(-np.pi, np.pi))
@@ -216,14 +245,17 @@ def main():
     ap.add_argument("--class-id", type=int, required=True, help="0=reference, 1=hypothesis")
     ap.add_argument("--smoke", type=int, default=0, help="fabricate N synthetic events (no ROOT)")
     ap.add_argument("--step-size", type=int, default=20000)
+    ap.add_argument("--tau-encoding", choices=["anonymous", "corner"], default="anonymous",
+                    help="tau_h token type: anonymous=stock jet (0,0,0); corner=(0,0,+-1)")
     args = ap.parse_args()
 
     if args.smoke:
-        out = make_smoke(args.smoke, args.class_id)
+        out = make_smoke(args.smoke, args.class_id, tau_encoding=args.tau_encoding)
     else:
         if not args.input:
             ap.error("--input required unless --smoke is given")
-        out = convert_delphes(args.input, args.tree, args.class_id, args.step_size)
+        out = convert_delphes(args.input, args.tree, args.class_id, args.step_size,
+                              args.tau_encoding)
     np.savez_compressed(args.output, **out)
     print(f"wrote {args.output}: " + ", ".join(f"{k}{v.shape}" for k, v in out.items()))
 
