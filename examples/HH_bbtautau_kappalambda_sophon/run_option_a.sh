@@ -94,7 +94,8 @@ stage_ceiling() {
     note "kinematic ceiling from $FEATURES (tree_sbi_lam1 vs tree_sbi_lam$KL_HYP)"
     $CONVERT_PY scripts/feature_ceiling.py --input "$FEATURES" \
         --tree-ref tree_sbi_lam1 --tree-hyp "tree_sbi_lam$KL_HYP" \
-        --out-prefix "${CEILING_JSON%.json}"
+        --out-prefix "${CEILING_JSON%.json}" ${CEILING_OPTS:-}
+    # quick pass: CEILING_OPTS="--max-events 100000 --seeds 2 --max-iter 100"
 }
 
 stage_setup() {

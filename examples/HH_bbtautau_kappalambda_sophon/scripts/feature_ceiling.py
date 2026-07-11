@@ -99,7 +99,10 @@ def run(args):
     details, ceiling = {}, {}
     for size in args.sizes:
         aucs = []
-        for seed in range(args.seeds):
+        # at fraction 1.0 every seed draws the identical training set (no subsampling
+        # variation) -- one fit suffices; saves the dominant wall-clock tier
+        n_seeds = 1 if size >= 1.0 else args.seeds
+        for seed in range(n_seeds):
             rng = np.random.default_rng(seed)
             i0 = rng.choice(len(w0tr), max(2, int(len(w0tr) * size)), replace=False)
             i1 = rng.choice(len(w1tr), max(2, int(len(w1tr) * size)), replace=False)
@@ -117,6 +120,7 @@ def run(args):
             met = closure_metrics(p, y_te, w_te)
             aucs.append(auc)
             details.setdefault(str(size), []).append(dict(seed=seed, auc=auc, **met))
+            print(f"  size={size} seed={seed}: auc={auc:.4f}", flush=True)
         ceiling[str(size)] = float(np.nanmean(aucs))
         d = details[str(size)]
         print(f"size={size:<5} AUC={np.nanmean(aucs):.4f}+-{np.nanstd(aucs):.4f}  "
