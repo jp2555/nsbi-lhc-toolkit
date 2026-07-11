@@ -37,8 +37,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from eval_closure import closure_metrics          # noqa: E402
 from plot_data_efficiency import weighted_auc     # noqa: E402
 
-FEATURES = ["m_hh", "m_bb", "m_tautau", "pt_hh", "dr_bb", "dr_tautau",
-            "pt_h1", "pt_h2", "log_m_hh", "deta_hh", "dphi_hh", "cos_theta_star"]
+# Default = the analysis' TrainingFeatures list (NSBI-pheno config_powheg.yml): the
+# 10 features behind the published unbinned result. log_m_hh (old toy files only;
+# redundant monotone transform of m_hh) and deta_hh (inf sentinels, excluded upstream)
+# are deliberately NOT defaults. Requested features missing from the tree are dropped
+# with a warning (the file has been regenerated with varying schemas).
+FEATURES = ["m_hh", "cos_theta_star", "pt_hh", "m_bb", "dr_bb",
+            "m_tautau", "dphi_hh", "dr_tautau", "pt_h1", "pt_h2"]
 _SPLIT_SEED = 123                                 # fixed test split, shared by all points
 
 
@@ -61,7 +66,21 @@ def split_train_test(X, w, test_frac):
     return (X[tr], w[tr]), (X[te], w[te])
 
 
+def resolve_features(path, tree, requested):
+    import uproot
+    have = set(uproot.open(f"{path}:{tree}").keys())
+    missing = [f for f in requested if f not in have]
+    kept = [f for f in requested if f in have]
+    if missing:
+        print(f"WARNING: dropping features absent from {tree}: {missing}")
+    if len(kept) < 2:
+        raise KeyError(f"only {kept} of {requested} present in {tree}; "
+                       f"available: {sorted(have)}")
+    return kept
+
+
 def run(args):
+    args.features = resolve_features(args.input, args.tree_ref, args.features)
     X0, w0 = load_tree(args.input, args.tree_ref, args.features, args.weights_branch,
                        args.max_events)
     X1, w1 = load_tree(args.input, args.tree_hyp, args.features, args.weights_branch,
