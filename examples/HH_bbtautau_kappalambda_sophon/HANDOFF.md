@@ -1,86 +1,110 @@
-# HANDOFF — EveNet data-efficiency money plots for κ_λ (HH→bbττ)
+# HANDOFF — EveNet Option A: κ_λ data-efficiency test on CMS bbττ
 
-**For:** a fresh session continuing on **Perlmutter**. **Repo/branch:** `jp2555/nsbi-lhc-toolkit @ fm`,
-code in `examples/HH_bbtautau_kappalambda_sophon/`. **Date:** 2026-06-26.
+**For:** a fresh session continuing on **Perlmutter**. **Repo/branch:** `jp2555/nsbi-lhc-toolkit @ fm`
+(tip `1be16ac`), code in `examples/HH_bbtautau_kappalambda_sophon/`. **Date:** 2026-07-11.
+Supersedes the 2026-06-26 handoff (its still-valid content is folded in below).
 
 ## Mission (one paragraph)
-Produce **money plots** showing a pretrained event-level foundation model (**EveNet**, arXiv:2601.17126)
-improves training in the **low-statistics** regime — especially for **systematic variations** — for the
-κ_λ measurement in HH→bbττ. Success metric = **data efficiency** (AUC / closure vs training-set fraction),
-NOT raw separation. Keep the kinematic-ceiling MLP/BDT as the bar. **Do NOT quote σ_κλ significance**
-(that needs the deferred MC-stat/wifi work — separate project). Full rationale + contract:
-[`EVENET_INTEGRATION_PLAN.md`](EVENET_INTEGRATION_PLAN.md).
+Money plots showing a pretrained event-level FM (**EveNet**, arXiv:2601.17126) improves training in
+the **low-statistics** regime — especially systematic variations — for κ_λ in HH→bbττ. Metric =
+**data efficiency** (AUC *and ratio closure* vs training fraction), bar = the kinematic ceiling.
+**No σ_κλ significance** (MC-stat/wifi deferred). Decision gates G0/G0.5/G1 with kill criteria:
+`EVENET_FEASIBILITY_NOTE.pdf` §8; runbook: `EVENET_INTEGRATION_PLAN.md` §10; driver: `run_option_a.sh`.
 
-## State: what's done (all on branch `fm`, latest commit `833e2d1`)
-Built locally on a bare Mac (no torch/data) and **verified at the numpy/yaml layer only**;
-**2026-06-27 update:** the scratch leg of the smoke pipeline now runs end-to-end in a local pixi-GPU
-env (workspace sandbox, not Perlmutter). See "Smoke run — what works locally" below.
+## Where we are (2026-07-11)
+- ✅ Scratch smoke pipeline end-to-end (2026-06-27, `5485efb`): NPZ→preprocess→train→predict→plot,
+  prediction key `classification/klambda` **confirmed**; NPZ schema hardened (18 tokens,
+  `x_mask/conditions_mask/num_vectors/subprocess_id`); `predict_klambda.yaml` + `resonance_klambda.yaml` added.
+- ✅ Git recovery done: diverged Perlmutter clone merged (cherry-pick), **LFS pointer-flap fixed**
+  (`.gitattributes` exempts `docs/teaching/*.png`), run artifacts gitignored.
+- ✅ Feasibility analysis + Option A harness built and locally verified (see file table).
+- ▶️ **Ceiling stage is the next command** (it failed only on env — see Env setup):
+  ```bash
+  export CONVERT_PY="pixi run -e nsbi-env python"
+  ./run_option_a.sh ceiling            # writes $STORE/ceiling-kl5.json
+  ```
+- ⏭ then: `convert` (blocked on NTUPLES location — open item 1) → `preprocess` → `configs` →
+  `train` → `predict` → `eval`.
 
-| File | Role | Verified locally |
+## New since 2026-06-27 (all verified locally where stated)
+| File | Role | Verified |
 |---|---|---|
-| `scripts/delphes_to_evenet_npz.py` | Delphes ROOT → EveNet NPZ (`--smoke` mode) | ✅ schema/mask/non-neg |
-| `scripts/inject_systematic.py` | parametric `jes`/`jes_mhh` systematic | ✅ scaling/shape |
-| `configs/event_info_klambda.yaml` | binary `[ref, kl_hyp]` event_info | template (load-test pending) |
-| `configs/workflow_klambda.yaml` | sweep control file (`<PLACEHOLDER>` paths) | template |
-| `configs/train_klambda.yaml` | global train config | template |
-| `scripts/make_klambda_configs.py` | emits 3×5×5=75 configs + `train-evenet.sh` | ✅ wiring/counts |
-| `scripts/plot_data_efficiency.py` | AUC-vs-fraction money plot | ✅ `weighted_auc` |
+| `EVENET_FEASIBILITY_NOTE.{tex,pdf}` | 12pp: τ/γ 3-tier gap, ratio-asymmetry argument, corner encoding, options A/B/C, gates G0–G4, open questions Q1–Q10 | compiles clean |
+| `scripts/crown_to_evenet_npz.py` | **DEFAULT sweep input.** CROWN mt/et ntuples → 4-token cloud (b1,b2,τ_h,ℓ) + MET globals; genWeight×puweight; sentinel filtering | ✅ vs fabricated CROWN tree |
+| `scripts/nanoaod_to_evenet_npz.py` | raw NanoAOD v15 path (`INPUT_FORMAT=nanoaod`); needs `--btag-wp` (BTV) | ✅ vs fabricated NanoAOD tree incl. fallbacks |
+| `scripts/delphes_to_evenet_npz.py` | + `--tau-encoding corner` (G1); Delphes cross-check path | ✅ corner/anon kinematics identical |
+| `scripts/eval_closure.py` | **G0.5**: integral closure ±stat err, stat-debiased shape RMS, χ²/ndf from `prediction.pt` | ✅ analytic self-test, multi-seed/size |
+| `scripts/feature_ceiling.py` | ceiling from the 12-feature file (`dihiggs_powheg_data.root`, lowercase) | ✅ on the real file |
+| `run_option_a.sh` | staged driver: smoke/setup/ceiling/check/convert/preprocess/configs/train/predict/eval | ✅ smoke+ceiling stages |
+| `scripts/inject_systematic.py` | + `subprocess_id` sync (was stale vs new schema → would mislabel predictions) | ✅ on 18-token schema |
 
-**Nothing torch/EveNet-touching has run yet** — that's this session's job. Reference EveNet source is
-cloned on the Mac at `~/Desktop/evenet-src/{Core,EveNet-Full,EveNet-Lite,Exotic-Higgs-Study}`; on
-Perlmutter, clone EveNet-Full + Exotic-Higgs-Study fresh (the harness mirrors Exotic-Higgs-Study's).
+Ceiling result on the real file (kl1-vs-kl5, full stats): **AUC ≈ 0.816**; at 3% training fraction
+AUC barely drops but **calibration collapses** (|IC| 0.34, SC_rms 0.50 → 0.008/0.065 at 30%) —
+the G0.5 phenomenon in miniature: low-stat failure is calibration, not ordering.
 
 ## Decision log (settled — do not re-open)
-- **Input dataset = Delphes bbττ** (matches EveNet's Delphes pretraining domain; pheno-paper aligned). Not full-sim.
-- **Ratio head = binary classifier** `CLASSLABEL [ref, kl_hyp]` → `softmax[...,1]` → `eval_to_ratios.py` LR trick. (Regression head rejected as less battle-tested.)
-- **τ_h → jet, photons → generic object**: EveNet has *no* tau/photon type (only `btag/isLepton/charge`). Stock 7+10 schema only (adding features breaks pretrained-weight reuse). Accepts τ-ID / SVfit-m_ττ loss — valid for the data-efficiency comparison.
-- **3-way contrast via the options file**: finetune=`options_pretrain.yaml`(freeze none), frozen=`options_frozen.yaml`(freeze full), scratch=`options.yaml`(pretrain null).
-- **wifi/MC-stat uncertainty (2506.00113) = DEFERRED** to a separate project (was explored: frozen-FM-as-wifi-basis; real but out of scope now).
-- **bbγγ = cheap later increment** (only the adapter's object-filling changes); deferred (cleaner m_HH but smaller FM headroom + no infra yet).
+- **Input = CROWN analysis ntuples** (supersedes "Delphes first"): the files
+  `NSBI-pheno/dihiggs_bbtautau/convert_powheg_to_sbi.py` reads
+  (`<base>/GluGluHHto2B2Tau_*kl-{0p00,1p00,2p45,5p00}*/{mt,et}/*.root`, tree `ntuple`).
+  They carry per-object four-vectors + MET + charges; the flat 12-feature file is an
+  **irreversible aggregate** (no MET/charges/object splits) → **ceiling only**. ttbar shares the contract.
+- **Pairing:** class 0 = κλ=1 (SM ref), class 1 = `KL_HYP` (default 5; 0 available).
+- **τ encodings:** `anonymous` (stock, G0 default); `corner` (0,0,±1) = G1 A/B (one env var;
+  identical kinematics/conditions by construction; injector treats both as jets).
+- **Closure gates:** |IC| < max(0.01, ~3×stat), SC_rms < 0.05 (=`CLOSURE_TOL`), χ²/ndf≈1 ⇒ noise-only.
+  Compare configs at the FIXED shared test split; seed spread = noise floor. Do NOT gate on raw max-bin.
+- Carried: binary head + LR trick; 3-way contrast via options files; wifi/MC-stat deferred;
+  bbγγ = later increment (photon corner (0,1,0)); G0 adopt-iff finetune > scratch beyond compute
+  penalty AND ≥ ceiling; a G0 null with scratch passing closure ⇒ objective-mismatch verdict
+  (also condemns a like-for-like new τ/γ FM — feasibility note §8).
 
-## Smoke run — what works locally (2026-06-27)
-End-to-end pipeline validated **scratch-only** under `/workspace/evenet_smoke/`:
-- `delphes_to_evenet_npz.py --smoke` → 2 NPZ → `preprocess.py` → parquet under `evenet-train/` ✅
-- `scripts/train.py` (pixi env, no shifter): scratch trained at sizes 0.3 + 1.0 (1 seed, 2 epochs each) ✅
-- `scripts/predict.py` → `prediction.pt` with key `classification/klambda` (matches plot script) ✅
-- `plot_data_efficiency.py --store_dir /workspace/evenet_smoke` → `data_efficiency_smoke.png` ✅
-  - n=1 per point, AUC≈0.5 as expected (2-epoch smoke); plot machinery verified, physics-meaningful curves are the Perlmutter job.
+## Env setup (Perlmutter)
+```bash
+pixi install -e nsbi-env                            # one-time, CPU env (uproot/sklearn/yaml/mpl/torch)
+export CONVERT_PY="pixi run -e nsbi-env python"     # per shell — covers ALL CPU stages of the driver
+```
+| Stages | Env |
+|---|---|
+| smoke, ceiling, convert, configs, eval | pixi `nsbi-env` via `$CONVERT_PY` (login node OK) |
+| preprocess, train, predict | shifter `avencast1994/evenet:1.5` (driver invokes it) |
+| setup | plain shell (`git clone` + `hf download Avencast/EveNet`) |
 
-**Adapter fixes from the smoke run (committed)**: `delphes_to_evenet_npz.py` now
-emits `x_mask`, `conditions_mask`, `num_vectors` (float32), `num_sequential_vectors` (float32),
-and `subprocess_id`. `N_OBJ_MAX` bumped 16 → 18 to match EveNet's preprocessor.
+Driver env knobs: `STORE` (default `$PSCRATCH/evenet-klambda`), `NTUPLES` (CROWN base, required for
+convert), `KL_HYP=0|5`, `TAU_ENCODING=corner`, `TASK=syst` (Money Plot 2), `ACCOUNT` (sbatch), `NGPU`, `TIME`.
 
-**Local env quirks (for any future local-smoke session)**:
-- `scripts/train.py` asserts `WANDB_API_KEY` — set `WANDB_API_KEY=dummy WANDB_MODE=offline`.
-- wandb 0.28.0 imports `sentry_sdk` + `gitpython` (missing from pixi env): `python -m pip install --user sentry_sdk gitpython`.
-- Run from `EveNet-Full/` with `PYTHONPATH=/workspace/evenet_local/EveNet-Full` (predict.py uses `from scripts.engine ...`).
+## Open items (priority order)
+1. **NTUPLES location**: `convert_powheg_to_sbi.py`'s default base is `/work/jpan/bbtautau_2024` —
+   a **KIT** path. If the CROWN ntuples aren't on Perlmutter, run `convert` at KIT (pure
+   numpy/uproot) and copy the **NPZs** into `$STORE/npz-anonymous/` (they're small).
+2. **`options_frozen.yaml`**: create if the smoke session didn't
+   (`cp` EveNet `options_pretrain.yaml`; set `Training.GlobalEmbedding.freeze.type: full`).
+3. **`workflow_klambda.yaml` placeholders**: `configs` stage refuses until `<PLACEHOLDER>`s are filled
+   ($STORE, EveNet working_dir, network/resonance/options paths, ckpt `checkpoints.20M.a4.last.ckpt`).
+4. **Load-test ONE config inside the shifter image before the 75-job array** (schema mismatch vs the
+   real loader is the likely snag); verify EveNet reads `options.Training.seed`.
+5. Ceiling for `KL_HYP=0` too if running the kl0 pair.
 
-**Local blockers that don't apply on Perlmutter**:
-- `hf download Avencast/EveNet` 403's on the AWS CDN from the sandbox — pretrained ckpt could
-  NOT be fetched, so **finetune/frozen legs are not validated locally**. Step 1 below stands.
-
-## Next actions on Perlmutter (detail in EVENET_INTEGRATION_PLAN.md §5–§7)
-1. `shifterimg -v pull docker:avencast1994/evenet:1.5`; `hf download Avencast/EveNet --local-dir $STORE/pretrain-weights`.
-2. **Create `options_frozen.yaml`**: `cp` EveNet's `options_pretrain.yaml`, set `Training.GlobalEmbedding.freeze.type: full`.
-3. Fill every `<PLACEHOLDER>` in `configs/workflow_klambda.yaml` + `train_klambda.yaml` ($STORE, account, wandb entity, network/resonance/predict paths).
-4. **Load-test before launching 75 jobs** (inside the image): `python -c "from evenet.control.global_config import global_config as g; g.load_yaml('config_farm/<one>.yaml'); print('ok')"`. **Most likely snag = train/event_info schema mismatch vs the real loader** — fix the templates against the actual error.
-5. Run: `delphes_to_evenet_npz.py` (real ROOT, one NPZ/sample, ref=0/hyp=1) → `preprocess.py` → `make_klambda_configs.py` → `bash config_farm/train-evenet.sh` → predict → `plot_data_efficiency.py`.
-6. **Confirm the prediction key is `classification/klambda`** (the plot reads it; one-line fix if EveNet names it differently).
-7. **Money Plot 2 (systematics)**: same pipeline with `inject_systematic.py` producing the varied sample (class 1) vs nominal (class 0) — no harness change.
-
-## Constraints & gotchas
-- All real runs are Perlmutter (containerized, not pixi). The Mac venv only validated numpy/yaml logic.
-- `seed` is set at `options.Training.seed` in generated configs — **verify EveNet actually reads that key**, else wire to the correct one.
-- Delphes branch assumptions in the adapter (`Jet.BTag` etc.) follow `delphes_to_sophon_clouds.py`; verify against the real files with `uproot.open(f)["Delphes"].keys()`.
-- Keep commits brief (6–10 words), **no Claude attribution** (user's CLAUDE.md). Auto-push to `origin/fm`.
+## Gotchas (hard-won — read before committing/debugging)
+- **git-lfs**: the Mac clone has NO git-lfs. `.gitattributes` LFS-tracks `*.root/*.npy/*.h5/*.onnx/*.png`
+  (exempted: `docs/_images/`, `docs/teaching/` pngs). Committing matching binaries from the Mac
+  recreates the pointer-flap that blocked pulls for a day. Perlmutter-side commits are safe.
+- `deta_hh` in the feature file carries **inf sentinels (~10%)** (handled in `feature_ceiling.py`;
+  already excluded from the NSBI TrainingFeatures upstream).
+- Weights: ceiling trains AND evaluates with |w| class-normalised (AUC invariant; closure then
+  measures calibration, not the κλ cross-section ratio W0/W1≈0.35). EveNet uses stored signed weights.
+- Local-smoke quirks (sandbox only): `WANDB_API_KEY=dummy WANDB_MODE=offline`; wandb needs
+  `sentry_sdk gitpython`; run from `EveNet-Full/` with `PYTHONPATH` set.
+- Commits: brief (6–10 words), **no Claude attribution**, push `origin fm` after each change.
 
 ## Pointers
-- Plan/contract: `EVENET_INTEGRATION_PLAN.md` (NPZ schema, object mapping, run env, money plots).
-- Landscape/why-EveNet: `FOUNDATION_MODEL_BRIEF.md`.
-- Prelim physics: Ghosh–Klute–Pan note (NSBI-pheno/dihiggs_bbtautau) — full-sim 2.75σ→7.1σ, no systematics in fit.
-- Memory slug: `fm-systematics-wifi-direction` (has STATUS + REMAINING).
+- Feasibility/gates: `EVENET_FEASIBILITY_NOTE.pdf` · runbook: `EVENET_INTEGRATION_PLAN.md` §10 ·
+  landscape: `FOUNDATION_MODEL_BRIEF.md`.
+- Prelim physics: Ghosh–Klute–Pan note (`NSBI-pheno/dihiggs_bbtautau`); feature file
+  `/pscratch/sd/j/jing/NSBI-irishep/dihiggs_bbtautau/dihiggs_powheg_data.root` (+ `ttbar_powheg_data.root`).
+- EveNet: code `github.com/UW-EPE-ML/EveNet_Public`, ckpts `hf.co/Avencast/EveNet`,
+  image `avencast1994/evenet:1.5`.
 
 ## Suggested skills
-- `superpowers:verification-before-completion` — run/inspect before claiming any EveNet step works (evidence before assertions).
-- `superpowers:systematic-debugging` — for the first config-load / preprocess / train failure (expected at step 4).
-- `remember` — save state at the end of the Perlmutter session.
+- `superpowers:verification-before-completion` — evidence before claiming any EveNet step works.
+- `superpowers:systematic-debugging` — for the first config-load/preprocess failure (expected at open item 4).
+- `remember` — save state at session end.
