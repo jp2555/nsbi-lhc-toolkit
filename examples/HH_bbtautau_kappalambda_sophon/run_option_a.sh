@@ -156,7 +156,7 @@ stage_configs() {
         || die "fill the <PLACEHOLDER> paths in configs/workflow_klambda.yaml first \
 (working_dir=$EVENET_SRC, image, network/resonance/option yamls, pretrain ckpt under \
 $STORE/pretrain-weights/) — see HANDOFF.md"
-    python3 scripts/make_klambda_configs.py configs/workflow_klambda.yaml \
+    $CONVERT_PY scripts/make_klambda_configs.py configs/workflow_klambda.yaml \
         --farm "$FARM" --store_dir "$STORE" --ray_dir "${PSCRATCH:-/tmp}/ray-$USER"
     [ -f "$FARM/predict-evenet.sh" ] \
         || echo "WARN: no predict-evenet.sh — set workflow_klambda.yaml:predict_yaml to also emit predict configs"
@@ -192,11 +192,11 @@ stage_eval() {
     cd "$HERE"
     [ -n "${CEILING:-}" ] || { [ -f "$CEILING_JSON" ] && CEILING="$CEILING_JSON"; }
     note "G0: AUC money plot (ceiling: ${CEILING:-none — run: ceiling})"
-    python3 scripts/plot_data_efficiency.py --store_dir "$STORE" \
+    $CONVERT_PY scripts/plot_data_efficiency.py --store_dir "$STORE" \
         --output "data_efficiency-$TASK-$TAU_ENCODING.png" \
         ${CEILING:+--ceiling "$CEILING"}
     note "G0.5: ratio-closure gates (|IC| vs stat, SC_rms < 0.05, chi2/ndf ~ 1)"
-    python3 scripts/eval_closure.py --store_dir "$STORE" \
+    $CONVERT_PY scripts/eval_closure.py --store_dir "$STORE" \
         --output-prefix "closure-$TASK-$TAU_ENCODING"
 }
 
