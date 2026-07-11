@@ -210,3 +210,20 @@ data/
 docs/_build/
 
 .snakemake
+
+# macOS sidecar files
+.DS_Store
+._*
+
+# Claude Code local state
+.claude/
+
+# EveNet kappa_lambda run artifacts (convert/sweep/baseline outputs)
+convert_*.out
+convert_*.err
+slurm-*.out
+baseline_kl*/
+syst_kl*/
+evenet_local/
+evenet_smoke/
+config_farm*/

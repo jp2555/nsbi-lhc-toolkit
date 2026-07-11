@@ -53,6 +53,8 @@ def inject(data, kind, alpha, m0, w, class_id):
     out["x"] = x
     out["conditions"] = build_conditions(x, mask, met, met_phi)
     out["classification"] = np.full(len(x), int(class_id), dtype=np.int64)
+    if "subprocess_id" in out:               # keep the predict-time label in sync
+        out["subprocess_id"] = out["classification"]
     return out
 
 
