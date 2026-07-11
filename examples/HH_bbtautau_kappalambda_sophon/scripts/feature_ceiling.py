@@ -1,4 +1,4 @@
-"""Kinematic CEILING from the prelim-result FEATURE ntuple (diHiggs_powheg_data.root).
+"""Kinematic CEILING from the prelim-result FEATURE ntuple (dihiggs_powheg_data.root).
 
 The CMS full-sim bbtautau files at /pscratch/sd/j/jing/NSBI-irishep/dihiggs_bbtautau/ are
 HIGH-LEVEL feature ntuples (trees tree_sbi_lam{0,1,2p45,5}; 12 features + weights), NOT
@@ -23,7 +23,7 @@ fine on a login node.
 
 Usage (Perlmutter):
   python3 scripts/feature_ceiling.py \
-      --input /pscratch/sd/j/jing/NSBI-irishep/dihiggs_bbtautau/diHiggs_powheg_data.root \
+      --input /pscratch/sd/j/jing/NSBI-irishep/dihiggs_bbtautau/dihiggs_powheg_data.root \
       --tree-ref tree_sbi_lam1 --tree-hyp tree_sbi_lam5 --out-prefix ceiling-kl5
 """
 import argparse

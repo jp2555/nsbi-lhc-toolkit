@@ -108,7 +108,7 @@ optional `TAU_ENCODING=corner` for the G1 A/B, `TASK=syst` for Money Plot 2, `KL
 same post-selection mt/et files `NSBI-pheno/dihiggs_bbtautau/convert_powheg_to_sbi.py`
 reads (they carry the b-pair + ττ-leg four-vectors; `scripts/crown_to_evenet_npz.py`
 builds the 4-token cloud + MET globals from them, ttbar shares the branch contract).
-The flat 12-feature files on pscratch (`diHiggs_powheg_data.root`) feed the `ceiling`
+The flat 12-feature files on pscratch (`dihiggs_powheg_data.root`) feed the `ceiling`
 stage only. If the CROWN ntuples live at KIT (`/work/jpan/bbtautau_2024`), run `convert`
 there and copy the **NPZs** to Perlmutter — they are far smaller than the ntuples.
 The manual commands are kept for reference (NanoAOD path via `INPUT_FORMAT=nanoaod`):

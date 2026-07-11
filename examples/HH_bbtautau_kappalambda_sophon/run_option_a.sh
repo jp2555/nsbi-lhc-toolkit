@@ -14,7 +14,7 @@
 #   ./run_option_a.sh predict                    # sequential predictions (GPU node)
 #   ./run_option_a.sh eval                       # AUC money plot (ceiling overlaid) + closure gates
 #
-# INPUT NOTE: the flat feature ntuples (diHiggs_powheg_data.root: tree_sbi_lam*, 12
+# INPUT NOTE: the flat feature ntuples (dihiggs_powheg_data.root: tree_sbi_lam*, 12
 # features) feed the CEILING ONLY. The sweep (convert stage) takes object-level input,
 # dispatched on INPUT_FORMAT:
 #   crown   (default) the CROWN analysis ntuples convert_powheg_to_sbi.py reads
@@ -38,7 +38,7 @@
 #   BTAG_BRANCH=Jet_btagUParTAK4B      NanoAOD b-tag discriminant branch
 #   CONVERT_PY=python3                 python with numpy+uproot for the adapter steps
 #   NGPU=1  TIME=04:00:00              per training task (sbatch array)
-#   FEATURES=.../diHiggs_powheg_data.root   prelim-result feature ntuple (ceiling stage)
+#   FEATURES=.../dihiggs_powheg_data.root   prelim-result feature ntuple (ceiling stage)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -51,7 +51,7 @@ KL_HYP="${KL_HYP:-5}"
 TASK="${TASK:-kl}"
 BTAG_BRANCH="${BTAG_BRANCH:-Jet_btagUParTAK4B}"
 CONVERT_PY="${CONVERT_PY:-python3}"
-FEATURES="${FEATURES:-/pscratch/sd/j/jing/NSBI-irishep/dihiggs_bbtautau/diHiggs_powheg_data.root}"
+FEATURES="${FEATURES:-/pscratch/sd/j/jing/NSBI-irishep/dihiggs_bbtautau/dihiggs_powheg_data.root}"
 NPZ="$STORE/npz-$TAU_ENCODING"
 FARM="$HERE/config_farm-$TASK-$TAU_ENCODING"
 CEILING_JSON="$STORE/ceiling-kl$KL_HYP.json"

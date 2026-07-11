@@ -53,8 +53,9 @@ the model was trained on **128 constituents** with:
 | 17| part_dphi                       | 0    | 1   |
 
 **`pf_vectors` (pair_input_dim = 4):** `[part_px, part_py, part_pz, part_energy]`
-— pass as the `vectors` arg to the encoder's `forward` to enable the pairwise
-interaction features the checkpoint was trained with.
+— stored as `parts` columns 17:21 (so `parts` has 21 columns total). The encoder slices
+`x = parts[:, :, :17]` and `v = parts[:, :, 17:21]`, keeping a plain `forward(parts, mask)`
+interface (no separate vectors tensor through the dataset/model/ONNX).
 
 **Labels:** 23 classes (`jet_label` 0–22). The classifier head (`fc.*`) is dropped on
 load; only the backbone + class-attention weights are kept.
