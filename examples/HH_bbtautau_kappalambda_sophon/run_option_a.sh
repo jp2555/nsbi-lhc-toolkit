@@ -53,8 +53,8 @@ BTAG_BRANCH="${BTAG_BRANCH:-Jet_btagUParTAK4B}"
 CONVERT_PY="${CONVERT_PY:-python3}"
 REPO_ROOT="$(cd "$HERE/../.." && pwd)"
 if [ -z "${FEATURES:-}" ]; then      # feature ntuple: repo-local copies first, then the original
-    for c in "$HERE"/saved_datasets/{dihiggs,diHiggs}_powheg_data.root \
-             "$REPO_ROOT"/saved_datasets/{dihiggs,diHiggs}_powheg_data.root \
+    for c in "$HERE"/{samples,saved_datasets}/{dihiggs,diHiggs}_powheg_data.root \
+             "$REPO_ROOT"/{samples,saved_datasets}/{dihiggs,diHiggs}_powheg_data.root \
              /pscratch/sd/j/jing/NSBI-irishep/dihiggs_bbtautau/dihiggs_powheg_data.root; do
         [ -f "$c" ] && FEATURES="$c" && break
     done
