@@ -6,6 +6,7 @@
 #   ./run_option_a.sh smoke                      # local sanity, no ROOT/GPU needed (any machine)
 #   ./run_option_a.sh setup                      # clone EveNet + download checkpoints
 #   ./run_option_a.sh ceiling                    # kinematic ceiling from the FEATURE ntuple (CPU)
+#   ./run_option_a.sh ceiling-array              # same, as a 5-task sbatch array + merge job
 #   ./run_option_a.sh check <file.root>          # verify NanoAOD branch names before converting
 #   ./run_option_a.sh convert                    # ntuples -> NPZ (kl0, kl1, kl5) + jes_mhh inject
 #   ./run_option_a.sh preprocess                 # EveNet preprocess (shifter) for the chosen pair
@@ -96,6 +97,32 @@ stage_ceiling() {
         --tree-ref tree_sbi_lam1 --tree-hyp "tree_sbi_lam$KL_HYP" \
         --out-prefix "${CEILING_JSON%.json}" ${CEILING_OPTS:-}
     # quick pass: CEILING_OPTS="--max-events 100000 --seeds 2 --max-iter 100"
+}
+
+stage_ceiling_array() {   # one shared-QOS CPU task per size tier + dependent merge job
+    [ -f "$FEATURES" ] || die "FEATURES=$FEATURES not found (feature ntuple)"
+    [ -n "${ACCOUNT:-}" ] || die "set ACCOUNT=<project> for sbatch"
+    mkdir -p "$STORE"
+    local prefix="${CEILING_JSON%.json}"
+    cat > "$STORE/ceiling-array.sbatch" <<EOF
+#!/bin/bash
+#SBATCH -A $ACCOUNT -q shared -C cpu -c 32 -t ${TIME:-02:00:00}
+#SBATCH --array=0-4
+#SBATCH -o $STORE/ceiling-%A_%a.out
+export PATH="\$HOME/.pixi/bin:\$PATH"
+SIZES=(0.01 0.03 0.1 0.3 1.0)
+cd $HERE
+$CONVERT_PY scripts/feature_ceiling.py --input "$FEATURES" \\
+    --tree-ref tree_sbi_lam1 --tree-hyp "tree_sbi_lam$KL_HYP" \\
+    --sizes \${SIZES[\$SLURM_ARRAY_TASK_ID]} \\
+    --out-prefix "$prefix.part\$SLURM_ARRAY_TASK_ID" ${CEILING_OPTS:-}
+EOF
+    local jid
+    jid=$(sbatch --parsable "$STORE/ceiling-array.sbatch")
+    sbatch -A "$ACCOUNT" -q shared -C cpu -c 1 -t 00:10:00 \
+        --dependency=afterok:"$jid" -o "$STORE/ceiling-merge-%j.out" \
+        --wrap "export PATH=\$HOME/.pixi/bin:\$PATH; cd $HERE && $CONVERT_PY scripts/feature_ceiling.py --merge '$prefix'"
+    note "submitted array $jid (5 tiers) + merge job; result -> $CEILING_JSON; watch: squeue --me"
 }
 
 stage_setup() {
@@ -213,6 +240,7 @@ case "${1:-}" in
     smoke)       stage_smoke ;;
     setup)       stage_setup ;;
     ceiling)     stage_ceiling ;;
+    ceiling-array) stage_ceiling_array ;;
     check)       stage_check "${2:-}" ;;
     convert)     stage_convert ;;
     preprocess)  stage_preprocess ;;

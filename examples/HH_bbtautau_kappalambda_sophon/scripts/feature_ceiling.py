@@ -135,10 +135,30 @@ def run(args):
     print(f"wrote {args.out_prefix}.json (+_details.json)")
 
 
+def merge(prefix):
+    """Combine <prefix>.part*.json (one per array task) -> <prefix>.json (+_details)."""
+    import glob
+    ceiling, details = {}, {}
+    parts = sorted(p for p in glob.glob(f"{prefix}.part*.json")
+                   if not p.endswith("_details.json"))
+    if not parts:
+        raise FileNotFoundError(f"no {prefix}.part*.json files to merge")
+    for p in parts:
+        ceiling.update(json.load(open(p)))
+        details.update(json.load(open(p.replace(".json", "_details.json"))))
+    ceiling = {k: ceiling[k] for k in sorted(ceiling, key=float)}
+    with open(f"{prefix}.json", "w") as f:
+        json.dump(ceiling, f, indent=1)
+    with open(f"{prefix}_details.json", "w") as f:
+        json.dump(details, f, indent=1)
+    print(f"merged {len(parts)} parts -> {prefix}.json: "
+          + ", ".join(f"{k}:{v:.4f}" for k, v in ceiling.items()))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--input", required=True, help="feature ntuple ROOT file")
+    ap.add_argument("--input", help="feature ntuple ROOT file")
     ap.add_argument("--tree-ref", default="tree_sbi_lam1", help="class-0 tree (SM reference)")
     ap.add_argument("--tree-hyp", default="tree_sbi_lam5", help="class-1 tree (hypothesis)")
     ap.add_argument("--features", nargs="+", default=FEATURES)
@@ -149,7 +169,15 @@ def main():
     ap.add_argument("--max-events", type=int, default=0, help="cap per tree (0 = all)")
     ap.add_argument("--max-iter", type=int, default=200)
     ap.add_argument("--out-prefix", default="ceiling")
-    run(ap.parse_args())
+    ap.add_argument("--merge", metavar="PREFIX",
+                    help="merge PREFIX.part*.json from an array run, then exit")
+    args = ap.parse_args()
+    if args.merge:
+        merge(args.merge)
+        return
+    if not args.input:
+        ap.error("--input required unless --merge is given")
+    run(args)
 
 
 if __name__ == "__main__":
