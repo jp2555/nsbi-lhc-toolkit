@@ -126,11 +126,12 @@ def run(args):
         print(f"size={size:<5} AUC={np.nanmean(aucs):.4f}+-{np.nanstd(aucs):.4f}  "
               f"|IC|={np.nanmean([abs(m['integral']) for m in d]):.4f}  "
               f"SC_rms={np.nanmean([m['shape_rms'] for m in d]):.4f}  (n={len(d)})")
+        # write after every size tier so an interrupted run keeps its finished tiers
+        with open(f"{args.out_prefix}.json", "w") as f:
+            json.dump(ceiling, f, indent=1)
+        with open(f"{args.out_prefix}_details.json", "w") as f:
+            json.dump(details, f, indent=1)
 
-    with open(f"{args.out_prefix}.json", "w") as f:
-        json.dump(ceiling, f, indent=1)
-    with open(f"{args.out_prefix}_details.json", "w") as f:
-        json.dump(details, f, indent=1)
     print(f"wrote {args.out_prefix}.json (+_details.json)")
 
 
