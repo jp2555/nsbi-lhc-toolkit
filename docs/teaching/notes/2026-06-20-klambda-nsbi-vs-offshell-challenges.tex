@@ -189,10 +189,12 @@ total-variation distance $+$ integral-closure, stable under one-at-a-time low-TV
 $\rho($\kl,JES/$\tau$ES$)$/VIF quantification needs the systematic variations.)}} \sref{\S2,\,\S5}
 \item \stPart\ \priO\,\eff{S} \textbf{Source the \kl-differential THU$_{HH}$ band --- and measure the
 shape-truncation bias.} Compile the scale/PDF/$m_t$ band vs \kl$\in[-2,5]$ and parametrise it as a
-\kl-dependent \emph{rate} weight; then fit Asimov data generated with scale-varied \emph{shapes} using a
-normalisation-only model and measure the \kl\ bias. \dw a smooth band reproducing the AN-25-103 Table-40 values
-(incl.\ the $m_t$ sign flip); truncation bias quantified ($<0.05$ $\Rightarrow$ CMS-style normalisation-only is
-justified). \textcolor{orange!75!black}{\emph{\small(Prelim.: the total-level band per \kl\ now exists ---
+\kl-dependent \emph{rate} weight; then fit Asimov data generated with scale-varied \emph{shapes} (per-event
+$\mu_R/\mu_F$ weights, no new samples) with the normalisation-only model in \emph{both} the binned and NSBI fits
+--- two-sided: is the truncation \emph{differentially} unsafe for the unbinned fit? \dw a smooth band reproducing
+the AN-25-103 Table-40 values (incl.\ the $m_t$ sign flip); truncation bias quantified for \emph{both} fits
+($<0.05$ each $\Rightarrow$ CMS-parity default validated; NSBI $\gg$ binned $\Rightarrow$ C4b required for our
+method). \textcolor{orange!75!black}{\emph{\small(Prelim.: the total-level band per \kl\ now exists ---
 AN-25-103 Table 40: $+4/-18\%$ at $\kl{=}1$, $+4/-22\%$ at 2.45, $+13/-4\%$ at 5 [$m_t$ scheme]; the
 \emph{component-differential} split needed for shape morphing remains open --- C4b, see \S5.)}} \sref{\S2,\,\S5}
 \item \stPart\ \priO\,\eff{M} \textbf{Validate the LO$\to$NLO \kl-reweighting that generates the $R(x|$\kl$)$ sources.}
@@ -612,12 +614,24 @@ gap NSBI must close to match the baseline; it is where \emph{both} approaches cu
 NSBI's per-component structure is the natural upgrade. Table 40's \textbf{sign flip} ($+4/-18\%$ at $\kl{=}1$
 $\to$ $+13/-4\%$ at $\kl{=}5$) is direct empirical evidence for the per-component picture: the net band rotates
 because the components' bands differ --- exactly what blending POI-independent component bands with the known
-\kl\ coefficients reproduces automatically. \textbf{Gate refocus:} the C4 pilot is no longer ``can we handle THU
-at all'' but (i) source the component-differential bands, and (ii) measure the \emph{truncation bias} --- fit
-Asimov data generated with scale-varied \emph{shapes} using the normalisation-only model and measure the \kl\
-bias: small $\Rightarrow$ the CMS truncation is justified and C4b is deprioritised; large $\Rightarrow$
-per-component shape morphing becomes a genuine physics improvement NSBI can claim (folded into studies
-\#5/\#19).
+\kl\ coefficients reproduces automatically. \textbf{Gate refocus $+$ recommended default:} adopt
+\textbf{CMS-parity as the default for the headline comparison} --- C4a only (rate-band lnN per scan point,
+correlated across runs), \emph{no} theory-shape nuisance --- so the NSBI-vs-binned CI comparison holds every
+systematic fixed and attributes the difference to \emph{unbinning alone} (this also preserves the best-case
+width guarantee of the width analysis below, and is the review-defensible choice: ``our systematic model is
+identical to AN-25-103, NP for NP''). The truncation risk is then \emph{shared} with the baseline --- but
+possibly not \emph{equally} shared: an unbinned fit reads shape at full per-event resolution and may convert an
+unmodelled theory-shape distortion into a \emph{larger} \kl\ bias than the binned fit (or a smaller one --- in
+the full feature space the distortion may look \emph{less} like \kl; empirical either way). Hence the pilot is
+\textbf{two-sided}: generate Asimov data with scale-varied \emph{shapes} (free --- $\mu_R/\mu_F$ variations are
+stored per-event generator weights, no new samples), fit \emph{both} the binned and the NSBI models in the
+shared normalisation-only configuration, and compare \kl\ biases. Both small $\Rightarrow$ parity validated;
+comparable $\Rightarrow$ shared caveat, comparison still clean; NSBI visibly larger $\Rightarrow$ C4b graduates
+from optional to needed-for-our-method. Either way, \textbf{C4b is a separable Phase-3 \emph{methods} upgrade}
+--- a \emph{fidelity/coverage} improvement, not a CI-tightening one (it likely costs width, though a shape NP is
+partially data-constrainable in situ, unlike a signal-rate lnN) --- natural in the per-component architecture,
+cheap (scale weights need no new samples), and never a prerequisite for the headline result (folded into
+studies \#5/\#19).
 \end{takeaway}
 
 \medskip\noindent\textbf{Best-case CI \emph{width} vs.\ the binned fit (a complementary axis).} The matrix above
