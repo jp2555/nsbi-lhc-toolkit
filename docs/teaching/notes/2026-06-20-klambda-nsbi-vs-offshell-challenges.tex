@@ -160,10 +160,15 @@ belt at \kl$\in\{-1,0,1,3,5\}$. \dw empirical coverage $\ge67\%$, $|$bias$|<0.1$
 specific NP/component. \textcolor{green!45!black}{\emph{\small(Prelim.: 500 toys at \kl$=1$ give pulls
 $\sim\mathcal N(0,1)$ and calibrated 68\% intervals for both NSBI and binned [Fig.\,2]; extend to the full
 \kl\ grid and re-run with systematics.)}} \sref{\S6}
-\item \stPart\ \priO\,\eff{M} \textbf{MC-stat ensemble-spread nuisance: design, size, coverage, Barlow--Beeston
-orthogonality.} Compare ensemble strategies (seeds / $k$-fold / bootstrap / \mhh-stratified) for the per-event
-ratio. \dw C2ST $p>0.1$ on holdout, NP width $\approx1$ (BB-valid), \kl\ widens 5--15\% when unfrozen, corr $<0.3$
-with physics NPs. \sref{\S5,\,\S6}
+\item \stPart\ \priO\,\eff{M} \textbf{MC-stat of the learned ratios: the wifi pilot $+$ three-way estimator
+shootout.} Wrap the \emph{existing} prelim ensembles as a frozen wifi basis (convex re-fit on a held-out split;
+sandwich covariance); propagate through the pointwise scan via Gong--Samaniego; \emph{derive and validate the
+weighted-events extension} (NLO negative weights --- not covered by the wifi paper); then the coverage shootout:
+ATLAS-style naive spread vs corrected bootstrap (fresh ensembles per pseudo-experiment) vs wifi, at nominal and
+$\pm1\sigma$-downsampled stats (10/30/50\%), $M\in\{8,16,32\}$. \dw wifi coverage 65--70\% on \bbtt\ toys incl.\
+weighted events; the ``training-stat $=X\%$ of $\sigma(\kl)$'' decomposition produced; shootout verdict documented.
+\textcolor{orange!75!black}{\emph{\small(See the item-6 update in \S5: two independent strikes against the naive
+spread already exist.)}} \sref{\S5,\,\S6}
 \item \stPart\ \priO\,\eff{S} \textbf{Interference-aware impact definition $+$ binned-NSBI fallback.}
 Implicit-function-theorem impact at the minimum vs finite-difference and the CMS rank; histogram the per-event
 log-ratio (5/10/20 bins) as an exact, learning-free cross-check. \dw matches the CMS rank $\pm2$; binned constraint
@@ -472,7 +477,9 @@ estimates \pA{83,84}. CMS does the per-\emph{bin} analogue (re-run the DNN on va
   2506.00113) --- a basis-function expansion whose weight covariance propagates in closed form to a per-event
   uncertainty band on $r(x)$, with demonstrated coverage on an SBI density-ratio example and \emph{no bootstrap},
   so it is attractive on both correctness \emph{and} the ensemble/compute cost (untested on
-  interference/morphing/weighted-MC).
+  interference/morphing/weighted-MC). The wifi paper's own coverage tests add a \emph{second, empirical} strike
+  against the spread-style estimator: uniform-weight (``naive'') ensembles come out \emph{biased and
+  under-covering}. Full dissection of the ATLAS estimator and the wifi plug-in map: the item-6 update below.
 \end{enumerate}
 
 \medskip\noindent\textbf{Two systematics that NSBI actually handles \emph{better} than templates.} Worth stating
@@ -504,7 +511,7 @@ a \emph{reconstructed} \mhh\ across three channels with data-driven backgrounds.
 3 data-driven bkg systematics & components exist (ABCDnn, neural FF, GOLLUM) but \emph{never combined} per-event; neural FF (2511.06972) explicitly defers systematics & hybrid (borderline open) & high\\
 4 \kl-dependent (POI-coupled) theory & \emph{split} (AN-25-103): \emph{rate} band $=$ standard practice (pointwise \kl-dependent lnN, its Table 40); per-event \emph{shape} part $=$ proposed only, done by nobody & \textbf{C4a closed / C4b open (upgrade)} & med\\
 5 factorisation cross-term (NP$\times$NP) & per-event \emph{toy} only (GOLLUM, sim data); $\tau$ES$\to$MET$\to$SVfit$\to$\mhh\ recompute untested & hybrid & med\\
-6 MC-stat of learned ratios & real (ATLAS) but a \emph{published correctness critique} (Shyamsundar, 2505.19156); leading candidate fix = analytic-frequentist \emph{wifi ensembles} (2506.00113) & hybrid & high\\
+6 MC-stat of learned ratios & real (ATLAS) but \emph{two strikes}: correctness critique (Shyamsundar, 2505.19156; $\sim$30$\times$ toy underestimate) $+$ empirical naive-ensemble undercoverage (2506.00113 tests); leading fix $=$ \emph{wifi ensembles} & hybrid & high\\
 a PS/generator via CARL/DCTR & components exist; never demonstrated end-to-end as a profiled NSBI nuisance & hybrid & med\\
 b absorb $b$-tag/$\tau$-ID SFs & building blocks only; no per-event SF-absorption $+$ in-situ standard candle shown & hybrid & med\\
 \bottomrule
@@ -524,8 +531,9 @@ is the borderline second --- every component exists but none combine. The other 
 exists in an easier setting, so each ``pilot'' is a \emph{method-selection gate}, not pure quantification.
 \textbf{Most dangerous to the headline} (a \emph{tighter} interval that must still \emph{cover}): \#6 --- Shyamsundar
 (2505.19156) argues via a toy that the ATLAS double-bootstrap MC-stat estimator does \emph{not} capture the
-finite-MC uncertainty, so settle this before quoting a number (leading candidate replacement: the
-analytic-frequentist \emph{wifi}-ensemble estimator, 2506.00113); and \#2 --- the $\sim$40-NP scale may force a
+finite-MC uncertainty --- and uniform-weight ensembles under-cover \emph{empirically} in 2506.00113's own tests
+--- so settle this before quoting a number (leading candidate replacement: the analytic-frequentist
+\emph{wifi}-ensemble estimator, 2506.00113); and \#2 --- the $\sim$40-NP scale may force a
 conditional surrogate (GOLLUM/R4) or GP morphing (R3) over $\sim$thousands of classifiers. \textbf{Suggested gates
 first:} \#4 (does a POI$\times$NP ansatz work, on a toy) and \#6 (which MC-stat estimator is correct); then the \#2
 scaling gate; then \#3/\#1/\#5 closures; the upsides (a,b) are field-first demonstrations. \emph{(Gate \#4
@@ -633,6 +641,89 @@ partially data-constrainable in situ, unlike a signal-rate lnN) --- natural in t
 cheap (scale weights need no new samples), and never a prerequisite for the headline result (folded into
 studies \#5/\#19).
 \end{takeaway}
+
+\medskip\noindent\textbf{Update (12 Jul 2026): training statistics of the learned ratios (item 6) --- the ATLAS
+double-bootstrap dissected, and the wifi map.} Two distinct ``statistical'' uncertainties must not be conflated:
+the \emph{data} statistics (Poisson fluctuations of the observed events --- dominates the CI in this stat-limited
+analysis, is handled exactly by the likelihood, and is where NSBI's per-event \emph{gain} lives) and the
+\emph{training} statistics (finite MC $\Rightarrow$ an error on every \emph{learned} ratio --- item 6). The second
+is existential for the headline claim: a \emph{tighter interval from the same data} is only credible if the
+learned-ratio noise is quantified with correct coverage --- and it concentrates exactly where the samples are
+smallest (the $\pm1\sigma$ variations).
+
+\smallskip\noindent\emph{What ATLAS actually does (off-shell \pA{86,87}, as dissected in 2505.19156).} Two
+bootstrap levels: (1) resample the training set $D$ $M$ times, train one NN per replica, and \emph{uniformly
+average} the $M$ log-ratios into the estimator; (2) resample \emph{the ensemble itself} $K$ times with
+replacement and take the spread of the $K$ re-averaged estimators as the uncertainty, inserted into the fit as a
+single coherent (spurious-signal-style) nuisance. \emph{The critique:} level 2 resamples \emph{conditional on the
+fixed} $D$, so it estimates only the finite-\emph{ensemble} noise, $\mathrm{Var}[\text{avg}\,|\,D]\sim1/M$ ---
+which vanishes as $M\to\infty$ at fixed $N$ --- and \emph{not} the finite-\emph{sample} deviation of the trained
+estimator from the true ratio ($\propto1/N$, independent of $M$). In Shyamsundar's Gaussian toy the true
+uncertainty is $\sim$0.1 while the double-bootstrap reports $\sim$0.003 --- a $\sim$30$\times$ underestimate.
+\emph{Second, independent strike:} the wifi paper's own coverage tests find uniform-weight (``naive'') ensembles
+--- structurally the ATLAS aggregation --- \emph{biased and under-covering}, while their estimator covers.
+(Fairness note: in the off-shell regime the MC was ample relative to the data sensitivity, so the practical
+impact there may have been limited; in \bbtt\ the $\pm1\sigma$ samples are the \emph{binding} constraint, so the
+estimator cannot be inherited on trust.)
+
+\smallskip\noindent\emph{What wifi does instead (2506.00113; mechanics verified).} The name is the construction:
+$w_if_i$. (1) Train $M$ networks and \emph{freeze} them as basis functions $f_i(x)$ --- for us, the
+already-trained prelim ensembles; basis diversity via their \emph{Bootstrap protocol} (members trained on
+bootstrap replicas --- i.e.\ ATLAS's level 1, reused). (2) Re-fit the \emph{linear} combination
+$\log\tilde r(x|w)=\sum_i w_i f_i(x)$ on a \emph{held-out} split with a symmetrised, normalisation-enforcing
+classifier loss --- a \emph{convex} problem. (3) $\mathrm{Cov}(\hat w)$ from the \textbf{sandwich estimator}
+$C=V^{-1}UV^{-1}$ (M-estimator theory: Hessian $V$, score covariance $U$ --- anchored to the \emph{sample}, not
+the ensemble). (4) Propagate \emph{analytically}: per-event band $\sigma^2(x)=f_i(x)\,C_{ij}\,f_j(x)$, and
+through a downstream fit via the \textbf{Gong--Samaniego} closed form,
+$\sigma^2_{\rm GS}=\sigma^2_{\rm MLE}\,(1+\sigma^2_{\rm MLE}\,A_iC_{ij}A_j)$ --- no extra NP, no toys, no
+bootstrap retrainings. Demonstrated nominal coverage on a Gaussian toy ($M\ge8$) and on q/g-jet SBI ($M=32$,
+Bootstrap protocol). \textbf{The structural relation in one line:} both start from the same level-1 bootstrap
+ensembles and diverge \emph{after} --- uniform average $+$ resample-the-ensemble spread (wrong target, $\to0$ as
+$M$ grows) vs.\ held-out convex re-fit $+$ sandwich covariance (right target, anchored to $N$).
+
+\begin{table}[h]\centering\small
+\begin{tabular}{@{}p{0.22\textwidth}p{0.35\textwidth}p{0.35\textwidth}@{}}
+\toprule
+ & \textbf{ATLAS off-shell (double-bootstrap)} & \textbf{wifi ensembles}\\
+\midrule
+target of the estimate & $\mathrm{Var}[\text{ensemble avg}\,|\,D]$ (level-2 spread) & asymptotic variance of the fitted ratio over data realisations (sandwich)\\
+scaling & $\sim1/M$ at fixed $N$ ($\to0$: the pathology) & anchored to $N$ via the score; $M$ only enriches the basis\\
+aggregation & uniform average of members & optimal convex re-fit of $w$ on a held-out split\\
+enters the fit as & one coherent NP (spurious-signal style), profiled & closed-form Gong--Samaniego inflation per scan point (no NP)\\
+granularity & single global shift & full functional covariance via the basis\\
+cost & $M$ trainings ($+$ cheap resampling); the \emph{corrected} bootstrap needs $M\times K$ retrainings & $M$ trainings (reused) $+$ one convex fit; no retraining multiplier\\
+validation status & internal calibration; toy counterexample ($\sim$30$\times$ under); naive-ensemble undercoverage (2506.00113 tests) & nominal coverage on toy $+$ q/g; \emph{untested} on interference / weighted MC\\
+key assumptions & level-2 bootstrap validity (contested) & well-specified basis; asymptotics; \emph{unweighted} events\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\smallskip\noindent\emph{The concrete plug-in map (five points).}
+\begin{enumerate}[leftmargin=1.4em]
+\item \emph{Family-1 ratios:} wrap the \emph{existing} prelim ensembles as the frozen basis; convex re-fit on a
+  held-out split; sandwich $C$ $\Rightarrow$ a calibrated per-event stat band on every $r_s(x)$ at near-zero
+  extra training cost.
+\item \emph{Honest morphing (\#9):} the same band on each Family-2 anchor classifier is the \emph{statistical}
+  part of the morphing uncertainty --- exactly where the $\pm1\sigma$ samples are smallest.
+\item \emph{R3 synergy:} the anchor bands enter the GP interpolation as \emph{heteroscedastic noise} --- wifi
+  handles within-anchor training stat; the GP handles between-anchor interpolation.
+\item \emph{The fit:} propagate $C$ through the pointwise \textsc{jax} scan via Gong--Samaniego ($A$ from
+  autodiff) $\Rightarrow$ the paper-ready decomposition ``training statistics contribute $X\%$ of
+  $\sigma(\kl)$.''
+\item \emph{The C6 gate, precisely labelled:} a three-way coverage shootout on \bbtt\ toys --- ATLAS-style naive
+  spread vs.\ the \emph{corrected} bootstrap (Shyamsundar's fix: fresh ensembles per pseudo-experiment,
+  $M\times K$ retrainings) vs.\ wifi --- at nominal and $\pm1\sigma$-mimicking downsampled statistics.
+\end{enumerate}
+\noindent\emph{Caveats before leaning on it:} \textbf{weighted/negative-weight events are not addressed in the
+wifi paper} (our NLO samples have them; the weighted-M-estimation extension is ours to derive and validate ---
+the genuinely new piece); the \emph{well-specified-basis} assumption means the covariance sees variance around
+the basis-restricted optimum, not a shared blind spot of all members --- C2ST closure stays mandatory;
+asymptotics must be checked at the smallest $\pm1\sigma$ samples; budget $M\approx16$--$32$ (Bootstrap protocol
+--- their Partition protocol degraded in high dimension); and the interplay with the isotonic-calibration step is
+an implementation detail to settle. Study \#15 is rewritten as this pilot. A Phase-2 crossover: frozen
+foundation-model embeddings as a \emph{shared fixed basis} $+$ linear heads make every ratio a GLM with exact
+sandwich covariance --- frozen-FM was worst for point-estimate \emph{separation}, but may be ideal as a
+\emph{covariance basis}.
 
 \medskip\noindent\textbf{Best-case CI \emph{width} vs.\ the binned fit (a complementary axis).} The matrix above
 asks \emph{can we do it}; this asks \emph{what it buys on the interval width if we do} --- assuming the morphing is
@@ -1021,13 +1112,20 @@ GeV, TeV --- giga-/tera-electronvolt (energy/mass units).
 \bibitem{shyam} P.~Shyamsundar, \emph{Comment on ``An implementation of neural simulation-based inference for
   parameter estimation in ATLAS''}, arXiv:2505.19156 (2025). Argues, via a toy counterexample, that the ATLAS
   double-bootstrap estimator of the finite-simulation (MC-stat) uncertainty does not capture it --- a correctness
-  critique, not merely an under-validation. Bears on item~6.
+  critique, not merely an under-validation. Dissection: the second bootstrap level resamples the ensemble
+  \emph{conditional on the fixed training set}, so it measures only the finite-ensemble noise ($\sim1/M$, $\to0$
+  as $M\to\infty$) and not the finite-sample error ($\propto1/N$); Gaussian toy: true $\sim$0.1 vs reported
+  $\sim$0.003 ($\sim$30$\times$). Proposed fixes: plain bootstrap without merging; fresh ensembles per
+  pseudo-experiment ($M\times K$ retrainings); or summary-statistic SBI. Bears on item~6.
 \bibitem{wifi} S.~Benevedes, J.~Thaler, \emph{Frequentist Uncertainties on Neural Density Ratios with wifi
-  Ensembles}, arXiv:2506.00113 (2025). Trains basis functions $f_i(x)$ and propagates the weight covariance
-  \emph{analytically} (no bootstrap) to an asymptotic frequentist uncertainty band on a learned density ratio;
-  empirically correct coverage on a q/g SBI example. Leading candidate estimator for item~6 --- addresses both the
-  correctness critique \emph{and} the ensemble/bootstrap compute multiplier; per-event band also feeds the honest
-  morphing-uncertainty of item~9/\#15. Untested on interference/morphing/weighted-MC.
+  Ensembles}, arXiv:2506.00113 (2025). wifi $=$ ``$w_if_i$'': freeze $M$ trained nets as basis functions; convex
+  re-fit of the linear weights in log-ratio space on a held-out split (symmetrised MLC loss); covariance from the
+  sandwich estimator $C=V^{-1}UV^{-1}$; per-event band $f_i C_{ij} f_j$; downstream fits inflated in closed form
+  via the Gong--Samaniego theorem --- no bootstrap, no extra NP. Nominal coverage on a Gaussian toy ($M\ge8$) and
+  q/g SBI ($M=32$, Bootstrap protocol); \emph{uniform-weight (naive) ensembles come out biased and under-covering
+  in the same tests} (the second strike against spread-style estimators). Leading candidate for item~6; per-event
+  band also feeds the honest morphing-uncertainty of item~9/\#15. \emph{Not addressed:} weighted/negative-weight
+  events (our derivation task); untested on interference/multi-component mixtures.
 \bibitem{neuralff} \emph{Neural Fake Factor Estimation} (data-based density-ratio inference), arXiv:2511.06972,
   JHEP 04 (2026) 188. Per-event continuous fake factor as a learned density ratio (NSBI-compatible); \emph{defers}
   fake-rate systematics to future work. Bears on items~3 and the data-driven backgrounds of Sec.~4.
