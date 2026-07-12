@@ -91,6 +91,20 @@ def closure_metrics(p, y, w, nbins=20, neff_min=25.0):
     )
 
 
+def first_passing(results_cfg, int_gate=0.01, shape_gate=0.05):
+    """Smallest fraction whose seed-mean passes BOTH gates (|IC| within max(gate, 3x stat),
+    SC_rms below gate); None if no fraction passes. The closure left-shift of this number,
+    finetune vs scratch, is the adoption metric."""
+    for size in sorted(results_cfg):
+        v = results_cfg[size]
+        ic = np.nanmean(np.abs([m["integral"] for m in v]))
+        ie = np.nanmean([m["integral_err"] for m in v])
+        sc = np.nanmean([m["shape_rms"] for m in v])
+        if ic <= max(int_gate, 3.0 * ie) and sc <= shape_gate:
+            return size
+    return None
+
+
 def _load_prediction(path):
     import torch
     df = torch.load(path, map_location="cpu")
@@ -201,6 +215,18 @@ def main():
                   f"(stat {np.nanmean(ie):.4f})  "
                   f"SC_rms={np.nanmean(sc):.4f}+-{np.nanstd(sc):.4f}  "
                   f"chi2/ndf={np.nanmean(x2):.2f}  (n={len(v)})")
+
+    # Decision readout (primacy fixed 2026-07-12, pre-unblinding): the adoption metric is
+    # the closure LEFT-SHIFT -- smallest fraction whose seed-mean passes both gates.
+    # AUC is a secondary guard (finetune must not regress vs scratch), not the win metric.
+    fp = {cfg: first_passing(results.get(cfg, {})) for cfg in CONFIGS}
+    for cfg in CONFIGS:
+        print(f"first fraction passing gates  {cfg:9s}: "
+              f"{fp[cfg] if fp[cfg] is not None else 'none'}")
+    if fp.get("finetune") and fp.get("scratch"):
+        print(f"equivalent-data multiplier (scratch/finetune): "
+              f"{fp['scratch'] / fp['finetune']:.1f}x")
+
     with open(f"{args.output_prefix}.json", "w") as f:
         json.dump(results, f, indent=1)
     plot(results, f"{args.output_prefix}.png")

@@ -57,6 +57,12 @@ the G0.5 phenomenon in miniature: low-stat failure is calibration, not ordering.
   bbγγ = later increment (photon corner (0,1,0)); G0 adopt-iff finetune > scratch beyond compute
   penalty AND ≥ ceiling; a G0 null with scratch passing closure ⇒ objective-mismatch verdict
   (also condemns a like-for-like new τ/γ FM — feasibility note §8).
+- **Decision primacy (2026-07-12, fixed pre-unblinding): closure left-shift is the win metric.**
+  Finetune passing both gates at a smaller fraction than scratch (e.g. 3% vs 30% = 10×
+  equivalent-data multiplier) = adoption-grade win even at AUC parity; AUC-only win with failing
+  closure = not a win. `eval_closure.py` prints the first-passing fractions + multiplier.
+  Ceiling anchors (full stats, kl1-vs-kl5): AUC 0.792→0.817; gates first pass at the 10%
+  fraction; method-limited |IC| floor ≈ 1.7%.
 
 ## Env setup (Perlmutter)
 ```bash

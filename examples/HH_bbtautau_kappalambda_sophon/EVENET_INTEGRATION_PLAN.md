@@ -162,6 +162,11 @@ Pre-flight checklist (carried from HANDOFF.md — do BEFORE the 75-job launch):
 4. local smoke tests pass without ROOT: `nanoaod_to_evenet_npz.py --smoke 512`,
    `eval_closure.py --self-test`.
 
-Decision readout (G0): adopt EveNet iff finetune > scratch beyond the compute penalty AND
-beats the kinematic ceiling — and (G0.5) closure gates pass wherever scratch passes. A G0
-null with passing scratch closure = the objective-mismatch verdict (feasibility note §8).
+Decision readout (primacy fixed 2026-07-12, pre-unblinding): the win metric is the
+**closure left-shift** — finetune passing both gates (|IC| < max(1%, 3×stat), SC_rms < 0.05)
+at a smaller fraction than scratch (e.g. 3% vs 30% = 10× equivalent-data multiplier) is an
+adoption-grade win even at AUC parity; `eval_closure.py` prints the first-passing fractions
+and the multiplier. AUC is a secondary guard (no material regression vs scratch) plus the
+ceiling comparison (full-stats anchors: AUC 0.792→0.817, gates first pass at 10%, |IC| floor
+≈1.7%). An AUC-only win with failing closure is NOT adoption. A G0 null with passing scratch
+closure = the objective-mismatch verdict (feasibility note §8).

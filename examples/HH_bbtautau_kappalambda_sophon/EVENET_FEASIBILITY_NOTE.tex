@@ -576,6 +576,16 @@ kill/branch interpretation.
   \emph{Branch:} if FM fine-tunes win AUC but fail closure where scratch
   passes, the FM inductive bias is biasing the ratio --- a new, reportable
   failure mode, and a hard blocker for NSBI adoption regardless of G0.
+  \emph{Decision primacy (fixed 2026-07-12, before any sweep curves existed):}
+  the adoption metric is the closure \textbf{left-shift} --- finetune passing
+  both gates at a smaller training fraction than scratch (e.g.\ 3\% vs.\ 30\%
+  $=$ a $10\times$ equivalent-data multiplier) \emph{is} an adoption-grade win
+  even at AUC parity; an AUC-only win with failing closure is not. AUC is a
+  secondary guard (finetune must not materially regress below scratch).
+  Calibration, not ordering, is the binding axis: the full-statistics ceiling
+  measurement shows AUC saturating by the 10\% fraction (0.792 at 1\% vs.\
+  0.817 at 100\%) while its closure gates first pass only at 10\%, with a
+  method-limited $|\mathrm{IC}|$ floor of ${\approx}1.7\%$.
 \item[G1 --- Corner-encoding A/B test (\tauh: anonymous vs.\ $(0,0,\pm1)$).]
   One adapter flag; run at two dataset fractions $\times$ 5 seeds.
   \emph{Pass:} corner $\geq$ anonymous at all fractions (watch R2 of
