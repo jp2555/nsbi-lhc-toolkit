@@ -725,6 +725,53 @@ foundation-model embeddings as a \emph{shared fixed basis} $+$ linear heads make
 sandwich covariance --- frozen-FM was worst for point-estimate \emph{separation}, but may be ideal as a
 \emph{covariance basis}.
 
+\medskip\noindent\textbf{Where the impacts actually land (AN-25-103 Fig.\,118: pulls/impacts on the Asimov
+dataset, POI $=r$ multiplying SM ggHH$+$qqHH, full Run-3).} The total Asimov uncertainty is
+$r=1.00^{+1.69}_{-1.37}$ --- strongly stat-dominated, consistent with the expected limit of $3.3\times$SM. The
+leading nuisances (bar lengths read off a draft plot; treat as $\pm$0.05-level approximate):
+
+\begin{table}[h]\centering\small
+\begin{tabular}{@{}clllp{0.27\textwidth}@{}}
+\toprule
+\textbf{Rank} & \textbf{NP} & \textbf{Impact $|\Delta r|$} & \textbf{Prior (input) size} & \textbf{Challenge row (Sec.\,5 matrix)}\\
+\midrule
+1 & \texttt{CMS\_scale\_j\_2024} (JES, 2024 era) & $\approx{+}0.5/{-}0.2$ & $\pm1\sigma$ jet calibration (2024 JEC still preliminary) & \textbf{C1} (deforms \mhh/DNN inputs) $+$ one of C2's $\sim$40\\
+2 & \texttt{QCDscale\_ggHH$+$mtop} (theory) & $\approx\mp0.3$--$0.35$ & $+6/-23\%$ at SM (Table 40; sign-flips with \kl) & \textbf{C4} (POI-coupled theory; C4a rate half)\\
+3--4 & \texttt{MC stat}, $\tau\tau$ res2b 2024, bins 3/3, 2/3 & $\approx\pm0.25$--$0.3$ \emph{each} & per-bin template Poisson (large in sparse high-score bins) & \textbf{C6} (binned analog of learned-ratio training stat)\\
+5 & \texttt{bbtt\_norm\_ggH} (single-H normalisation) & $\approx\pm0.27$ & not stated in the pages read & none of the hard rows --- benign green-factor lnN (study \#12)\\
+6--8 & more MC-stat bins; \texttt{CMS\_res\_j\_2024} (JER) & $\approx\pm0.2$--$0.25$ & --- & C6; C1/C2\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Three structural observations. (i) \textbf{Roughly half of the top-25 rows are individual MC-stat
+bins}; their naive quadrature aggregate ($\sim$0.6--0.8, with more bins in ranks 26--75) makes finite-simulation
+statistics arguably the \emph{largest single systematic block} in the current analysis --- which the AN itself
+concedes (Sec.\,7.3: MC statistics is ``the limiting factor'' for shape systematics, forcing
+symmetrisation/envelope manipulations). The binned baseline is \emph{already} MC-stat-dominated; the NSBI
+version of that block is exactly the learned-ratio training stat (item 6/wifi). (ii) The impact spectrum
+\emph{drops an order of magnitude} after the top-25 (Fig.\,119 spans only $|\Delta r|\lesssim0.06$): jet$\to\tau$
+fakes (\texttt{CMS\_FF\_syst}, rank $\sim$33) and luminosity (rank $\sim$40) are mid-list, \emph{not} leaders.
+(iii) The empirical top --- \{JES, theory, MC-stat\} --- is precisely \{C1, C4, C6\}, the three challenges this
+note's risk matrix prioritises, now confirmed by the analysis's own impact ordering.
+
+\smallskip\noindent\emph{Why ``the leading systematic is theory'' is consistent with JES topping this plot.}
+Four reconciliations, all real: (i) \emph{grouping granularity} --- JES is split into per-era NPs (2022, 2022EE,
+2023, 2023BPix, 2024, plus JER), each ranked separately, while the QCD$+m_t$ theory band is \emph{one} NP;
+``leading systematic'' statements usually refer to \emph{grouped} uncertainty breakdowns, not single-NP rows.
+(ii) \emph{Correlation structure} --- experimental NPs are uncorrelated across eras and across Run-2/Run-3
+(different detector conditions, Sec.\,8.5.1), so in combinations they average down alongside statistics; the
+theory band is \emph{fully correlated} across everything (Sec.\,8.5.1) and is therefore a \emph{floor} whose
+relative share grows with luminosity. (iii) \emph{POI context} --- for the \kl\ interval and the
+$\sigma\times$BR-vs-theory crossing, the theory band enters \emph{directly} through $\sigma_{\rm theory}(\kl)$,
+largest ($-22\%$) exactly near the $\sigma$-minimum region that controls the interval edges; JES never touches
+$\sigma_{\rm theory}$. (iv) \emph{Irreducibility} --- a signal-normalisation theory NP is degenerate with $r$
+(no shape handle; the data cannot constrain it), whereas JES is constrained in situ and its post-fit impact
+shrinks as data grow. A practical footnote: the 2024-era JES sits at rank 1 partly because the 2024 jet
+calibration is still preliminary in this draft --- expect it to deflate by unblinding. \emph{Caveats: draft,
+blinded (Asimov), POI $=r$ not \kl; in a \kl\ scan the C1 (JES/$\tau$ES) and C4 (theory, via the sign-flipping
+band) entries would if anything climb; the rank-5 label is small in the plot --- re-verify at unblinding.}
+
 \medskip\noindent\textbf{Best-case CI \emph{width} vs.\ the binned fit (a complementary axis).} The matrix above
 asks \emph{can we do it}; this asks \emph{what it buys on the interval width if we do} --- assuming the morphing is
 calibrated and coverage correct (i.e.\ setting aside item~6's correctness question). Two baselines must be kept
