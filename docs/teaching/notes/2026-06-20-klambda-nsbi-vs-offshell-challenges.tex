@@ -75,7 +75,7 @@ at $450\,\mathrm{fb}^{-1}$ and to $\mathbf{7.1\sigma}$ at the HL-LHC ($3000\,\ma
 binned); 500-toy pulls $\sim\mathcal N(0,1)$ for both fits (Figs.\,1--2, Table\,I). A focused test statistic (FTS)
 further tightens the 95\% interval near the SM by 10--20\% at no extra training cost (Fig.\,3, Table\,II).
 \textbf{Completed:} \stDone\ \#11, \#14, \#17. \textbf{Partial} (done without systematics, or by an alternative
-route): \stPart\ \#1, \#4, \#7, \#13, \#15, \#16, \#18, \#20, \#24, \#25. Remaining items are systematics-,
+route): \stPart\ \#1, \#4, \#7, \#13, \#15, \#16, \#18, \#19, \#20, \#24, \#25. Remaining items are systematics-,
 CR-, and data-driven-background-related.}
 \end{keybox}
 
@@ -187,9 +187,14 @@ $\rho<0.7$, VIF$<1.5$; settle whether constituents/SVfit push $\rho<0.60$ or it 
 NSBI lifts the binned-\mhh\ secondary minimum near \kl$\,\sim\,$3--4 [Fig.\,1]; features selected by
 total-variation distance $+$ integral-closure, stable under one-at-a-time low-TV removal. The
 $\rho($\kl,JES/$\tau$ES$)$/VIF quantification needs the systematic variations.)}} \sref{\S2,\,\S5}
-\item \priO\,\eff{S} \textbf{Source the \kl-differential THU$_{HH}$ theory band.} Compile the scale/PDF/$m_t$
-uncertainty vs \kl$\in[-2,5]$ from the LHC HH WG / Powheg-NLO and parametrise it as a POI-coupled weight. \dw a
-smooth band reproducing $+4/-18\%$ at the SM, ready for the factorisation study (\#5). \sref{\S2,\,\S5}
+\item \stPart\ \priO\,\eff{S} \textbf{Source the \kl-differential THU$_{HH}$ band --- and measure the
+shape-truncation bias.} Compile the scale/PDF/$m_t$ band vs \kl$\in[-2,5]$ and parametrise it as a
+\kl-dependent \emph{rate} weight; then fit Asimov data generated with scale-varied \emph{shapes} using a
+normalisation-only model and measure the \kl\ bias. \dw a smooth band reproducing the AN-25-103 Table-40 values
+(incl.\ the $m_t$ sign flip); truncation bias quantified ($<0.05$ $\Rightarrow$ CMS-style normalisation-only is
+justified). \textcolor{orange!75!black}{\emph{\small(Prelim.: the total-level band per \kl\ now exists ---
+AN-25-103 Table 40: $+4/-18\%$ at $\kl{=}1$, $+4/-22\%$ at 2.45, $+13/-4\%$ at 5 [$m_t$ scheme]; the
+\emph{component-differential} split needed for shape morphing remains open --- C4b, see \S5.)}} \sref{\S2,\,\S5}
 \item \stPart\ \priO\,\eff{M} \textbf{Validate the LO$\to$NLO \kl-reweighting that generates the $R(x|$\kl$)$ sources.}
 Direct-NLO vs 2D-LO-reweight vs dedicated-NLO-reweight; propagate the difference through an Asimov fit. \dw
 NLO-reweight reproduces direct to $<5\%$/bin and $<0.1\sigma$ \kl\ bias; the LO-only cost quantified.
@@ -446,9 +451,13 @@ estimates \pA{83,84}. CMS does the per-\emph{bin} analogue (re-run the DNN on va
   uncertainties (11--28\%, Table 33) \pC{95}, the VBF dipole-recoil PS uncertainty (20--70\%, Table 32) \pC{93}.
   These are template/weight constructs, not deformations of an MC density.
 \item \textbf{\kl-dependent theory uncertainty (POI$\times$systematic entanglement).} The HH scale/PDF/$m_t$
-  uncertainties are folded into a normalisation NP \texttt{THU\_HH} $=+4\%/-18\%$ at the SM point that becomes a
-  \emph{\kl-dependent} uncertainty across the scan \pC{91}. The off-shell $\mu$ does not entangle with its theory
-  uncertainty this way. Capturing it requires non-factorisable (POI-coupled) morphing.
+  uncertainties are folded into normalisation NPs that are strongly \emph{\kl-dependent}: Run-2 quoted
+  \texttt{THU\_HH} $=+4\%/-18\%$ at the SM \pC{91}; the Run-3 note (AN-25-103) gives ggF scale$+m_t$-scheme
+  $=+6/-23\%$ at the SM and tabulates the band \emph{per \kl\ point}, with the $m_t$ asymmetry \emph{flipping
+  sign} across the scan (its Table~40). The off-shell $\mu$ does not entangle with its theory uncertainty this
+  way. A faithful \emph{per-event} treatment would require POI-coupled morphing --- but see the AN-25-103
+  reassessment below: the \emph{rate} part is handled pointwise without any such object; only the \emph{shape}
+  part remains open.
 \item \textbf{Factorisation is more likely to break.} $w_X=\prod_m w_X(\alpha_m)$ assumes NPs are independent
   sources \pA{83}; but JES and $\tau$ES \emph{both} feed \mhh\ ($=m(b\bar b+\tau\tau)$), so a genuine cross-term
   exists in \bbtt\ that is benign in clean $4\ell$.
@@ -491,7 +500,7 @@ a \emph{reconstructed} \mhh\ across three channels with data-driven backgrounds.
 1 \kl--syst.\ shape degeneracy & poly-exp morphing exists (ATLAS, GOLLUM); per-event closure under \emph{simultaneous} JES$\times\tau$ES on \mhh\ unreported & hybrid & high\\
 2 order-of-mag.\ more NPs ($\sim$40) & $\le$50 NPs on clean $4\ell$ (ATLAS); $\le$3 calib.\ NPs on sim data (GOLLUM); cross-terms $+$ calibration at this scale unproven & hybrid & high\\
 3 data-driven bkg systematics & components exist (ABCDnn, neural FF, GOLLUM) but \emph{never combined} per-event; neural FF (2511.06972) explicitly defers systematics & hybrid (borderline open) & high\\
-4 \kl-dependent (POI-coupled) theory & \emph{proposed only} --- no POI-coupled per-event morphing anywhere; off-shell structurally avoids it & \textbf{open} & high\\
+4 \kl-dependent (POI-coupled) theory & \emph{split} (AN-25-103): \emph{rate} band $=$ standard practice (pointwise \kl-dependent lnN, its Table 40); per-event \emph{shape} part $=$ proposed only, done by nobody & \textbf{C4a closed / C4b open (upgrade)} & med\\
 5 factorisation cross-term (NP$\times$NP) & per-event \emph{toy} only (GOLLUM, sim data); $\tau$ES$\to$MET$\to$SVfit$\to$\mhh\ recompute untested & hybrid & med\\
 6 MC-stat of learned ratios & real (ATLAS) but a \emph{published correctness critique} (Shyamsundar, 2505.19156); leading candidate fix = analytic-frequentist \emph{wifi ensembles} (2506.00113) & hybrid & high\\
 a PS/generator via CARL/DCTR & components exist; never demonstrated end-to-end as a profiled NSBI nuisance & hybrid & med\\
@@ -501,11 +510,14 @@ b absorb $b$-tag/$\tau$-ID SFs & building blocks only; no per-event SF-absorptio
 \end{table}
 
 \begin{takeaway}[Open vs.\ numerical --- the verdict]
-\textbf{One challenge is conceptually open} (no literature to tackle it): \#4, the \kl-dependent / POI-coupled theory
-morphing $w_\theta(x;\kl,\alpha_\theta)$. The standard factorised scheme keeps every NP weight \emph{POI-independent}
-($w_m(x;\alpha_m)$), and off-shell avoids the problem entirely ($\mu$ does not couple to its theory band because its
-signal \emph{shape} is a fixed mixture). Note \#4 (POI$\times$NP) is distinct from \#5 (NP$\times$NP): GOLLUM solves
-the latter on a toy but does \emph{not} reach the former. \#3 (per-event systematics of a \emph{data-driven} density)
+\textbf{One challenge was rated conceptually open --- and it has since split} (see the AN-25-103 reassessment
+below): \#4, the \kl-dependent / POI-coupled theory morphing $w_\theta(x;\kl,\alpha_\theta)$. The standard
+factorised scheme keeps every NP weight \emph{POI-independent} ($w_m(x;\alpha_m)$), and off-shell avoids the problem
+entirely ($\mu$ does not couple to its theory band because its signal \emph{shape} is a fixed mixture). Note \#4
+(POI$\times$NP) is distinct from \#5 (NP$\times$NP): GOLLUM solves the latter on a toy but does \emph{not} reach the
+former. \emph{Post-AN-25-103}: the \emph{rate} half (C4a) is \textbf{closed} --- a pointwise \kl-dependent lnN,
+standard CMS practice --- while the per-event \emph{shape} half (C4b) remains open but is an \emph{upgrade} that no
+analysis performs. \#3 (per-event systematics of a \emph{data-driven} density)
 is the borderline second --- every component exists but none combine. The other six are \emph{hybrid}: a method
 exists in an easier setting, so each ``pilot'' is a \emph{method-selection gate}, not pure quantification.
 \textbf{Most dangerous to the headline} (a \emph{tighter} interval that must still \emph{cover}): \#6 --- Shyamsundar
@@ -514,7 +526,9 @@ finite-MC uncertainty, so settle this before quoting a number (leading candidate
 analytic-frequentist \emph{wifi}-ensemble estimator, 2506.00113); and \#2 --- the $\sim$40-NP scale may force a
 conditional surrogate (GOLLUM/R4) or GP morphing (R3) over $\sim$thousands of classifiers. \textbf{Suggested gates
 first:} \#4 (does a POI$\times$NP ansatz work, on a toy) and \#6 (which MC-stat estimator is correct); then the \#2
-scaling gate; then \#3/\#1/\#5 closures; the upsides (a,b) are field-first demonstrations.
+scaling gate; then \#3/\#1/\#5 closures; the upsides (a,b) are field-first demonstrations. \emph{(Gate \#4
+refocused post-AN-25-103: the rate half is closed; the pilot is now the theory-\emph{shape} truncation-bias
+measurement --- see the reassessment below.)}
 \end{takeaway}
 
 \medskip\noindent\emph{Why off-shell escapes \#4, and the likely way out.} Algebraically off-shell and \kl\ are
@@ -529,8 +543,82 @@ re-mixes a component-differential theory band. \textbf{Way out (first thing to t
 total-signal THU$_{HH}$ NP with \emph{per-component, POI-independent} theory weights
 $w_\triangle,\,w_{\rm int},\,w_\square$ (functions of $\alpha_\theta$ only); the \kl\ coefficients then blend them and
 the \kl-dependence of the net THU emerges \emph{automatically}, preserving factorisation. The two missing pieces
-(hence ``open''): the \emph{component-differential} theory bands (the LHC HH WG tabulates only the total
-$+4/{-}18\%$), and any NSBI closure test of per-component theory morphing.
+(hence ``open''): the \emph{component-differential} theory bands (the WG tabulates only the total band per \kl\
+point), and any NSBI closure test of per-component theory morphing. \emph{This prediction is now empirically
+confirmed --- see the sign flip in the AN-25-103 update just below.}
+
+\medskip\noindent\textbf{Update (12 Jul 2026): how the theory uncertainty is \emph{actually} handled in the
+current CMS \bbtt\ analysis (Run-3, AN-25-103) --- and the C4 reassessment.} Reading the Run-3 note confirms the
+theory uncertainty is the \emph{leading} \bbtt\ systematic and reveals a three-layer treatment:
+\begin{enumerate}[leftmargin=1.4em]
+\item \emph{POI rate$+$shape, by construction.} The ggF signal at any $(\kl,\kappa_t)$ is an \emph{exact}
+  three-component template combination, $\sigma(\kl,\kappa_t)=\mathbf k^{\rm T}\mathbf K^{-1}\boldsymbol\Sigma$,
+  built from three NLO \textsc{powheg} samples at $\kl=1,\,2.45,\,5$ and applied \emph{per bin at fit time}
+  (AN Eq.\,52--55; the VBF analog uses six components). This is precisely the mixture / known-green-coefficient
+  structure of Sec.\,1, executed on templates.
+\item \emph{Theory NPs are pure normalisation lnN.} QCDscale, PDF and $\alpha_s$ enter as rate modifiers with
+  log-normal priors (AN Sec.\,7.1, Table 42): at the SM point, ggF scale$+m_t$-scheme $=+6/-23\%$ (the $-23\%$
+  dominated by the $m_t$-\emph{scheme} choice, not scale), PDF $\pm1.5\%$, $\alpha_s$ $\pm1.7\%$; VBF scale
+  $+0.05/-0.03\%$, PDF$+\alpha_s$ $\pm2.7\%$. \textbf{No theory-shape NP exists for the signal} --- scale/$m_t$
+  variations never deform the templates.
+\item \emph{The \kl-dependence is handled at interpretation time.} AN Table 40 tabulates the band \emph{per \kl\
+  basis point} --- large and \emph{sign-flipping}:
+\begin{center}\small
+\begin{tabular}{@{}cccc@{}}\toprule
+$\kl$ & $\sigma(\kl)$ [fb] & scale & $m_t$ scheme\\ \midrule
+1 & 34.13 & $+2.1/-4.9\%$ & $+4/-18\%$\\
+2.45 & 14.92 & $+3.2/-5.5\%$ & $+4/-22\%$\\
+5 & 99.65 & $+7.9/-8.4\%$ & $\mathbf{+13/-4\%}$\\ \bottomrule
+\end{tabular}
+\end{center}
+  The scans are \emph{pointwise}: at each fixed \kl\ hypothesis the model is \emph{rebuilt} (templates via
+  Eq.\,55, band at that \kl) and all nuisances profiled (AN Sec.\,8.4.5); 2-D exclusions compare the rate limit
+  to $\sigma_{\rm theory}$ \emph{evaluated at each parameter point}, with the band propagated to the exclusion
+  boundaries (Sec.\,8.4.6); the Run-2$+$3 combination treats the joint QCD$+m_t$ ggF uncertainty as
+  \emph{correlated} across runs (Sec.\,8.5.1).
+\end{enumerate}
+
+\begin{keybox}[Concept: what a ``scan'' actually is --- and why \kl\ can be fixed inside every fit]
+A profile-likelihood ``scan'' is not one fit: it is a \textbf{grid of conditional fits, one per hypothesis
+value}. Each fit answers one frozen question --- \emph{``if \kl\ were exactly this value, how well can the model
+explain the data, with every nuisance doing its best?''} --- and returns \emph{one number}, the profiled NLL:
+one evaluation of the numerator of $\lambda(\kl)=L(\kl,\hat{\hat\alpha}(\kl))/L(\hat\kl,\hat\alpha)$. The
+``scan'' is the assembled table of $(\kl,t)$ pairs; $\hat\kl$ is the \emph{curve's} minimum and the CI its
+$t\le1$ crossings --- read off the assembly, never from a single fit. (Valley picture: each fit is a probe
+dropped to the valley floor at one longitude; no probe moves sideways, yet the probe depths trace the
+floor-vs-longitude curve.) \textbf{Why pointwise} rather than one fit with \kl\ floating: (i) a free fit yields
+only the minimum and a Hessian \emph{parabola} --- blind to the grossly non-parabolic \kl\ curve (the AN's own
+scan, its Fig.\,131, shows the interference structure near $\kl\!\approx\!5$--$6$); (ii) each minimisation is
+over nuisances only, hence robust; (iii) \textbf{the model may be rebuilt per point} --- re-mixed templates
+\emph{and} that point's theory band --- because the minimiser never needs
+$\partial(\text{model})/\partial\kl$: the \kl-dependence of the band never enters any derivative, pull, or
+profiling step. It is bookkeeping \emph{between} fits, not structure \emph{within} one. \textbf{NSBI scans are
+pointwise in exactly the same way} (the prelim's profile-NLL scan already evaluates $t(\kl)$ on a grid over
+cached ratios), so the identical trick ports verbatim. Mild costs, engineering not conceptual: grid resolution
+(interpolate near thresholds and the $\sigma$-minimum) and per-point convergence.
+\end{keybox}
+
+\begin{takeaway}[C4 reassessed (12 Jul 2026): it splits --- the rate part is closed, the shape part is an upgrade]
+\textbf{C4a --- the \kl-dependent \emph{rate} band: closed (numerical, portable today).} Because any scan
+(binned \emph{or} NSBI) profiles at fixed \kl\ pointwise, a \kl-dependent lnN \emph{magnitude} needs no
+POI-coupled per-event object: put band$(\kl)$ (LHC HH WG / AN Table 40) into the green rate factor on
+$\nu_{\rm sig}(\kl)$, profiled per scan point and correlated across points/runs exactly as CMS does. Since the
+theory uncertainty is the \emph{leading} systematic and the rate band carries the $-23\%$, \textbf{the dominant
+\bbtt\ systematic is implementable in the NSBI fit at parity with CMS, today.}
+\textbf{C4b --- the theory \emph{shape} deformation: still open, but an \emph{upgrade}, not a parity risk.}
+Scale/$m_t$ variations deform each component's $d\sigma/dx$ (hence the discriminant) --- the per-component
+$w_{\theta,s}(x;\alpha_\theta)$ morphing that \emph{nobody} performs: CMS is normalisation-only. So C4b is not a
+gap NSBI must close to match the baseline; it is where \emph{both} approaches currently truncate, and where
+NSBI's per-component structure is the natural upgrade. Table 40's \textbf{sign flip} ($+4/-18\%$ at $\kl{=}1$
+$\to$ $+13/-4\%$ at $\kl{=}5$) is direct empirical evidence for the per-component picture: the net band rotates
+because the components' bands differ --- exactly what blending POI-independent component bands with the known
+\kl\ coefficients reproduces automatically. \textbf{Gate refocus:} the C4 pilot is no longer ``can we handle THU
+at all'' but (i) source the component-differential bands, and (ii) measure the \emph{truncation bias} --- fit
+Asimov data generated with scale-varied \emph{shapes} using the normalisation-only model and measure the \kl\
+bias: small $\Rightarrow$ the CMS truncation is justified and C4b is deprioritised; large $\Rightarrow$
+per-component shape morphing becomes a genuine physics improvement NSBI can claim (folded into studies
+\#5/\#19).
+\end{takeaway}
 
 \medskip\noindent\textbf{Best-case CI \emph{width} vs.\ the binned fit (a complementary axis).} The matrix above
 asks \emph{can we do it}; this asks \emph{what it buys on the interval width if we do} --- assuming the morphing is
@@ -631,7 +719,7 @@ Backgrounds & one MC $q\bar qZZ$ (interfering), CR-constrained & QCD (ABCD), DY 
 Data-driven bkg in NSBI & none needed & \textbf{QCD \& fakes have no per-event density} \\
 Experimental systematics & few, small (leptons) & many, large (JES$\times$11, $\tau$ES, $b$-tag$\times$5, DeepTau, \ldots) \\
 Syst.\ vs signal shape & largely separable & \textbf{JES/$\tau$ES deform \mhh\ (degenerate with \kl)} \\
-Theory--POI coupling & none & \textbf{\kl-dependent \texttt{THU\_HH} $+4/-18\%$} \\
+Theory--POI coupling & none & \textbf{\kl-dependent theory band (Run-3: $+6/-23\%$ at SM; sign-flips with \kl)} \\
 Factorisation of NPs & safe & JES$\times\tau$ES cross-term in \mhh \\
 Signal yield & $\sim$15\% of $\sigma$ & $\mathcal O(10$--$100)$ events (fb-scale) \\
 MC training stats & --- & ample ($\approx$500--750k/\kl); watch $\pm1\sigma$ samples \\
@@ -866,7 +954,7 @@ GeV, TeV --- giga-/tera-electronvolt (energy/mass units).
 
 \textbf{SVfit} --- algorithm that reconstructs the $\tau\tau$ invariant mass from the visible decay products $+$ MET.
 
-\textbf{THU$_{HH}$} --- theory uncertainty on the HH cross-section/shape; \kl-dependent ($+4/-18\%$ at the SM point).
+\textbf{THU$_{HH}$} --- theory uncertainty on the HH cross-section/shape; \kl-dependent (Run-3 ggF scale$+m_t$: $+6/-23\%$ at the SM; the $m_t$-scheme asymmetry sign-flips across the \kl\ scan --- AN-25-103 Table 40).
 
 \textbf{$\tau$ES (tauES)} --- $\tau$ energy scale (a systematic).
 
@@ -929,6 +1017,14 @@ GeV, TeV --- giga-/tera-electronvolt (energy/mass units).
 \bibitem{neuralff} \emph{Neural Fake Factor Estimation} (data-based density-ratio inference), arXiv:2511.06972,
   JHEP 04 (2026) 188. Per-event continuous fake factor as a learned density ratio (NSBI-compatible); \emph{defers}
   fake-rate systematics to future work. Bears on items~3 and the data-driven backgrounds of Sec.~4.
+\bibitem{an25103} CMS Collaboration (A.~Andrade \emph{et al.}), \emph{Search for non-resonant Higgs boson pair
+  production in the \bbtt\ final state with Run-3 data}, CMS AN-25-103 (draft, 2026); $172.3\,\mathrm{fb}^{-1}$
+  at 13.6 TeV $+$ Run-2 combination. Key for this note: exact 3-component ggF signal morphing at fit time
+  (Eq.\,52--55; NLO samples at $\kl=1,2.45,5$; VBF 6-component analog); theory uncertainties as
+  \emph{normalisation-only} lnN (Sec.\,7.1, Table 42; ggF scale$+m_t$ $=+6/-23\%$ at SM --- the leading \bbtt\
+  systematic); the band tabulated \emph{per \kl\ point} with the $m_t$ asymmetry sign-flipping (Table 40);
+  pointwise scans and limit-vs-$\sigma_{\rm theory}$ exclusions (Secs.\,8.4.5--8.4.6); joint QCD$+m_t$ correlated
+  across runs (Sec.\,8.5.1). Basis of the C4a/C4b split in Sec.\,5.
 \end{thebibliography}
 
 \end{document}
