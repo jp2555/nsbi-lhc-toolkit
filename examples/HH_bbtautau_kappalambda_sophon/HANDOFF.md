@@ -95,6 +95,18 @@ convert), `KL_HYP=0|5`, `TAU_ENCODING=corner`, `TASK=syst` (Money Plot 2), `ACCO
 3. Ceiling for `KL_HYP=0` too if running the kl0 pair (`KL_HYP=0 ./run_option_a.sh ceiling-array`);
    also worth re-running `ceiling-array` once on the NEW grid so overlay x-points match the sweep.
 
+## Conversion record (2026-07-13, KIT: /ceph/jpan/saved_datasets/ntuple_bbtt_24)
+NPZs produced at /ceph/jpan/evenet-klambda/npz-{anonymous,corner}/ and shipped to
+$PSCRATCH/evenet-klambda/. Selected events (identical across encodings): kl0 438k, kl1 488k,
+kl5 339k; negative weights 3.9/6.1/1.0%; all optional branches (q_1/q_2, met/metphi,
+genWeight, puweight) resolved. **Sentinel drops 18.6–24.5%, κλ-dependent — verified to be
+the valid-b-pair requirement** (per-branch census: pt_1/pt_2 0% bad, bpair_pt_1 14.2%,
+bpair_pt_2 25.4% in kl5/mt; softer κλ=5 spectrum → more failed second b). Population is
+therefore "events with a valid H→bb candidate" — correct phase space; NOTE the ceiling was
+measured on the flat file WITHOUT this cut (kept as NaN features), so the sweep population
+is slightly easier: a marginal AUC-over-ceiling result carries this caveat; the closure
+left-shift metric (arms-internal) is immune.
+
 ## Gotchas (hard-won — read before committing/debugging)
 - **git-lfs**: the Mac clone has NO git-lfs. `.gitattributes` LFS-tracks `*.root/*.npy/*.h5/*.onnx/*.png`
   (exempted: `docs/_images/`, `docs/teaching/` pngs). Committing matching binaries from the Mac
