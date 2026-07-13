@@ -180,10 +180,15 @@ stage_preprocess() {
     [ -d "$EVENET_SRC" ] || die "EVENET_SRC=$EVENET_SRC missing (run: setup)"
     local files; files=$(pair_files)
     for f in $files; do [ -f "$f" ] || die "$f missing (run: convert)"; done
-    note "preprocess $files -> $STORE/evenet-train ($TASK task)"
+    # merge the pair into ONE shuffled NPZ: upstream preprocess assumes every file is
+    # class-mixed (bincount crash on single-class), and the shuffle prevents the
+    # mt-then-et file ordering from leaking channel composition into the test split
+    local merged="$NPZ/merged-$TASK-kl$KL_HYP.npz"
+    $CONVERT_PY scripts/merge_npz.py --inputs $files --output "$merged"
+    note "preprocess $merged -> $STORE/evenet-train ($TASK task)"
     cd "$EVENET_SRC"
     shifter --image="$IMAGE" env PYTHONPATH="$EVENET_SRC" python3 preprocessing/preprocess.py \
-        --files $files --split_ratio 0.8,0.1,0.1 \
+        --files "$merged" --split_ratio 0.8,0.1,0.1 \
         --store_dir "$STORE/evenet-train" --config "$HERE/configs/preprocess_klambda.yaml"
     # EveNet's loader globs *.parquet per dir: test.parquet MUST NOT sit next to train/val
     # (training would ingest it; predict on the combined dir would see train events).
