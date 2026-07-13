@@ -184,7 +184,7 @@ stage_preprocess() {
     cd "$EVENET_SRC"
     shifter --image="$IMAGE" env PYTHONPATH="$EVENET_SRC" python3 preprocessing/preprocess.py \
         --files $files --split_ratio 0.8,0.1,0.1 \
-        --store_dir "$STORE/evenet-train" --config "$HERE/configs/event_info_klambda.yaml"
+        --store_dir "$STORE/evenet-train" --config "$HERE/configs/preprocess_klambda.yaml"
     # EveNet's loader globs *.parquet per dir: test.parquet MUST NOT sit next to train/val
     # (training would ingest it; predict on the combined dir would see train events).
     [ -f "$STORE/evenet-train/test.parquet" ] || die "test.parquet not produced — check the log"

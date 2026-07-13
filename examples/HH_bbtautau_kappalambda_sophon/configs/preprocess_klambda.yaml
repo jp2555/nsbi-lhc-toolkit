@@ -1,0 +1,9 @@
+# Minimal GLOBAL config for EveNet_Public preprocessing/preprocess.py.
+# global_config.load_yaml requires exactly these two sections (skip_keys); the
+# `default:` includes resolve relative to THIS file's directory, and preprocess
+# itself only reads global_config.event_info (classification names/labels) and,
+# via PostProcessor, event_info.process_names / event_equivalence_classes.
+event_info:
+  default: event_info_klambda.yaml
+resonance:
+  default: resonance_klambda.yaml
