@@ -182,9 +182,17 @@ stage_preprocess() {
     for f in $files; do [ -f "$f" ] || die "$f missing (run: convert)"; done
     note "preprocess $files -> $STORE/evenet-train ($TASK task)"
     cd "$EVENET_SRC"
-    shifter --image="$IMAGE" python3 preprocessing/preprocess.py \
+    shifter --image="$IMAGE" env PYTHONPATH="$EVENET_SRC" python3 preprocessing/preprocess.py \
         --files $files --split_ratio 0.8,0.1,0.1 \
         --store_dir "$STORE/evenet-train" --config "$HERE/configs/event_info_klambda.yaml"
+    # EveNet's loader globs *.parquet per dir: test.parquet MUST NOT sit next to train/val
+    # (training would ingest it; predict on the combined dir would see train events).
+    [ -f "$STORE/evenet-train/test.parquet" ] || die "test.parquet not produced — check the log"
+    mkdir -p "$STORE/evenet-test"
+    mv "$STORE/evenet-train/test.parquet" "$STORE/evenet-test/test.parquet"
+    [ -f "$STORE/evenet-train/shape_metadata.json" ] && \
+        cp "$STORE/evenet-train/shape_metadata.json" "$STORE/evenet-test/"
+    note "store layout:"; ls -la "$STORE/evenet-train" "$STORE/evenet-test"
 }
 
 stage_configs() {

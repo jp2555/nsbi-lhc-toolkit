@@ -84,7 +84,8 @@ def prepare(args):
                 load_all = "--load_all" if size < 0.2 else ""
                 train_lines.append(
                     f"cd {working_dir}; shifter --image={image} "
-                    f"python3 scripts/train.py {cfg_path} --ray_dir {args.ray_dir} {load_all}\n")
+                    f"env PYTHONPATH={working_dir} "
+                    f"python3 evenet/train.py {cfg_path} --ray_dir {args.ray_dir} {load_all}\n")
 
                 if predict_tmpl is not None:
                     pc = deepcopy(predict_tmpl)
@@ -102,7 +103,8 @@ def prepare(args):
                         yaml.safe_dump(pc, fout, sort_keys=False)
                     predict_lines.append(
                         f"cd {working_dir}; shifter --image={image} "
-                        f"python3 scripts/predict.py {pc_path}\n")
+                        f"env PYTHONPATH={working_dir} "
+                        f"python3 evenet/predict.py {pc_path}\n")
 
     with open(os.path.join(farm, "train-evenet.sh"), "w") as f:
         f.writelines(train_lines)
