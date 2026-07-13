@@ -55,7 +55,8 @@ Convert: `python preprocessing/preprocess.py --files *.npz --split_ratio 0.8,0.1
 
 ## 5. Money Plot 1 — κ_λ separation data-efficiency
 
-- Sweep `dataset_size_choice = [0.01, 0.03, 0.1, 0.3, 1.0]` × config × ≥5 seeds.
+- Sweep `dataset_size_choice = [0.003, 0.01, 0.02, 0.05, 0.1, 1.0]` × config × ≥5 seeds
+  (grid re-cut 2026-07-13: ceiling showed 0.3≈1.0; low side refined — 0.003 ≈ 1.4k/1.1k events).
   - **finetune:** `Training.pretrain_model_load_path = checkpoints.20M.a4.last.ckpt`, `GlobalEmbedding.freeze.type = none`
   - **frozen:** same checkpoint, `GlobalEmbedding.freeze.type = full` (train head only)
   - **scratch:** `pretrain_model_load_path = null`
@@ -144,7 +145,7 @@ shifter --image=avencast1994/evenet:1.5 python3 EveNet_Public/preprocessing/prep
   --files $STORE/npz/kl1.npz $STORE/npz/kl0.npz --split_ratio 0.8,0.1,0.1 \
   --store_dir $STORE/evenet-train --config <global_klambda.yaml>
 
-# 5. sweep: 75 configs (3 modes x 5 fractions x 5 seeds) + predictions
+# 5. sweep: 90 configs (3 modes x 6 fractions x 5 seeds) + predictions
 python3 scripts/make_klambda_configs.py configs/workflow_klambda.yaml \
   --farm config_farm --store_dir $STORE --ray_dir $PSCRATCH/ray
 bash config_farm/train-evenet.sh && bash config_farm/predict-evenet.sh
@@ -155,7 +156,7 @@ python3 scripts/eval_closure.py --store_dir $STORE --output-prefix closure
 #   gates: |IC| < max(0.01, stat), SC_rms < 0.05 (CLOSURE_TOL); chi2/ndf ~ 1 = noise-only
 ```
 
-Pre-flight checklist (carried from HANDOFF.md — do BEFORE the 75-job launch):
+Pre-flight checklist (carried from HANDOFF.md — do BEFORE the 90-job launch):
 1. create `options_frozen.yaml` (freeze.type: full) next to the other option files;
 2. load-test ONE config inside the shifter image (schema mismatch is the likely snag);
 3. confirm the prediction key is `classification/klambda` (else edit plot/eval scripts' key);

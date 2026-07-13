@@ -86,7 +86,7 @@ convert), `KL_HYP=0|5`, `TAU_ENCODING=corner`, `TASK=syst` (Money Plot 2), `ACCO
    (`cp` EveNet `options_pretrain.yaml`; set `Training.GlobalEmbedding.freeze.type: full`).
 3. **`workflow_klambda.yaml` placeholders**: `configs` stage refuses until `<PLACEHOLDER>`s are filled
    ($STORE, EveNet working_dir, network/resonance/options paths, ckpt `checkpoints.20M.a4.last.ckpt`).
-4. **Load-test ONE config inside the shifter image before the 75-job array** (schema mismatch vs the
+4. **Load-test ONE config inside the shifter image before the 90-job array** (schema mismatch vs the
    real loader is the likely snag); verify EveNet reads `options.Training.seed`.
 5. Ceiling for `KL_HYP=0` too if running the kl0 pair.
 
