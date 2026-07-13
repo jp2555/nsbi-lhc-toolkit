@@ -85,9 +85,10 @@ Driver env knobs: `STORE` (default `$PSCRATCH/evenet-klambda`), `NTUPLES` (CROWN
 convert), `KL_HYP=0|5`, `TAU_ENCODING=corner`, `TASK=syst` (Money Plot 2), `ACCOUNT` (sbatch), `NGPU`, `TIME`.
 
 ## Open items (priority order)
-1. **NTUPLES location**: `convert_powheg_to_sbi.py`'s default base is `/work/jpan/bbtautau_2024` —
-   a **KIT** path. If the CROWN ntuples aren't on Perlmutter, run `convert` at KIT (pure
-   numpy/uproot) and copy the **NPZs** into `$STORE/npz-anonymous/` (they're small).
+1. **NTUPLES: RESOLVED 2026-07-13** — CROWN ntuples live at KIT:
+   `/ceph/jpan/saved_datasets/ntuple_bbtt_24` (now the driver default). Plan: run `convert` at
+   KIT (both encodings), rsync the NPZs to `$PSCRATCH/evenet-klambda/npz-*/` on Perlmutter via
+   dtn01.nersc.gov, continue there from `preprocess`.
 2. **Load-test ONE config inside the shifter image before the 90-job array** (schema drift between
    the vendored options/network yamls and the installed EveNet is caught exactly there); verify
    EveNet reads `options.Training.seed`. The `configs` stage prints the load-test command.

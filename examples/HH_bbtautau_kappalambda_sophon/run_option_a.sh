@@ -25,7 +25,7 @@
 #   python3 scripts/crown_to_evenet_npz.py --input '<globs>' --class-id 1 --output ...
 #
 # Required env (convert/preprocess/train):
-#   NTUPLES=/path/to/crown_ntuples     CROWN base dir (GluGluHHto2B2Tau_*kl-*/{mt,et}/*.root)
+#   NTUPLES=/ceph/jpan/saved_datasets/ntuple_bbtt_24   CROWN base (KIT; override elsewhere)
 #   NANO=/path/to/cms_nanoaod          only for INPUT_FORMAT=nanoaod (with BTAG_WP)
 #   ACCOUNT=<mXXXX>                    Slurm allocation (train stage only)
 # Optional env (defaults):
@@ -52,6 +52,7 @@ KL_HYP="${KL_HYP:-5}"
 TASK="${TASK:-kl}"
 BTAG_BRANCH="${BTAG_BRANCH:-Jet_btagUParTAK4B}"
 CONVERT_PY="${CONVERT_PY:-python3}"
+NTUPLES="${NTUPLES:-/ceph/jpan/saved_datasets/ntuple_bbtt_24}"   # CROWN ntuples (KIT)
 REPO_ROOT="$(cd "$HERE/../.." && pwd)"
 if [ -z "${FEATURES:-}" ]; then      # feature ntuple: repo-local copies first, then the original
     for c in "$HERE"/{samples,saved_datasets}/{dihiggs,diHiggs}_powheg_data.root \
@@ -154,8 +155,8 @@ stage_convert() {
         cls=1; [ "$kl" = "1" ] && cls=0            # kl=1 is the SM reference class
         note "convert kl=$kl (class $cls, $INPUT_FORMAT, tau-encoding $TAU_ENCODING)"
         if [ "$INPUT_FORMAT" = "crown" ]; then
-            [ -n "${NTUPLES:-}" ] || die "set NTUPLES=<CROWN base dir> (the directory \
-convert_powheg_to_sbi.py reads: GluGluHHto2B2Tau_*kl-*/{mt,et}/*.root)"
+            [ -d "$NTUPLES" ] || die "NTUPLES=$NTUPLES not found (CROWN base dir \
+containing GluGluHHto2B2Tau_*kl-*/{mt,et}/*.root; default = the KIT location)"
             klp="${kl}p00"
             $CONVERT_PY scripts/crown_to_evenet_npz.py \
                 --input "$NTUPLES/GluGluHHto2B2Tau_Par-c2-0p00-kl-$klp-kt-1p00_*PowhegBugFix*/mt/*.root" \
