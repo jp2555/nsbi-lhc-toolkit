@@ -6,13 +6,13 @@
 #   ./run_option_a.sh smoke                      # local sanity, no ROOT/GPU needed (any machine)
 #   ./run_option_a.sh setup                      # clone EveNet + download checkpoints
 #   ./run_option_a.sh ceiling                    # kinematic ceiling from the FEATURE ntuple (CPU)
-#   ./run_option_a.sh ceiling-array              # same, as a 5-task sbatch array + merge job
+#   ./run_option_a.sh ceiling-array              # same, as a 6-task sbatch array + merge job
 #   ./run_option_a.sh check <file.root>          # verify NanoAOD branch names before converting
 #   ./run_option_a.sh convert                    # ntuples -> NPZ (kl0, kl1, kl5) + jes_mhh inject
 #   ./run_option_a.sh preprocess                 # EveNet preprocess (shifter) for the chosen pair
 #   ./run_option_a.sh configs                    # generate the 90 sweep configs + run scripts
 #   ./run_option_a.sh train                      # submit sbatch array (or train-local, sequential)
-#   ./run_option_a.sh predict                    # sequential predictions (GPU node)
+#   ./run_option_a.sh predict                    # 90-task GPU sbatch array (or predict-local)
 #   ./run_option_a.sh eval                       # AUC money plot (ceiling overlaid) + closure gates
 #
 # INPUT NOTE: the flat feature ntuples (dihiggs_powheg_data.root: tree_sbi_lam*, 12
@@ -245,7 +245,24 @@ stage_train_local() {   # sequential, for an interactive GPU node (salloc)
 }
 
 stage_predict() {
-    [ -f "$FARM/predict-evenet.sh" ] || die "no predict-evenet.sh (see configs stage WARN)"
+    [ -f "$FARM/predict-evenet.sh" ] || die "no predict-evenet.sh (run: configs)"
+    [ -n "${ACCOUNT:-}" ] || die "set ACCOUNT=<mXXXX_g> for sbatch (or use: predict-local on a GPU node)"
+    local n; n=$(wc -l < "$FARM/predict-evenet.sh")
+    cat > "$FARM/predict-array.sbatch" <<EOF
+#!/bin/bash
+#SBATCH -A $ACCOUNT -C gpu -q shared -t ${PTIME:-00:30:00}
+#SBATCH -N 1 --gpus-per-task=1 --ntasks=1 -c 32
+#SBATCH --array=1-$n%32
+#SBATCH -o $FARM/predict-%A_%a.out
+export WANDB_API_KEY=\${WANDB_API_KEY:-dummy} WANDB_MODE=\${WANDB_MODE:-offline}
+eval "\$(sed -n "\${SLURM_ARRAY_TASK_ID}p" $FARM/predict-evenet.sh)"
+EOF
+    sbatch "$FARM/predict-array.sbatch"
+    note "submitted $n-task predict array (shared GPU QOS); watch: squeue --me"
+}
+
+stage_predict_local() {   # sequential, for an interactive GPU node (salloc)
+    [ -f "$FARM/predict-evenet.sh" ] || die "run: configs"
     bash "$FARM/predict-evenet.sh"
 }
 
@@ -273,6 +290,7 @@ case "${1:-}" in
     train)       stage_train ;;
     train-local) stage_train_local ;;
     predict)     stage_predict ;;
+    predict-local) stage_predict_local ;;
     eval)        stage_eval ;;
     *) awk 'NR>1 { if ($0 !~ /^#/) exit; print }' "$0"; exit 1 ;;
 esac
