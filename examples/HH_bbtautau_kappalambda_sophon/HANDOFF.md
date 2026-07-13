@@ -1,7 +1,7 @@
 # HANDOFF — EveNet Option A: κ_λ data-efficiency test on CMS bbττ
 
-**For:** a fresh session continuing on **Perlmutter**. **Repo/branch:** `jp2555/nsbi-lhc-toolkit @ fm`
-(tip `1be16ac`), code in `examples/HH_bbtautau_kappalambda_sophon/`. **Date:** 2026-07-11.
+**For:** a fresh session continuing on **Perlmutter**. **Repo/branch:** `jp2555/nsbi-lhc-toolkit @ fm`,
+code in `examples/HH_bbtautau_kappalambda_sophon/`. **Date:** 2026-07-13.
 Supersedes the 2026-06-26 handoff (its still-valid content is folded in below).
 
 ## Mission (one paragraph)
@@ -18,13 +18,19 @@ the **low-statistics** regime — especially systematic variations — for κ_λ
 - ✅ Git recovery done: diverged Perlmutter clone merged (cherry-pick), **LFS pointer-flap fixed**
   (`.gitattributes` exempts `docs/teaching/*.png`), run artifacts gitignored.
 - ✅ Feasibility analysis + Option A harness built and locally verified (see file table).
-- ▶️ **Ceiling stage is the next command** (it failed only on env — see Env setup):
-  ```bash
-  export CONVERT_PY="pixi run -e nsbi-env python"
-  ./run_option_a.sh ceiling            # writes $STORE/ceiling-kl5.json
-  ```
-- ⏭ then: `convert` (blocked on NTUPLES location — open item 1) → `preprocess` → `configs` →
-  `train` → `predict` → `eval`.
+- ✅ **Ceiling measured at full statistics** (2026-07-12, 6-task sbatch array on m5295, merged to
+  `$STORE/ceiling-kl5.json`): AUC 0.792 (1%) → 0.817 (100%), saturates by 10%; closure gates first
+  pass at the 10% fraction; method-limited |IC| floor ≈ 1.7% at ≥30%. Decision anchors set.
+- ✅ **Sweep machinery complete** (2026-07-13): fraction grid re-cut to
+  `[0.003, 0.01, 0.02, 0.05, 0.1, 1.0]` (ceiling showed 0.3≈1.0; low side refined; 0.003 ≈
+  1.4k/1.1k events/class = the EveNet-paper regime) → **90 configs** (3 arms × 6 × 5 seeds).
+  Options files VENDORED into `configs/` (`options_{finetune,frozen,scratch}.yaml` from the
+  Exotic-Higgs recipes, frozen = backbone GlobalEmbedding/PET/ObjectEncoder freeze.type=full,
+  heads trainable; + `network_20M.yaml`). `configs` stage now AUTO-RESOLVES every `<PLACEHOLDER>`
+  from env (writes `configs/*.resolved.yaml`, gitignored) — no hand-editing. Config generation
+  verified end-to-end locally (90 train + 90 predict, per-arm assertions).
+- ⏭ **next: `convert`** (blocked ONLY on NTUPLES location — open item 1) → `preprocess` →
+  `configs` → `train` (ACCOUNT=m5295_g) → `predict` → `eval` (prints the adoption verdict).
 
 ## New since 2026-06-27 (all verified locally where stated)
 | File | Role | Verified |
@@ -82,13 +88,11 @@ convert), `KL_HYP=0|5`, `TAU_ENCODING=corner`, `TASK=syst` (Money Plot 2), `ACCO
 1. **NTUPLES location**: `convert_powheg_to_sbi.py`'s default base is `/work/jpan/bbtautau_2024` —
    a **KIT** path. If the CROWN ntuples aren't on Perlmutter, run `convert` at KIT (pure
    numpy/uproot) and copy the **NPZs** into `$STORE/npz-anonymous/` (they're small).
-2. **`options_frozen.yaml`**: create if the smoke session didn't
-   (`cp` EveNet `options_pretrain.yaml`; set `Training.GlobalEmbedding.freeze.type: full`).
-3. **`workflow_klambda.yaml` placeholders**: `configs` stage refuses until `<PLACEHOLDER>`s are filled
-   ($STORE, EveNet working_dir, network/resonance/options paths, ckpt `checkpoints.20M.a4.last.ckpt`).
-4. **Load-test ONE config inside the shifter image before the 90-job array** (schema mismatch vs the
-   real loader is the likely snag); verify EveNet reads `options.Training.seed`.
-5. Ceiling for `KL_HYP=0` too if running the kl0 pair.
+2. **Load-test ONE config inside the shifter image before the 90-job array** (schema drift between
+   the vendored options/network yamls and the installed EveNet is caught exactly there); verify
+   EveNet reads `options.Training.seed`. The `configs` stage prints the load-test command.
+3. Ceiling for `KL_HYP=0` too if running the kl0 pair (`KL_HYP=0 ./run_option_a.sh ceiling-array`);
+   also worth re-running `ceiling-array` once on the NEW grid so overlay x-points match the sweep.
 
 ## Gotchas (hard-won — read before committing/debugging)
 - **git-lfs**: the Mac clone has NO git-lfs. `.gitattributes` LFS-tracks `*.root/*.npy/*.h5/*.onnx/*.png`
