@@ -163,7 +163,7 @@ def main():
     ap.add_argument("--tree-hyp", default="tree_sbi_lam5", help="class-1 tree (hypothesis)")
     ap.add_argument("--features", nargs="+", default=FEATURES)
     ap.add_argument("--weights-branch", default="weights")
-    ap.add_argument("--sizes", nargs="+", type=float, default=[0.01, 0.03, 0.1, 0.3, 1.0])
+    ap.add_argument("--sizes", nargs="+", type=float, default=[0.003, 0.01, 0.02, 0.05, 0.1, 1.0])
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--test-frac", type=float, default=0.2)
     ap.add_argument("--max-events", type=int, default=0, help="cap per tree (0 = all)")

@@ -43,7 +43,11 @@ pretrain_choice:
     option: <PATH_TO>/EveNet-Full/share/options/options.yaml
 
 # Data-efficiency axis + repeats (Money Plot 1/2 x-axis and error bands).
-dataset_size_choice: [0.01, 0.03, 0.1, 0.3, 1.0]
+# Grid re-cut 2026-07-13 after the full-stats ceiling: 0.3 ~= 1.0 there (dAUC 0.0015,
+# same closure floor), while the closure transition lives below 0.1 -> refine the low
+# side (0.003 ~= 1.4k/1.1k events per class, the EveNet-paper low-stat regime) and
+# keep 1.0 as the asymptotic anchor.
+dataset_size_choice: [0.003, 0.01, 0.02, 0.05, 0.1, 1.0]
 seeds: [0, 1, 2, 3, 4]
 
 # Validate after filling (inside shifter docker:avencast1994/evenet:1.5):

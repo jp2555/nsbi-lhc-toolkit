@@ -10,7 +10,7 @@
 #   ./run_option_a.sh check <file.root>          # verify NanoAOD branch names before converting
 #   ./run_option_a.sh convert                    # ntuples -> NPZ (kl0, kl1, kl5) + jes_mhh inject
 #   ./run_option_a.sh preprocess                 # EveNet preprocess (shifter) for the chosen pair
-#   ./run_option_a.sh configs                    # generate the 75 sweep configs + run scripts
+#   ./run_option_a.sh configs                    # generate the 90 sweep configs + run scripts
 #   ./run_option_a.sh train                      # submit sbatch array (or train-local, sequential)
 #   ./run_option_a.sh predict                    # sequential predictions (GPU node)
 #   ./run_option_a.sh eval                       # AUC money plot (ceiling overlaid) + closure gates
@@ -107,10 +107,10 @@ stage_ceiling_array() {   # one shared-QOS CPU task per size tier + dependent me
     cat > "$STORE/ceiling-array.sbatch" <<EOF
 #!/bin/bash
 #SBATCH -A $ACCOUNT -q shared -C cpu -c 32 -t ${TIME:-02:00:00}
-#SBATCH --array=0-4
+#SBATCH --array=0-5
 #SBATCH -o $STORE/ceiling-%A_%a.out
 export PATH="\$HOME/.pixi/bin:\$PATH"
-SIZES=(0.01 0.03 0.1 0.3 1.0)
+SIZES=(0.003 0.01 0.02 0.05 0.1 1.0)
 cd $HERE
 $CONVERT_PY scripts/feature_ceiling.py --input "$FEATURES" \\
     --tree-ref tree_sbi_lam1 --tree-hyp "tree_sbi_lam$KL_HYP" \\
@@ -122,7 +122,7 @@ EOF
     sbatch -A "$ACCOUNT" -q shared -C cpu -c 1 -t 00:10:00 \
         --dependency=afterok:"$jid" -o "$STORE/ceiling-merge-%j.out" \
         --wrap "export PATH=\$HOME/.pixi/bin:\$PATH; cd $HERE && $CONVERT_PY scripts/feature_ceiling.py --merge '$prefix'"
-    note "submitted array $jid (5 tiers) + merge job; result -> $CEILING_JSON; watch: squeue --me"
+    note "submitted array $jid (6 tiers) + merge job; result -> $CEILING_JSON; watch: squeue --me"
 }
 
 stage_setup() {
@@ -188,14 +188,37 @@ stage_preprocess() {
 
 stage_configs() {
     cd "$HERE"
-    ! grep -q "PLACEHOLDER" configs/workflow_klambda.yaml \
-        || die "fill the <PLACEHOLDER> paths in configs/workflow_klambda.yaml first \
-(working_dir=$EVENET_SRC, image, network/resonance/option yamls, pretrain ckpt under \
-$STORE/pretrain-weights/) — see HANDOFF.md"
-    $CONVERT_PY scripts/make_klambda_configs.py configs/workflow_klambda.yaml \
+    # everything the resolved workflow will reference must exist (vendored in configs/)
+    for f in configs/event_info_klambda.yaml configs/resonance_klambda.yaml \
+             configs/predict_klambda.yaml configs/options_finetune.yaml \
+             configs/options_frozen.yaml configs/options_scratch.yaml \
+             configs/network_20M.yaml; do
+        [ -f "$f" ] || die "missing $f (vendored config; git pull?)"
+    done
+    [ -d "$EVENET_SRC" ] || die "EVENET_SRC=$EVENET_SRC missing (run: setup)"
+    # resolve the templates: <PLACEHOLDER> tokens -> this run's env (no hand-editing)
+    sed -e "s|<PATH_TO>/EveNet-Full/share/options/options_pretrain.yaml|$HERE/configs/options_finetune.yaml|" \
+        -e "s|<PATH_TO>/EveNet-Full/share/options/options.yaml|$HERE/configs/options_scratch.yaml|" \
+        -e "s|<PATH_TO>/options_frozen.yaml|$HERE/configs/options_frozen.yaml|" \
+        -e "s|<PATH_TO>/Exotic-Higgs-Study/configs/network.yaml|$HERE/configs/network_20M.yaml|" \
+        -e "s|<PATH_TO>/Exotic-Higgs-Study/configs/resonance.yaml|$HERE/configs/resonance_klambda.yaml|" \
+        -e "s|<PATH_TO>/EveNet-Full|$EVENET_SRC|" \
+        -e "s|<NERSC_ACCOUNT>|${ACCOUNT:-m5295_g}|" \
+        -e "s|^predict_yaml: null.*|predict_yaml: $HERE/configs/predict_klambda.resolved.yaml|" \
+        -e "s|^train_yaml: train_klambda.yaml|train_yaml: train_klambda.resolved.yaml|" \
+        -e "s|<STORE>|$STORE|g" \
+        configs/workflow_klambda.yaml > configs/workflow_klambda.resolved.yaml
+    sed -e "s|<STORE>|$STORE|g" -e "s|<WANDB_ENTITY>|${WANDB_ENTITY:-$USER}|" \
+        configs/train_klambda.yaml > configs/train_klambda.resolved.yaml
+    sed -e "s|<STORE>|$STORE|g" \
+        configs/predict_klambda.yaml > configs/predict_klambda.resolved.yaml
+    ! grep -qE "<(STORE|PATH_TO|NERSC|WANDB)" configs/*.resolved.yaml \
+        || die "unresolved <tokens> remain in configs/*.resolved.yaml"
+    $CONVERT_PY scripts/make_klambda_configs.py configs/workflow_klambda.resolved.yaml \
         --farm "$FARM" --store_dir "$STORE" --ray_dir "${PSCRATCH:-/tmp}/ray-$USER"
-    [ -f "$FARM/predict-evenet.sh" ] \
-        || echo "WARN: no predict-evenet.sh — set workflow_klambda.yaml:predict_yaml to also emit predict configs"
+    [ -f "$FARM/predict-evenet.sh" ] || die "predict-evenet.sh not emitted — check predict_yaml"
+    note "LOAD-TEST one config inside the shifter image before submitting the array:"
+    note "  shifter --image=$IMAGE python3 -c \"import yaml; yaml.safe_load(open('$FARM/\$(ls $FARM | head -1)'))\" && echo yaml-ok"
 }
 
 stage_train() {
@@ -208,6 +231,7 @@ stage_train() {
 #SBATCH -N 1 --gpus-per-task=${NGPU:-1} --ntasks=1 -c 32
 #SBATCH --array=1-$n%16
 #SBATCH -o $FARM/slurm-%A_%a.out
+export WANDB_API_KEY=\${WANDB_API_KEY:-dummy} WANDB_MODE=\${WANDB_MODE:-offline}
 eval "\$(sed -n "\${SLURM_ARRAY_TASK_ID}p" $FARM/train-evenet.sh)"
 EOF
     sbatch "$FARM/train-array.sbatch"

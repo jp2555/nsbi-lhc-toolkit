@@ -71,7 +71,9 @@ def prepare(args):
                 cfg["options"]["Training"]["seed"] = seed
                 cfg["options"]["Training"]["model_checkpoint_save_path"] = os.path.join(
                     store, "checkpoints", tag)
-                if size < 0.1:                                            # more epochs for tiny data
+                if size < 0.01:                                           # ~1k events: few steps/epoch
+                    cfg["options"]["Training"]["epochs"] = 300
+                elif size < 0.1:                                          # more epochs for tiny data
                     cfg["options"]["Training"]["epochs"] = 100
                 cfg["logger"]["wandb"]["run_name"] = tag
 
