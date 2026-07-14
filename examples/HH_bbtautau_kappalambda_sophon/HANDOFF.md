@@ -63,6 +63,11 @@ the G0.5 phenomenon in miniature: low-stat failure is calibration, not ordering.
   bbγγ = later increment (photon corner (0,1,0)); G0 adopt-iff finetune > scratch beyond compute
   penalty AND ≥ ceiling; a G0 null with scratch passing closure ⇒ objective-mismatch verdict
   (also condemns a like-for-like new τ/γ FM — feasibility note §8).
+- **Checkpoint selection (2026-07-14, pre-registered): every arm is evaluated at its BEST-val
+  checkpoint.** EveNet predict loads the newest-mtime ckpt in the dir (evenet/predict.py:39 =
+  the overfit final epoch); `scripts/select_best_ckpt.py` touches the best-val file so the mtime
+  rule picks it — run automatically by `stage_predict`. `--prune` (run only after predictions
+  verified) deletes non-best ckpts (~315 MB × every epoch × 90 tasks otherwise).
 - **Decision primacy (2026-07-12, fixed pre-unblinding): closure left-shift is the win metric.**
   Finetune passing both gates at a smaller fraction than scratch (e.g. 3% vs 30% = 10×
   equivalent-data multiplier) = adoption-grade win even at AUC parity; AUC-only win with failing
