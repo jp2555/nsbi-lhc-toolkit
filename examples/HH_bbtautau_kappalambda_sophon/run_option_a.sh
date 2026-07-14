@@ -260,6 +260,9 @@ stage_train_local() {   # sequential, for an interactive GPU node (salloc)
 stage_predict() {
     [ -f "$FARM/predict-evenet.sh" ] || die "no predict-evenet.sh (run: configs)"
     [ -n "${ACCOUNT:-}" ] || die "set ACCOUNT=<mXXXX_g> for sbatch (or use: predict-local on a GPU node)"
+    # pre-registered selection rule: predict loads the newest ckpt (mtime), so mark the
+    # BEST-val checkpoint newest in every run dir (identical rule for all arms)
+    $CONVERT_PY scripts/select_best_ckpt.py --store "$STORE"
     local n; n=$(wc -l < "$FARM/predict-evenet.sh")
     cat > "$FARM/predict-array.sbatch" <<EOF
 #!/bin/bash
