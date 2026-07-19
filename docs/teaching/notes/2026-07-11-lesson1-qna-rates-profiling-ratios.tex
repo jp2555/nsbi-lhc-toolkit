@@ -206,10 +206,23 @@ p_s(x|\alpha)\;=\;{\color{accent}w_s(x,\alpha)}\cdot p_s(x|0)
 \paragraph{Why factor into two hops instead of learning $p_s(x|\alpha)/P_{\rm ref}$ directly as one
 $\alpha$-parameterized ratio?} Three practical reasons:
 \begin{enumerate}
-\item \textbf{Statistics where it matters.} The Family-1 ratio is hard (genuinely different distributions) but
-  is trained \emph{once}, on the full nominal MC (the ample $\approx$500--750k events per \kl\ point). The
-  Family-2 ratios are \emph{easy} (two nearly identical distributions, ratio $\approx1$) --- which is what makes
-  them learnable at all from the smaller $\pm1\sigma$ samples.
+\item \textbf{Statistics where the danger is.} \emph{(Wording sharpened after a learner catch --- record 0011:
+  ``easy/hard'' here means ratio-\emph{estimation} difficulty, which runs \emph{opposite} to classification
+  difficulty.)} For \emph{classification}, separation is fuel: different distributions $=$ easy (high AUC),
+  similar $=$ hard (AUC $\approx0.5$, weak gradients). But the fit consumes the \emph{value} of $r=s/(1-s)$,
+  not the ranking --- and for the value, the difficulty inverts. The \textbf{Family-1} ratio is hard in the
+  \emph{dangerous} sense: the target spans orders of magnitude and is unbounded where the reference support
+  thins; the sigmoid saturates exactly where the value matters; calibration errors multiply the entire density.
+  It therefore gets the ample nominal MC ($\approx$500--750k events per \kl\ point) and is trained \emph{once}.
+  The \textbf{Family-2} ratios are \emph{feasible-by-construction}: the target is a bounded, perturbative
+  correction around $w\equiv1$, and the failure mode is graceful --- an under-trained net collapses toward
+  $w=1$, a few-percent absolute error that \emph{understates a systematic} rather than corrupting the density.
+  That boundedness is what makes them learnable at all from the smaller $\pm1\sigma$ samples.
+  \emph{Caveat --- the C6 burden:} on those small samples the training \emph{noise} on the few-percent deviation
+  can rival the deviation itself, and a net can latch onto the sample's own fluctuations; this is a real
+  hardness, but of the \emph{variance} kind --- quantifiable and insurable (ensembles, C2ST checks, the wifi
+  band) --- not an intractability. Asking a small sample to support a Family-1-style unbounded ratio directly
+  (the one-hop alternative) would be \emph{both} problems at once, with the catastrophic failure mode.
 \item \textbf{Modularity.} Adding, dropping, or retraining an NP never touches the nominal ratios or any other
   NP's weights.
 \item \textbf{It is the factorization ansatz made flesh} --- one Family-2 curve per NP, multiplied --- with all
