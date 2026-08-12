@@ -47,17 +47,45 @@ from plot_data_efficiency import CONFIGS, _TAG, _softmax_signal  # noqa: E402
 _EPS = 1e-6
 
 
-def closure_metrics(p, y, w, nbins=20, neff_min=25.0):
-    """-> dict(integral, shape_rms, shape_chi2ndf, shape_max, nbins_used). Pure numpy."""
+PRIORS = ("balanced", "weighted", "counts")
+
+
+def _prior_factor(prior, y, w):
+    """Inverse of the class prior the TRAINING loss effectively used (see
+    diagnose_ratio_convention.py -- chosen by measurement, not assumption)."""
+    if prior == "balanced":            # EveNet equalises classes internally: measured
+        return 1.0                     # unanimous over all 15 size-1.0 runs (2026-07-15)
+    if prior == "weighted":
+        return w[~y].sum() / w[y].sum()
+    if prior == "counts":
+        return (~y).sum() / max(y.sum(), 1)
+    raise ValueError(f"unknown prior {prior!r}")
+
+
+def closure_metrics(p, y, w, nbins=20, neff_min=25.0, prior="balanced", use_abs_w=True):
+    """-> dict(integral, integral_err, shape_rms, shape_rms_norm, shape_chi2ndf,
+    shape_max, nbins_used). Pure numpy.
+
+    integral        global normalisation error of r_hat (pre-registered gate)
+    shape_rms       stat-debiased RMS bin deviation of r_hat as-is
+    shape_rms_norm  same AFTER rescaling r_hat by 1/E_ref[r_hat] -- i.e. the SHAPE error
+                    with the global normalisation divided out. Reported alongside (not
+                    instead of) the pre-registered metrics: a global scale error is
+                    degenerate with the rate term in an NSBI fit and removable by
+                    construction, whereas a shape error is not. Post-hoc diagnostic,
+                    added 2026-07-15 after the prior-convention fix.
+    """
     nan = dict(integral=np.nan, integral_err=np.nan, shape_rms=np.nan,
-               shape_chi2ndf=np.nan, shape_max=np.nan, nbins_used=0)
+               shape_rms_norm=np.nan, shape_chi2ndf=np.nan, shape_max=np.nan, nbins_used=0)
     p = np.clip(np.asarray(p, float), _EPS, 1.0 - _EPS)
     y = (np.asarray(y) > 0.5)
     w = np.asarray(w, float)
+    if use_abs_w:                      # BCE training cannot consume negative weights;
+        w = np.abs(w)                  # the reference density it saw is the |w| one
     W1, W0 = w[y].sum(), w[~y].sum()
     if W0 <= 0 or W1 <= 0:
         return nan
-    r_hat = p / (1.0 - p) * (W0 / W1)
+    r_hat = p / (1.0 - p) * _prior_factor(prior, y, w)
 
     integral = float(np.sum(w[~y] * r_hat[~y]) / W0 - 1.0)
     res = w[~y] * (r_hat[~y] - (1.0 + integral))
@@ -67,24 +95,34 @@ def closure_metrics(p, y, w, nbins=20, neff_min=25.0):
     edges[0], edges[-1] = 0.0, 1.0
     edges = np.unique(edges)                     # ties in p can collapse bins
     idx = np.clip(np.digitize(p, edges) - 1, 0, len(edges) - 2)
-    rels, sigs = [], []
-    for b in range(len(edges) - 1):
-        in_b = idx == b
-        wb1 = w[y & in_b]                              # hypothesis side
-        wb0r = w[~y & in_b] * r_hat[~y & in_b]         # reweighted reference side
-        n1 = wb1.sum() ** 2 / max((wb1 ** 2).sum(), _EPS)
-        n0 = wb0r.sum() ** 2 / max((wb0r ** 2).sum(), _EPS)
-        if min(n1, n0) < neff_min:                     # both sides must have stats:
-            continue                                   # ref bins at p->1 carry few, huge r_hat
-        rels.append(wb0r.sum() / W0 / (wb1.sum() / W1) - 1.0)
-        sigs.append(np.sqrt(1.0 / n0 + 1.0 / n1))
-    if not rels:
+
+    def bin_devs(r):
+        rels, sigs = [], []
+        for b in range(len(edges) - 1):
+            in_b = idx == b
+            wb1 = w[y & in_b]                              # hypothesis side
+            wb0r = w[~y & in_b] * r[~y & in_b]             # reweighted reference side
+            n1 = wb1.sum() ** 2 / max((wb1 ** 2).sum(), _EPS)
+            n0 = wb0r.sum() ** 2 / max((wb0r ** 2).sum(), _EPS)
+            if min(n1, n0) < neff_min:                     # both sides must have stats:
+                continue                                   # ref bins at p->1 carry few, huge r
+            rels.append(wb0r.sum() / W0 / (wb1.sum() / W1) - 1.0)
+            sigs.append(np.sqrt(1.0 / n0 + 1.0 / n1))
+        return np.asarray(rels), np.asarray(sigs)
+
+    def debiased_rms(rels, sigs):
+        return float(np.sqrt(max(np.mean(rels ** 2 - sigs ** 2), 0.0)))
+
+    rels, sigs = bin_devs(r_hat)
+    if not len(rels):
         return dict(nan, integral=integral, integral_err=integral_err)
-    rels, sigs = np.asarray(rels), np.asarray(sigs)
+    # shape with the global normalisation divided out (post-hoc decomposition)
+    rels_n, sigs_n = bin_devs(r_hat / (1.0 + integral))
     return dict(
         integral=integral,
         integral_err=integral_err,
-        shape_rms=float(np.sqrt(max(np.mean(rels ** 2 - sigs ** 2), 0.0))),
+        shape_rms=debiased_rms(rels, sigs),
+        shape_rms_norm=(debiased_rms(rels_n, sigs_n) if len(rels_n) else np.nan),
         shape_chi2ndf=float(np.mean((rels / sigs) ** 2)),
         shape_max=float(np.abs(rels).max()),
         nbins_used=int(len(rels)),
@@ -115,7 +153,7 @@ def _load_prediction(path):
     return _softmax_signal(logits), label, weight
 
 
-def collect(store, nbins, neff_min):
+def collect(store, nbins, neff_min, prior="balanced", use_abs_w=True):
     """-> {config: {size: [metrics dict per seed]}}"""
     out = {c: {} for c in CONFIGS}
     for p in sorted(glob.glob(os.path.join(store, "predictions", "*", "prediction.pt"))):
@@ -124,7 +162,8 @@ def collect(store, nbins, neff_min):
             continue
         try:
             score, label, weight = _load_prediction(p)
-            met = closure_metrics(score, label, weight, nbins, neff_min)
+            met = closure_metrics(score, label, weight, nbins, neff_min,
+                                  prior=prior, use_abs_w=use_abs_w)
         except Exception as e:                    # noqa: BLE001
             print(f"  skip {p}: {e}")
             continue
@@ -194,6 +233,10 @@ def main():
                     help="writes <prefix>.json and <prefix>.png")
     ap.add_argument("--nbins", type=int, default=20)
     ap.add_argument("--neff-min", type=float, default=25.0)
+    ap.add_argument("--prior", choices=PRIORS, default="balanced",
+                    help="class prior the training loss used (measured: balanced)")
+    ap.add_argument("--signed-weights", action="store_true",
+                    help="use stored signed weights instead of |w| (default |w|)")
     ap.add_argument("--self-test", action="store_true")
     args = ap.parse_args()
 
@@ -203,7 +246,10 @@ def main():
     if not args.store_dir:
         ap.error("--store_dir required unless --self-test")
 
-    results = collect(args.store_dir, args.nbins, args.neff_min)
+    print(f"prior convention: {args.prior}   weights: "
+          f"{'|w|' if not args.signed_weights else 'signed'}")
+    results = collect(args.store_dir, args.nbins, args.neff_min,
+                      prior=args.prior, use_abs_w=not args.signed_weights)
     for cfg in CONFIGS:
         for size in sorted(results.get(cfg, {})):
             v = results[cfg][size]
@@ -211,9 +257,11 @@ def main():
             ie = np.asarray([m["integral_err"] for m in v])
             sc = np.asarray([m["shape_rms"] for m in v])
             x2 = np.asarray([m["shape_chi2ndf"] for m in v])
+            scn = np.asarray([m.get("shape_rms_norm", np.nan) for m in v])
             print(f"{cfg:9s} size={size:<5} |IC|={np.nanmean(ic):.4f}+-{np.nanstd(ic):.4f} "
                   f"(stat {np.nanmean(ie):.4f})  "
                   f"SC_rms={np.nanmean(sc):.4f}+-{np.nanstd(sc):.4f}  "
+                  f"SC_norm={np.nanmean(scn):.4f}+-{np.nanstd(scn):.4f}  "
                   f"chi2/ndf={np.nanmean(x2):.2f}  (n={len(v)})")
 
     # Decision readout (primacy fixed 2026-07-12, pre-unblinding): the adoption metric is
