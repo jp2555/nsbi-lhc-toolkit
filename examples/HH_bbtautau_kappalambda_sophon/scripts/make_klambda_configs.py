@@ -92,6 +92,14 @@ def prepare(args):
                     pc["network"]["default"] = _abs(wf["network"])
                     pc["event_info"]["default"] = _abs(os.path.join(config_dir, wf["event_info"]))
                     pc["resonance"]["default"] = _abs(wf["resonance"])
+                    # options.default was left at the template's relative "options.yaml",
+                    # which global_config resolves against the CONFIG's dir (<farm>/) -> missing
+                    # file -> every predict task died before loading the checkpoint.
+                    pc["options"]["default"] = _abs(spec["option"])
+                    # the built heads must match the trained checkpoint (train turns Assignment
+                    # etc. OFF); copy the train combo's Components so they can never drift.
+                    pc["options"]["Training"]["Components"] = deepcopy(
+                        cfg["options"]["Training"]["Components"])
                     pc["platform"]["data_parquet_dir"] = os.path.join(store, "evenet-test")
                     pc["options"]["prediction"]["output_dir"] = os.path.join(store, "predictions", tag)
                     pc["options"]["Training"]["model_checkpoint_load_path"] = os.path.join(

@@ -230,4 +230,4 @@ syst_kl*/
 evenet_local/
 evenet_smoke/
 config_farm*/
-configs/*.resolved.yaml
+*.resolved.yaml

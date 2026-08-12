@@ -19,7 +19,8 @@ platform:
   use_gpu: true
 
 options:
-  default: options.yaml                       # absolutised by make_klambda_configs.py
+  default: options.yaml                       # REPLACED per combo by make_klambda_configs.py
+                                              # (with the arm's options_*.yaml + its Components)
 
   prediction:
     output_dir: predictions/PLACEHOLDER       # overridden per combo to <store>/predictions/<tag>
