@@ -23,7 +23,7 @@ the **low-statistics** regime — especially systematic variations — for κ_λ
   pass at the 10% fraction; method-limited |IC| floor ≈ 1.7% at ≥30%. Decision anchors set.
 - ✅ **Sweep machinery complete** (2026-07-13): fraction grid re-cut to
   `[0.003, 0.01, 0.02, 0.05, 0.1, 1.0]` (ceiling showed 0.3≈1.0; low side refined; 0.003 ≈
-  1.4k/1.1k events/class = the EveNet-paper regime) → **90 configs** (3 arms × 6 × 5 seeds).
+  1.2k/0.8k events/class = the EveNet-paper regime) → **90 configs** (3 arms × 6 × 5 seeds).
   Options files VENDORED into `configs/` (`options_{finetune,frozen,scratch}.yaml` from the
   Exotic-Higgs recipes, frozen = backbone GlobalEmbedding/PET/ObjectEncoder freeze.type=full,
   heads trainable; + `network_20M.yaml`). `configs` stage now AUTO-RESOLVES every `<PLACEHOLDER>`
@@ -47,10 +47,21 @@ not calibration.*
 - **Ceiling contrast**: feature BDT reaches |IC|=0.018 at full stats where every EveNet arm
   sits at 0.13–0.17 — *better calibrated despite worse AUC* ⇒ the problem is the training
   objective, not the task.
-- **Leading mechanism (testable)**: EveNet's classification loss is diffusion-time weighted
-  (α²(t)·CE, noise_prob=1.0 per the authors' recipe) while predict runs at t=0 — a t-averaged
-  CE is not a proper scoring rule at t=0, so ranking transfers but logit scale need not.
-  **Decisive ablation: rerun fraction 1.0 (15 runs) with `noise_prob: [0.0, 0.0]`.**
+- **Mechanism — FIRST HYPOTHESIS REFUTED (2026-07-16, source audit).** The α²(t)/noise_prob
+  story is WRONG for these runs: `noise_prob` is read at exactly one line
+  (`evenet_model.py:481`) inside the `generation` branch, which THREE gates in our own configs
+  close (`ReconGeneration.include: false`, `generation-recon: [0,0]`, `classification-noised:
+  [0,0]`). Only the `deterministic` branch ran, and it sets `full_time = 0` — identical to
+  predict. **DO NOT run the noise_prob ablation: it is a guaranteed no-op (15 wasted GPU jobs).**
+- **New leading candidate (analysis-side, free to test)**: the loss is
+  `Σ c_{y_i} w_i CE_i / Σ c_{y_i} w_i` with `c = normalization.pt["class_balance"]`
+  (effective-number reweighting, NOT inverse-frequency), so the correct conversion is
+  `r̂ = p/(1-p)·(c0/c1)·(W0/W1)` — a factor none of our three tested conventions included.
+  Predicts exactly the observed same-sign, all-arms, all-fractions residual. Full-stats
+  signatures are the "pure scale error" pattern (|IC|≈SC_rms, SC_norm small), consistent.
+  **Run `scripts/diagnose_ratio_convention.py --normalization <store>/evenet-train/normalization.pt`
+  (CPU, seconds).** If the required factor is constant across arms/seeds, G0.5 recomputes from
+  existing predictions and results-note §7 must be rewritten.
 - Analysis corrections made before reading results: prior convention (measured balanced, not
   W0/W1 — the earlier flat-in-N closure was this bug), |w| weights, predict-config fixes.
 

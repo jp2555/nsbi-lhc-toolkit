@@ -84,7 +84,9 @@ $=$ \texttt{genWeight} $\times$ \texttt{puweight}. Requiring a valid $H\to b\bar
 candidate drops 18.6--24.5\% of events (\kl-dependent: softer \kl$=5$ spectrum
 $\Rightarrow$ more failed second-$b$ reconstruction). Class 0 $=$ \kl$=1$ (SM
 reference, 488k events), class 1 $=$ \kl$=5$ (339k). The merged, shuffled sample is
-split $80/10/10$; \textbf{all} runs share one fixed 82.7k-event test split.
+split $80/10/10$ into 661.9k train / 82.7k validation / 82.7k test; the training
+fractions below multiply the \emph{train} split, and \textbf{all} runs share the one
+fixed 82.7k-event test split.
 
 \paragraph{The contrast.} Three arms differing only in initialisation:
 \begin{description}[leftmargin=2.4em,style=nextline]
@@ -94,7 +96,8 @@ split $80/10/10$; \textbf{all} runs share one fixed 82.7k-event test split.
 \item[scratch] random initialisation --- the no-FM control.
 \end{description}
 Each at training fractions $\{0.003, 0.01, 0.02, 0.05, 0.1, 1.0\}$
-($\approx 2.5$k to 830k events) $\times$ 5 seeds $=$ 90 runs. Options files are the
+(the fractions apply to the 661.9k-event training split, i.e.\ $\approx 2.0$k to
+662k training events) $\times$ 5 seeds $=$ 90 runs. Options files are the
 authors' own downstream recipes (fine-tune and from-scratch variants of the
 Exotic-Higgs study), vendored unchanged apart from the freeze flags.
 
@@ -401,7 +404,8 @@ There is no consistent ordering and no left-shift.
 \paragraph{The failure is statistics-limited, not fixed.} \SCn\ falls monotonically
 with training fraction ($0.32\to0.07$ finetune, $0.47\to0.04$ frozen, $0.35\to0.08$
 scratch) and $\chi^2/\mathrm{ndf}$ drops from $60$--$190$ to $6$--$15$. The estimator
-does converge; it simply has not reached the 1\%/5\% gates by 830k events in any arm.
+does converge; it simply has not reached the 1\%/5\% gates by 662k training events
+in any arm.
 
 \paragraph{Ensembling does not rescue it.} Because $\Eref$ is linear in $r$, the
 ensemble ratio $\bar r = \frac1K\sum_k r_k$ satisfies the identity
