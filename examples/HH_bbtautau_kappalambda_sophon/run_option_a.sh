@@ -254,6 +254,17 @@ stage_configs() {
         --farm "$FARM" --store_dir "$STORE_RUN" --data_store_dir "$STORE" \
         --ray_dir "${PSCRATCH:-/tmp}/ray-$USER"
     [ -f "$FARM/predict-evenet.sh" ] || die "predict-evenet.sh not emitted — check predict_yaml"
+    if [ -n "$VARIANT" ]; then
+        note "VARIANT=$VARIANT -> $STORE_RUN (data read from $STORE)"
+        note "VERIFY THE FLIPPED KNOB IS THE ONE IN EFFECT before submitting (train_klambda.yaml"
+        note "and the options_*.yaml files both set noise_prob, with different values):"
+        note "  cd $EVENET_SRC && shifter --image=$IMAGE env PYTHONPATH=\$PWD python3 -c \\"
+        note "    \"from evenet.control.global_config import global_config as g; \\"
+        note "     g.load_yaml('$FARM/evenet-klambda-finetune-size1.0-seed0.yaml'); \\"
+        note "     print(g.options.Training.ProgressiveTraining.stages[0].train_parameters.noise_prob)\""
+        note "  expect [0.0, 0.0] -- anything else means the baseline sweep ran a different"
+        note "  recipe than assumed, which is itself a finding. STOP and report."
+    fi
     note "LOAD-TEST one config inside the shifter image before submitting the array:"
     note "  shifter --image=$IMAGE python3 -c \"import yaml; yaml.safe_load(open('$FARM/\$(ls $FARM | head -1)'))\" && echo yaml-ok"
 }
