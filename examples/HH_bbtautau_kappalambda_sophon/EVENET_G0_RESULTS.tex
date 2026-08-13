@@ -133,22 +133,63 @@ here unchanged:
 \section{Metrics}
 \label{sec:metrics}
 
+\subsection{The closure identity}
+
 For scores $p$, labels $y$ and weights $w$ on the test split, the ratio estimate is
 $\hat r = \frac{p}{1-p}\cdot f_{\text{prior}}$, with $f_{\text{prior}}$ the inverse of
 the class prior the training loss effectively used
-(measured, Sec.~\ref{sec:corrections}). Two closure quantities follow from the identity
-$\Eref[r] = \int p_{\mathrm{ref}}\,(p_{\mathrm{hyp}}/p_{\mathrm{ref}}) = 1$:
+(measured, Sec.~\ref{sec:corrections}). Everything below rests on one identity. Average
+the \emph{true} ratio over events drawn from the reference:
+%
+\begin{equation}
+\Eref[r] \;=\; \int p_{\mathrm{ref}}(x)\,
+\frac{p_{\mathrm{hyp}}(x)}{p_{\mathrm{ref}}(x)}\,\mathrm{d}x
+\;=\; \int p_{\mathrm{hyp}}(x)\,\mathrm{d}x \;=\; 1 .
+\label{eq:closure}
+\end{equation}
+%
+The reference density cancels against the denominator and what remains is a normalised
+probability density. So the true ratio, averaged over reference events, is \emph{exactly}
+one --- for any pair of hypotheses, with no free parameters. Intuitively, $r(x)$ says
+``this event is $r$ times more likely under the hypothesis''; over the reference ensemble
+the regions where $r>1$ and $r<1$ must balance precisely. On a weighted Monte Carlo
+sample the expectation becomes the self-normalised weighted average
+$\sum_{i\in\mathrm{ref}} w_i \hat r_i / \sum_{i\in\mathrm{ref}} w_i$, which converges to
+Eq.~\eqref{eq:closure} at rate $1/\sqrt{n_{\mathrm{eff}}}$ --- hence every closure number
+carries a statistical error and is ``consistent with 1'', never ``equal to 1''.
+
+\subsection{The two metrics}
 
 \begin{description}[leftmargin=2.4em,style=nextline]
-\item[{Integral closure $\IC = \Eref[\hat r]-1$}] the global normalisation error, quoted
-  with its weighted standard error.
-\item[Shape closure] quantile-bin the score; per bin compare the $\hat r$-reweighted
-  reference mass with the actual hypothesis mass; report the RMS relative deviation
-  with per-bin statistical variance subtracted in quadrature. We quote both the raw
-  value ($\mathrm{SC_{rms}}$) and \SCn, computed after rescaling $\hat r$ by
-  $1/\Eref[\hat r]$ --- i.e.\ the \emph{shape} error with the global normalisation
-  divided out.
+\item[{Integral closure, $\IC = \Eref[\hat r]-1$}]
+  \emph{Definition:} the weighted mean of $\hat r$ over held-out reference events, minus
+  one; quoted with its weighted standard error.
+  \emph{Intuition:} reweight the reference sample by $\hat r$ and ask whether you recover
+  the \emph{total} hypothesis yield. $\IC = +0.20$ means the reweighted reference
+  over-produces the hypothesis by 20\%. It is the \emph{normalisation} or ``exchange
+  rate'' error of the ratio. Two-bin illustration: reference $(0.5, 0.5)$, hypothesis
+  $(0.8, 0.2)$ gives true $r = (1.6, 0.4)$ and $\Eref[r] = 0.5(1.6)+0.5(0.4) = 1$
+  exactly; a miscalibrated $\hat r = (2.0, 0.4)$ gives $1.2$, i.e.\ $\IC = +20\%$.
+\item[{Shape closure, $\mathrm{SC_{rms}}$ and \SCn}]
+  \emph{Definition:} quantile-bin the score; in each bin compare the $\hat r$-reweighted
+  reference mass $A_b$ with the actual hypothesis mass $B_b$, forming
+  $\mathrm{rel}_b = A_b/B_b - 1$; report the RMS over bins with each bin's statistical
+  variance ($1/n_{\mathrm{eff},0} + 1/n_{\mathrm{eff},1}$) subtracted in quadrature, so
+  finite-sample noise does not masquerade as bias.
+  \emph{Intuition:} $\IC$ can be satisfied by errors that cancel globally --- too large
+  here, too small there. The shape test therefore applies Eq.~\eqref{eq:closure}
+  \emph{differentially}: after reweighting the reference by $\hat r$, it must become
+  statistically indistinguishable from the hypothesis sample \emph{bin by bin}, which is
+  precisely what ``being the density ratio'' means. We bin in the classifier score
+  because the score is monotone in $\hat r$ itself, so any miscalibration is forced to
+  show up there.
 \end{description}
+
+\noindent We quote \SCn\ alongside $\mathrm{SC_{rms}}$: the same quantity after rescaling
+$\hat r$ by $1/\Eref[\hat r]$, i.e.\ the shape error with the global normalisation
+divided out. This matters because a constant scale error shifts \emph{every} bin equally
+and therefore contaminates $\mathrm{SC_{rms}}$ with the $\IC$ failure --- the two raw
+numbers are not independent.
 
 \noindent The decomposition matters because the two failure modes have different
 consequences: a global scale error in $\hat r$ is degenerate with the rate term of an
@@ -158,6 +199,20 @@ is reported alongside, never instead of, the pre-registered gates. Validation: o
 synthetic data a pure $\times1.4$ scale error gives $\mathrm{SC_{rms}} = 0.399$ but
 $\SCn = 0.000$, while a genuine temperature distortion gives $0.694$ and $0.503$
 respectively.
+
+\paragraph{What closure cannot catch.} Both metrics test \emph{self-consistency}, not
+\emph{sufficiency}. A classifier trained on lossy features $\phi(x)$ converges to the
+exact ratio of the \emph{marginalised} densities
+$p_{\mathrm{hyp}}(\phi)/p_{\mathrm{ref}}(\phi)$, which satisfies
+Eq.~\eqref{eq:closure} identically and passes any test binned in a function of $\phi$
+--- the degenerate estimator $\hat r \equiv 1$ passes both metrics perfectly while
+carrying no information at all. Information loss does not appear as bias; it appears as
+a \emph{flatter} ratio, i.e.\ as lost discrimination. Closure therefore catches lies, not
+omissions: it earns $\hat r$ the right to enter the likelihood, while the AUC axis
+(Sec.~\ref{sec:auc}) is what shows the ratio is worth entering. This is also why a
+score-binned closure test cannot substitute for the analysis-level closure in physical
+observables, where the model is asked to reproduce distributions it was not free to
+choose the coordinates of.
 
 % =====================================================================
 \section{Result 1 --- discrimination (gate G0)}
