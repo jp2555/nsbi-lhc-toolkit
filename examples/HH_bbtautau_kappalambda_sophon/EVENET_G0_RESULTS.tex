@@ -1,0 +1,449 @@
+% =====================================================================
+% Option A / gate G0+G0.5 results note: EveNet data-efficiency test for
+% kappa_lambda density-ratio learning in HH->bbtautau (CMS full simulation).
+% Working-note conventions: British -ise spellings, first-occurrence
+% abbreviation expansion, \toverify{} flags for unverified content.
+% Build: pdflatex twice. No shell-escape, no external assets.
+% =====================================================================
+\documentclass[11pt]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{microtype}
+\emergencystretch=1.5em
+\usepackage[colorlinks=true,linkcolor=blue!60!black,citecolor=blue!60!black,urlcolor=blue!60!black]{hyperref}
+
+\newcommand{\kl}{\ensuremath{\kappa_\lambda}}
+\newcommand{\bbtt}{\ensuremath{b\bar b\,\tau^+\tau^-}}
+\newcommand{\tauh}{\ensuremath{\tau_h}}
+\newcommand{\mhh}{\ensuremath{m_{HH}}}
+\newcommand{\IC}{\ensuremath{\mathrm{IC}}}
+\newcommand{\SCn}{\ensuremath{\mathrm{SC}_{\mathrm{norm}}}}
+\newcommand{\Eref}{\ensuremath{\mathbb{E}_{\mathrm{ref}}}}
+\newcommand{\toverify}[1]{\textcolor{red}{[verify: #1]}}
+
+\title{Pre-training Buys Ordering, Not Calibration:\\
+An EveNet Data-Efficiency Test for \kl\ Density-Ratio Learning\\
+in $HH\to\bbtt$ (CMS Full Simulation)}
+\author{Working note --- \bbtt\ \kl\ NSBI project}
+\date{15 July 2026 \\[2pt]
+\small Gates G0 / G0.5 of \texttt{EVENET\_FEASIBILITY\_NOTE}; 90-run sweep,
+branch \texttt{fm}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+We test whether the pre-trained event-level foundation model (FM)
+EveNet~\cite{Hsu:2026evenet} improves the data efficiency of \emph{density-ratio}
+learning for a Higgs self-coupling (\kl) measurement via neural simulation-based
+inference (NSBI), using CMS full-simulation $HH\to\bbtt$ events. Three arms ---
+fine-tuned, frozen-backbone, and from-scratch --- identical in data, architecture and
+head and differing \emph{only} in initialisation, were trained at six training
+fractions $\times$ five seeds (90 runs) and evaluated on one fixed held-out split
+against two axes fixed before unblinding: discrimination (weighted area under the
+receiver-operating characteristic curve, AUC) and ratio calibration (integral and shape
+closure). The result is a clean dissociation. On discrimination, pre-training wins
+decisively and consistently: $+0.014$--$0.017$ AUC at every fraction $\ge 1\%$
+(many standard deviations), equivalent to a $\mathbf{{\approx}3\text{--}4.5\times}$
+data multiplier, with both pre-trained arms exceeding a feature-level gradient-boosted
+decision tree (BDT) ceiling. On calibration, pre-training buys \emph{nothing}: no arm
+passes the closure gates at any fraction, the pre-registered adoption metric (closure
+left-shift) is undefined, and the arms trade places within seed errors. Seed-ensembling
+does not change this, because the closure offsets are same-sign systematic
+($\Eref[\hat r]-1 \approx +0.13$--$0.29$) rather than zero-centred. The
+frozen arm matches fine-tuning everywhere, locating the value in the pre-trained
+\emph{representation} rather than in backbone adaptation. We argue the calibration
+failure is a property of EveNet's noise-conditioned classification objective rather
+than of the task, note that the feature BDT reaches $|\IC| = 0.018$ where EveNet
+reaches $0.13$--$0.17$ \emph{despite worse AUC}, and propose a single decisive ablation.
+\end{abstract}
+
+\tableofcontents
+
+% =====================================================================
+\section{What was tested}
+\label{sec:setup}
+
+\paragraph{Physics task.} Learn per-event density ratios $r(x;\kl,\kl')$ between
+\kl\ hypotheses for use in an unbinned NSBI likelihood. Discrimination between \kl\
+points is driven by the \mhh\ lineshape and triangle--box interference, i.e.\ by a
+\emph{continuous} deformation of one process's spectrum rather than by separation of
+two distinct processes.
+
+\paragraph{Data.} CMS 2024 full-simulation $HH\to\bbtt$ Powheg samples, passed through
+the KIT CROWN analysis chain (published $\mu\tau_h$/$e\tau_h$ selection), converted to
+EveNet's stock 7-feature token schema: four tokens per event ($b_1$, $b_2$, \tauh,
+$\ell$), missing transverse energy in the global conditioning block, weights
+$=$ \texttt{genWeight} $\times$ \texttt{puweight}. Requiring a valid $H\to b\bar b$
+candidate drops 18.6--24.5\% of events (\kl-dependent: softer \kl$=5$ spectrum
+$\Rightarrow$ more failed second-$b$ reconstruction). Class 0 $=$ \kl$=1$ (SM
+reference, 488k events), class 1 $=$ \kl$=5$ (339k). The merged, shuffled sample is
+split $80/10/10$; \textbf{all} runs share one fixed 82.7k-event test split.
+
+\paragraph{The contrast.} Three arms differing only in initialisation:
+\begin{description}[leftmargin=2.4em,style=nextline]
+\item[finetune] 20M-parameter pre-trained checkpoint, all weights trainable.
+\item[frozen] same checkpoint, backbone (GlobalEmbedding, PET, ObjectEncoder) frozen,
+  heads trainable --- isolates the \emph{representation} from optimiser effects.
+\item[scratch] random initialisation --- the no-FM control.
+\end{description}
+Each at training fractions $\{0.003, 0.01, 0.02, 0.05, 0.1, 1.0\}$
+($\approx 2.5$k to 830k events) $\times$ 5 seeds $=$ 90 runs. Options files are the
+authors' own downstream recipes (fine-tune and from-scratch variants of the
+Exotic-Higgs study), vendored unchanged apart from the freeze flags.
+
+\paragraph{External bar.} A gradient-boosted decision tree on the 10 high-level
+features behind the published unbinned result, measured at full statistics on the same
+physics (Sec.~\ref{sec:ceiling}).
+
+% =====================================================================
+\section{Pre-registration record}
+\label{sec:prereg}
+
+The following were fixed \emph{before} any sweep output existed, and are reproduced
+here unchanged:
+
+\begin{enumerate}[label=(P\arabic*),leftmargin=2.6em]
+\item \textbf{Decision primacy (2026-07-12).} The adoption metric is the \emph{closure
+  left-shift}: the smallest training fraction at which an arm's seed-mean passes both
+  gates, compared between finetune and scratch; their ratio is the equivalent-data
+  multiplier. A left-shift is an adoption-grade win \emph{even at AUC parity}; an
+  AUC-only win with failing closure is \emph{not} a win. AUC serves as a secondary
+  no-regression guard.
+\item \textbf{Gates.} $|\IC| \le \max(1\%,\,3\times\text{stat})$ \emph{and}
+  stat-debiased shape RMS $\le 0.05$ ($=$ the analysis \texttt{CLOSURE\_TOL}), with
+  $\chi^2/\mathrm{ndf}\approx 1$ indicating noise-only residuals.
+\item \textbf{Checkpoint selection (2026-07-14).} Every arm is evaluated at its
+  best-validation-loss checkpoint (EveNet's predictor otherwise loads the final, i.e.\
+  most overfit, epoch).
+\item \textbf{Fallback.} Should no arm pass the gates anywhere --- leaving the
+  left-shift undefined --- the secondary reading is relative closure at matched
+  fractions, reported as such.
+\end{enumerate}
+
+\noindent The fallback (P4) is the branch that actually materialised.
+
+% =====================================================================
+\section{Metrics}
+\label{sec:metrics}
+
+For scores $p$, labels $y$ and weights $w$ on the test split, the ratio estimate is
+$\hat r = \frac{p}{1-p}\cdot f_{\text{prior}}$, with $f_{\text{prior}}$ the inverse of
+the class prior the training loss effectively used
+(measured, Sec.~\ref{sec:corrections}). Two closure quantities follow from the identity
+$\Eref[r] = \int p_{\mathrm{ref}}\,(p_{\mathrm{hyp}}/p_{\mathrm{ref}}) = 1$:
+
+\begin{description}[leftmargin=2.4em,style=nextline]
+\item[{Integral closure $\IC = \Eref[\hat r]-1$}] the global normalisation error, quoted
+  with its weighted standard error.
+\item[Shape closure] quantile-bin the score; per bin compare the $\hat r$-reweighted
+  reference mass with the actual hypothesis mass; report the RMS relative deviation
+  with per-bin statistical variance subtracted in quadrature. We quote both the raw
+  value ($\mathrm{SC_{rms}}$) and \SCn, computed after rescaling $\hat r$ by
+  $1/\Eref[\hat r]$ --- i.e.\ the \emph{shape} error with the global normalisation
+  divided out.
+\end{description}
+
+\noindent The decomposition matters because the two failure modes have different
+consequences: a global scale error in $\hat r$ is degenerate with the rate term of an
+NSBI fit and removable by construction, whereas a shape error deforms the per-event
+likelihood and is not. \SCn\ is a \emph{post-hoc} diagnostic added during analysis and
+is reported alongside, never instead of, the pre-registered gates. Validation: on
+synthetic data a pure $\times1.4$ scale error gives $\mathrm{SC_{rms}} = 0.399$ but
+$\SCn = 0.000$, while a genuine temperature distortion gives $0.694$ and $0.503$
+respectively.
+
+% =====================================================================
+\section{Result 1 --- discrimination (gate G0)}
+\label{sec:auc}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}lccc|ccc@{}}
+\toprule
+& \multicolumn{3}{c|}{\textbf{single model} (seed mean $\pm$ s.d., $n=5$)}
+& \multicolumn{3}{c}{\textbf{5-seed ensemble}} \\
+fraction & finetune & frozen & scratch & finetune & frozen & scratch \\
+\midrule
+0.003 & 0.7427(57) & 0.7498(80) & \textbf{0.7573(122)} & 0.7576 & 0.7699 & \textbf{0.7738} \\
+0.01  & 0.7768(108) & \textbf{0.7793(76)} & 0.7612(300) & \textbf{0.7945} & 0.7935 & 0.7822 \\
+0.02  & \textbf{0.7941(43)} & 0.7931(80) & 0.7804(19) & 0.8050 & \textbf{0.8056} & 0.7877 \\
+0.05  & 0.8056(54) & \textbf{0.8099(22)} & 0.7949(8) & 0.8150 & \textbf{0.8167} & 0.8000 \\
+0.1   & 0.8163(22) & \textbf{0.8169(9)} & 0.8003(25) & 0.8214 & \textbf{0.8217} & 0.8075 \\
+1.0   & \textbf{0.8313(2)} & \textbf{0.8313(5)} & 0.8250(4) & \textbf{0.8339} & 0.8338 & 0.8292 \\
+\bottomrule
+\end{tabular}
+\caption{Weighted AUC. Parenthesised digits are the seed standard deviation in units
+of the last decimals. The pre-trained arms lead at every fraction $\ge 0.01$; only at
+0.003 does the ordering invert.}
+\label{tab:auc}
+\end{table}
+
+Three readings:
+
+\begin{enumerate}[leftmargin=2.2em]
+\item \textbf{Pre-training wins, decisively.} At fractions $0.01$--$1.0$ both
+  pre-trained arms exceed scratch by $0.014$--$0.017$ in AUC against seed standard
+  deviations of $0.001$--$0.008$ --- many standard deviations, and monotone across the
+  grid.
+\item \textbf{The gain is worth ${\approx}3$--$4.5\times$ the data.} Interpolating
+  scratch's curve logarithmically in fraction, finetune's ensemble AUC at $0.01$,
+  $0.02$, $0.05$ and $0.1$ requires scratch fractions of $0.033$, $0.079$, $0.222$
+  and $0.437$ respectively, i.e.\ multipliers $3.3\times$, $4.0\times$, $4.4\times$,
+  $4.4\times$; at full statistics scratch never reaches finetune's value at all.
+\item \textbf{Frozen $\approx$ finetune everywhere} (differences $\le 0.004$, mostly
+  within seed errors). The benefit lives in the pre-trained \emph{representation};
+  adapting the backbone adds nothing measurable. This is the sharpest single answer of
+  the trial to the ``did the pretext retain \kl-relevant continuous information?''
+  question: it did.
+\end{enumerate}
+
+\noindent \textbf{The 0.003 inversion.} At the smallest fraction scratch leads
+(ensemble $0.7738$ vs.\ $0.7576$/$0.7699$). That tier is in a pathological optimisation
+regime rather than a representational one: with $\approx 2.5$k training events and a
+global batch of $\approx 8$k across 4 GPUs, one ``epoch'' is a single gradient step, and
+the selected checkpoints sit at epochs 4--21, i.e.\ the models are compared after
+$\mathcal{O}(10)$ updates under \emph{different} learning-rate recipes (the fine-tune
+recipe uses an aggressive head learning rate over a small body one; the scratch recipe
+is uniform). We regard this tier as a recipe artefact pending a batch-size/learning-rate
+ablation, not as evidence about representations.
+
+% =====================================================================
+\section{Result 2 --- calibration (gate G0.5)}
+\label{sec:closure}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}lccc|ccc@{}}
+\toprule
+& \multicolumn{3}{c|}{$|\IC|$ (seed mean; stat.\ error ${\approx}0.01$--$0.02$)}
+& \multicolumn{3}{c}{\SCn\ (seed mean $\pm$ s.d.)} \\
+fraction & finetune & frozen & scratch & finetune & frozen & scratch \\
+\midrule
+0.003 & 0.130 & 0.468 & 0.202 & 0.318(66) & 0.470(79) & 0.348(109) \\
+0.01  & 0.205 & 0.361 & 0.237 & 0.343(123) & 0.337(160) & \textbf{0.207(172)} \\
+0.02  & 0.292 & 0.206 & 0.205 & 0.273(81) & 0.235(77) & \textbf{0.170(56)} \\
+0.05  & 0.188 & 0.215 & 0.124 & 0.165(41) & 0.195(46) & \textbf{0.158(58)} \\
+0.1   & 0.229 & 0.272 & 0.332 & 0.164(33) & \textbf{0.154(64)} & 0.165(69) \\
+1.0   & 0.133 & 0.171 & 0.156 & 0.074(56) & \textbf{0.044(44)} & 0.084(48) \\
+\bottomrule
+\end{tabular}
+\caption{Closure, single models. Gates: $|\IC| \le \max(0.01, 3\sigma_{\text{stat}})$
+and shape $\le 0.05$. \textbf{No arm passes at any fraction.}}
+\label{tab:closure}
+\end{table}
+
+\paragraph{Verdict under (P1)/(P2): a null.} The first-passing fraction is
+\texttt{none} for all three arms, so the closure left-shift --- the pre-registered
+adoption metric --- is undefined. Under the (P4) fallback, the arms overlap within
+seed errors and \emph{trade places}: scratch is nominally best at $0.01$--$0.05$
+(largest gap at $0.02$, ${\approx}2.3\sigma$), the pre-trained arms at $0.1$ and $1.0$.
+There is no consistent ordering and no left-shift.
+
+\paragraph{The failure is statistics-limited, not fixed.} \SCn\ falls monotonically
+with training fraction ($0.32\to0.07$ finetune, $0.47\to0.04$ frozen, $0.35\to0.08$
+scratch) and $\chi^2/\mathrm{ndf}$ drops from $60$--$190$ to $6$--$15$. The estimator
+does converge; it simply has not reached the 1\%/5\% gates by 830k events in any arm.
+
+\paragraph{Ensembling does not rescue it.} Because $\Eref$ is linear in $r$, the
+ensemble ratio $\bar r = \frac1K\sum_k r_k$ satisfies the identity
+$\IC_{\text{ens}} = \frac1K\sum_k \IC_k$ exactly: the ensemble carries no information
+beyond the \emph{signed} mean of the members' offsets. The measurement is unambiguous
+--- in 15 of 18 cells the per-seed mean $|\IC|$ and the signed mean are numerically
+identical (e.g.\ finetune $0.02$: $0.2917$ vs.\ $0.2917$; frozen $1.0$: $0.1706$ vs.\
+$0.1706$), i.e.\ \textbf{all five seeds miss in the same direction}. The offsets are a
+same-sign systematic ($\Eref[\hat r] - 1 \approx +0.13$ to $+0.29$), not zero-centred
+model noise, so there is nothing for averaging to cancel. (Ensembling does help in the
+three mixed-sign cells: finetune $0.003$, $0.130\to0.038$; scratch $0.01$,
+$0.237\to0.047$; scratch $0.05$, $0.124\to0.043$.) Ensemble AUC improves slightly for
+all arms and preserves the FM advantage (Table~\ref{tab:auc}).
+
+% =====================================================================
+\section{The ceiling comparison}
+\label{sec:ceiling}
+
+The feature-level BDT was measured on the same physics at full statistics with
+class-normalised weights (so its prior factor is unity and its closure numbers are
+directly comparable):
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+fraction & AUC & $|\IC|$ & shape \\
+\midrule
+0.01 & 0.7917 & 0.202 & 0.391 \\
+0.1  & 0.8130 & 0.011 & 0.039 \\
+1.0  & 0.8174 & 0.018 & 0.000 \\
+\bottomrule
+\end{tabular}
+\caption{Kinematic ceiling (10 published features, gradient-boosted trees).}
+\label{tab:ceilingtab}
+\end{table}
+
+\noindent Two comparisons matter, and they point in opposite directions:
+
+\begin{itemize}[leftmargin=2.2em]
+\item \textbf{Discrimination: EveNet wins.} At $0.1$ and $1.0$ both pre-trained arms
+  exceed the ceiling ($0.821$/$0.822$ vs.\ $0.813$; $0.834$ vs.\ $0.817$), i.e.\ the
+  object-level model extracts \kl\ information the 10 aggregate features discard.
+  \emph{Caveat:} the ceiling was measured on the un-cut flat-feature population,
+  whereas the sweep applies the valid-$b$-pair requirement, so the sweep population is
+  slightly easier; the margin at $1.0$ ($+0.017$) is larger than we would expect this
+  effect to explain, but the comparison carries an asterisk that the arm-to-arm
+  comparisons do not.
+\item \textbf{Calibration: the BDT wins by an order of magnitude.} At full statistics
+  the ceiling reaches $|\IC| = 0.018$ and shape $0.000$; every EveNet arm sits at
+  $|\IC| = 0.13$--$0.17$. \emph{A simple boosted-tree ensemble with worse AUC produces
+  a far better-calibrated ratio.} This is the observation that shifts the
+  interpretation from ``this task is hard to calibrate'' to ``this training objective
+  does not calibrate'' (Sec.~\ref{sec:mechanism}).
+\end{itemize}
+
+% =====================================================================
+\section{Interpretation: a dissociation, and a candidate mechanism}
+\label{sec:mechanism}
+
+\paragraph{The headline.} Pre-training improved \emph{ordering} substantially and
+\emph{calibration} not at all. These are separable properties: AUC is invariant under
+any monotone remap of the score, and an entire family of classifiers shares a given
+AUC while only one member is the density ratio. A method evaluated solely by
+significance-improvement characteristic (SIC) or background rejection --- as in the
+EveNet paper~\cite{Hsu:2026evenet} and the controlled objective
+study~\cite{Elsharkawy:2026} respectively --- would report an unambiguous success here
+and would be structurally unable to see the calibration null. For NSBI, where the
+per-event ratio enters the likelihood, the calibration axis is the binding one.
+
+\paragraph{Candidate mechanism (testable).} EveNet's classification head is trained
+under diffusion-time conditioning: the loss is $\alpha^2(t)\,\mathrm{CE}(y,\hat y)$
+with a noising probability that our configuration --- following the authors' own
+downstream recipe --- sets to $1.0$, while prediction is performed at the clean
+endpoint. A $t$-averaged cross-entropy is \emph{not} a proper scoring rule for the
+$t=0$ posterior: its minimiser preserves the ranking of events (hence the strong AUC)
+while the logit \emph{scale} need not equal that of the clean-input posterior (hence
+the systematic $\Eref[\hat r] > 1$). Three observations are consistent with this and
+inconsistent with a residual convention error: the offsets are same-sign across seeds
+and arms \emph{including scratch}; they vary cell-to-cell rather than being a common
+constant (a wrong prior factor would give an identical $\IC$ everywhere); and they
+correlate cell-by-cell with \SCn\ (frozen $0.003$: $0.47$/$0.31$; frozen $1.0$:
+$0.17$/$0.00$), as expected if both are driven by per-event log-ratio noise --- for
+which $\Eref[\hat r] \approx e^{\sigma^2/2} > 1$, with $\Eref[\hat r] = 1.2$
+corresponding to $\sigma \approx 0.6$.
+
+\paragraph{The decisive ablation.} Re-run one column of the grid (say fraction $1.0$,
+all three arms, 5 seeds $=$ 15 runs, hours) with the classification noising disabled
+(\texttt{noise\_prob: [0.0, 0.0]}), everything else identical. If $|\IC|$ collapses
+toward the ceiling's $0.018$, the calibration null is a fixable property of the
+training recipe and the FM programme continues on a corrected objective. If it does
+not, the null is a property of the pre-trained representation's transfer to continuous
+ratio estimation, and the objective-mismatch verdict of the feasibility note stands.
+
+% =====================================================================
+\section{Corrections applied during analysis}
+\label{sec:corrections}
+
+For reproducibility, three defects were found and fixed \emph{after} predictions
+existed but \emph{before} the numbers above were read. All are estimator/plumbing
+fixes, not changes to the decision rule.
+
+\begin{enumerate}[leftmargin=2.2em]
+\item \textbf{Prior convention (largest effect).} The evaluator initially applied
+  $f_{\text{prior}} = W_0/W_1 = 0.556$ (raw-weight training). Scanning the three
+  candidate conventions on all 15 full-statistics runs selected \emph{class-balanced}
+  ($f = 1$) unanimously; EveNet equalises classes internally. The spurious factor had
+  produced $|\IC| \approx 0.30$--$0.47$ \emph{flat in} $N$ and inflated shape closure
+  by the same constant (a scale error shifts every bin equally). This is why the
+  corrected numbers, unlike the first pass, decrease with statistics.
+\item \textbf{Weight treatment.} Closure now uses $|w|$: binary cross-entropy training
+  cannot consume negative weights, so the reference density the model saw is the $|w|$
+  one (the reference sample carries 6.1\% negative weights).
+\item \textbf{Predict-path configuration.} Predict configs inherited a relative
+  \texttt{options.yaml} path that resolved into the (empty) config farm, and lacked the
+  head-inclusion block, so every prediction task died before loading a checkpoint. Both
+  are now generated from the matching training config.
+\end{enumerate}
+
+% =====================================================================
+\section{Caveats and scope}
+\label{sec:caveats}
+
+\begin{itemize}[leftmargin=2.2em]
+\item \textbf{No sensitivity claim.} No $\sigma_{\kl}$ or absolute-sensitivity
+  statement is made or implied; the stock schema discards $\tau$-identification and
+  FastMTT $m_{\tau\tau}$ (equally in all arms), and the MC-statistics estimator
+  question remains open upstream~\cite{Shyamsundar:2025}.
+\item \textbf{One channel, one hypothesis pair.} \kl$=1$ vs.\ \kl$=5$, $\mu\tau_h$ and
+  $e\tau_h$ only. The \kl$=0$ pair and the systematic-variation task (Money Plot 2,
+  nominal vs.\ injected $\mathrm{JES}(\mhh)$) are untouched.
+\item \textbf{Population mismatch vs.\ the ceiling only} (Sec.~\ref{sec:ceiling}); all
+  arm-to-arm comparisons share identical events.
+\item \textbf{Five seeds} give seed errors of $0.03$--$0.17$ on \SCn, which is why the
+  closure comparison is a null rather than a measured equality.
+\item \textbf{The 0.003 tier} is optimiser-transient-dominated (Sec.~\ref{sec:auc}).
+\item One frozen cell ($0.02$, seed 3) and one scratch run ($0.01$, seed 2 ---
+  early-stopped at epoch 1) are degraded; both inflate their cells' seed spread and
+  neither changes a conclusion.
+\end{itemize}
+
+% =====================================================================
+\section{Implications and next steps}
+\label{sec:next}
+
+\paragraph{For the FM programme.} G0 passes on discrimination with a $3$--$4.5\times$
+data multiplier; G0.5 is a null. Under the pre-registered rule (P1) that combination is
+\emph{not} adoption for NSBI --- but it is also not the objective-mismatch verdict the
+feasibility note feared, because the representation demonstrably carries \kl-relevant
+information (frozen $\approx$ finetune, both above the ceiling on AUC). The programme's
+decision therefore hinges on the ablation of Sec.~\ref{sec:mechanism}, which is cheap.
+
+\paragraph{Priorities.}
+\begin{enumerate}[label=\textbf{N\arabic*}.,leftmargin=2.6em]
+\item \textbf{[P0, S]} Noising ablation at fraction $1.0$ (15 runs) --- decides whether
+  the calibration null is recipe or representation.
+\item \textbf{[P1, S]} G1 corner-encoding A/B (\tauh\ at the vacant flag corner): the
+  NPZs already exist for both encodings.
+\item \textbf{[P1, M]} Money Plot 2 (systematic-variation data efficiency): the FM's
+  low-statistics claim aimed at nuisance parameterisation, using the analytic injector
+  where closure is exact by construction.
+\item \textbf{[P2, S]} Low-fraction recipe ablation (batch size / learning rate at
+  0.003) to convert the inversion from artefact to measurement.
+\item \textbf{[P2, S]} Re-measure the ceiling on the valid-$b$-pair population to
+  remove the asterisk in Sec.~\ref{sec:ceiling}.
+\end{enumerate}
+
+\paragraph{For the EveNet authors (discussion, 16 July 2026).} Three concrete items:
+(i) is a calibration-preserving classification mode available or planned --- i.e.\ a
+$t=0$-only classification loss --- given that the ranking transfers but the calibrated
+ratio does not? (ii) our G1 result will be the first data on reusing \emph{vacant flag
+corners} for object types absent from pre-training (\tauh, $\gamma$); would they bless
+this as the zero-surgery interim, and (iii) would they consider retrofitting an
+explicit type-embedding table --- initialised from the current flag patterns so it is
+function-preserving on day one --- so that future object types become an
+append-a-row operation rather than schema surgery?
+
+% =====================================================================
+\begin{thebibliography}{9}\small
+
+\bibitem{Hsu:2026evenet}
+S.-C. Hsu et al.,
+``EveNet: A Foundation Model for Particle Collision Data Analysis,''
+arXiv:2601.17126 [hep-ex] (2026).
+
+\bibitem{Elsharkawy:2026}
+Y. Elsharkawy, J. Birk, V. Mikuni, W. Bhimji, G. Kasieczka, B. Nachman,
+``Pre-Training for Simulation-Based Science: A Study on Jet Foundation Model Training
+Objectives,'' arXiv:2606.14870 (2026).
+
+\bibitem{Shyamsundar:2025}
+P. Shyamsundar et al., critique of MC-statistical uncertainty estimation in NSBI,
+arXiv:2505.19156 (2025).
+
+\end{thebibliography}
+
+\end{document}
