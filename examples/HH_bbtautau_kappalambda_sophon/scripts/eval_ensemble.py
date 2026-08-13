@@ -31,7 +31,8 @@ import sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from eval_closure import _load_prediction, _prior_factor, closure_metrics  # noqa: E402
+from eval_closure import (_load_prediction, _prior_factor, closure_metrics,  # noqa: E402
+                          load_norm)
 from plot_data_efficiency import CONFIGS, _TAG, weighted_auc               # noqa: E402
 
 _EPS = 1e-6
@@ -47,7 +48,7 @@ def cells(store):
     return out
 
 
-def ensemble_cell(paths, use_abs_w=True, prior="balanced"):
+def ensemble_cell(paths, use_abs_w=True, prior="balanced", norm=None):
     """-> (r_ens, y, w, per_seed_ic) or None if the seeds are not aligned."""
     ref_y = ref_w = None
     ratios, ics = [], []
@@ -61,7 +62,7 @@ def ensemble_cell(paths, use_abs_w=True, prior="balanced"):
                 or not np.allclose(w, ref_w, rtol=1e-5):
             return None
         score = np.clip(score, _EPS, 1.0 - _EPS)
-        r = score / (1.0 - score) * _prior_factor(prior, y, w)
+        r = score / (1.0 - score) * _prior_factor(prior, y, w, norm)
         ratios.append(r)
         ics.append(float(np.sum(w[~y] * r[~y]) / w[~y].sum() - 1.0))
     return np.mean(ratios, axis=0), ref_y, ref_w, np.asarray(ics)
@@ -74,11 +75,20 @@ def main():
     ap.add_argument("--output-prefix", default="ensemble")
     ap.add_argument("--nbins", type=int, default=20)
     ap.add_argument("--neff-min", type=float, default=25.0)
+    ap.add_argument("--normalization", help="evenet-train/normalization.pt -> use the "
+                                            "'trained' prior + signed weights (matches "
+                                            "eval_closure.py --normalization)")
     args = ap.parse_args()
+    norm = load_norm(args.normalization) if args.normalization else None
+    prior = "trained" if norm is not None else "balanced"
+    use_abs = norm is None
+    if norm is not None:
+        print(f"prior factor = {_prior_factor('trained', None, None, norm):.4f}  "
+              f"(convention: trained, signed weights)")
 
     results = {}
     for (cfg, size), paths in sorted(cells(args.store_dir).items()):
-        got = ensemble_cell(paths)
+        got = ensemble_cell(paths, use_abs_w=use_abs, prior=prior, norm=norm)
         if got is None:
             print(f"SKIP {cfg} size={size}: seeds not aligned on the test split")
             continue
@@ -86,7 +96,7 @@ def main():
         # closure_metrics works from a score; invert r -> p (monotone, prior already applied)
         p_ens = r_ens / (1.0 + r_ens)
         met = closure_metrics(p_ens, y, w, args.nbins, args.neff_min,
-                              prior="balanced", use_abs_w=False)
+                              prior="balanced", use_abs_w=False)   # prior already in r_ens
         auc = weighted_auc(p_ens, y.astype(float), w)
         met.update(auc=auc, n_members=len(paths),
                    per_seed_ic_mean=float(np.mean(ics)),
