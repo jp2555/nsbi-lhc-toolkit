@@ -6,9 +6,10 @@ converts to an unbiased density ratio -- this script measures exactly that on th
 prediction.pt files the AUC money plot uses (see EVENET_FEASIBILITY_NOTE sec 8, gate G0.5).
 
 For scores p, labels y (0=ref, 1=hyp), weights w, the ratio estimate is
-    r_hat(x) = p/(1-p) * W0/W1,          W_c = sum of test weights in class c
-(assumes the test mixture matches the training mixture, which holds for the shared
-preprocess split). Two metrics per (config, size, seed):
+    r_hat(x) = p/(1-p) * f_prior
+with f_prior fixed by the convention EveNet's own loss implies (see _prior_factor;
+pass --normalization <evenet-train/normalization.pt> to use it). Two metrics per
+(config, size, seed):
 
   integral closure   IC = sum_{y=0} w * r_hat / sum_{y=0} w - 1
                      (E_ref[r] = 1 for the true ratio; analysis gate |IC| < 0.01)
@@ -47,14 +48,42 @@ from plot_data_efficiency import CONFIGS, _TAG, _softmax_signal  # noqa: E402
 _EPS = 1e-6
 
 
-PRIORS = ("balanced", "weighted", "counts")
+PRIORS = ("trained", "balanced", "weighted", "counts")
 
 
-def _prior_factor(prior, y, w):
-    """Inverse of the class prior the TRAINING loss effectively used (see
-    diagnose_ratio_convention.py -- chosen by measurement, not assumption)."""
-    if prior == "balanced":            # EveNet equalises classes internally: measured
-        return 1.0                     # unanimous over all 15 size-1.0 runs (2026-07-15)
+def load_norm(path):
+    """-> (class_balance, class_counts) as float arrays, from normalization.pt."""
+    import torch
+    d = torch.load(path, map_location="cpu")
+    to_np = lambda v: np.asarray(v.detach().cpu().numpy() if hasattr(v, "detach") else v,
+                                 dtype=float)
+    return to_np(d["class_balance"]), to_np(d["class_counts"])
+
+
+def _prior_factor(prior, y, w, norm=None):
+    """Factor converting the learned odds into the density ratio.
+
+    "trained" is the one implied by EveNet's own loss. That loss is
+        sum_i c_{y_i} w_i CE_i / sum_i c_{y_i} w_i
+    (evenet/network/loss/classification.py; c = normalization.pt["class_balance"],
+    w = the SIGNED per-event weight, since Training.apply_event_weight is true), whose
+    population optimum is  p/(1-p) = c1*dW1(x) / (c0*dW0(x)).  The physical ratio is
+    r = [dW1/W1]/[dW0/W0], so
+
+        r = p/(1-p) * (c0*W0) / (c1*W1),      W_c = class_counts[c]
+
+    with W taken from normalization.pt, i.e. the SIGNED weighted class sums of the TRAIN
+    split -- the same quantities the loss normalised by. Using test-split or |w| sums
+    instead leaves a residual (for our data: 0.9493 vs 0.8593, a 10.5% overshoot).
+    The other three options are the historical guesses, kept for comparison.
+    """
+    if prior == "trained":
+        if norm is None:
+            raise ValueError("prior='trained' needs --normalization <normalization.pt>")
+        cb, cc = norm
+        return float(cb[0] * cc[0]) / float(cb[1] * cc[1])
+    if prior == "balanced":
+        return 1.0
     if prior == "weighted":
         return w[~y].sum() / w[y].sum()
     if prior == "counts":
@@ -62,7 +91,8 @@ def _prior_factor(prior, y, w):
     raise ValueError(f"unknown prior {prior!r}")
 
 
-def closure_metrics(p, y, w, nbins=20, neff_min=25.0, prior="balanced", use_abs_w=True):
+def closure_metrics(p, y, w, nbins=20, neff_min=25.0, prior="balanced",
+                    use_abs_w=True, norm=None):
     """-> dict(integral, integral_err, shape_rms, shape_rms_norm, shape_chi2ndf,
     shape_max, nbins_used). Pure numpy.
 
@@ -85,7 +115,7 @@ def closure_metrics(p, y, w, nbins=20, neff_min=25.0, prior="balanced", use_abs_
     W1, W0 = w[y].sum(), w[~y].sum()
     if W0 <= 0 or W1 <= 0:
         return nan
-    r_hat = p / (1.0 - p) * _prior_factor(prior, y, w)
+    r_hat = p / (1.0 - p) * _prior_factor(prior, y, w, norm)
 
     integral = float(np.sum(w[~y] * r_hat[~y]) / W0 - 1.0)
     res = w[~y] * (r_hat[~y] - (1.0 + integral))
@@ -153,7 +183,7 @@ def _load_prediction(path):
     return _softmax_signal(logits), label, weight
 
 
-def collect(store, nbins, neff_min, prior="balanced", use_abs_w=True):
+def collect(store, nbins, neff_min, prior="balanced", use_abs_w=True, norm=None):
     """-> {config: {size: [metrics dict per seed]}}"""
     out = {c: {} for c in CONFIGS}
     for p in sorted(glob.glob(os.path.join(store, "predictions", "*", "prediction.pt"))):
@@ -163,7 +193,7 @@ def collect(store, nbins, neff_min, prior="balanced", use_abs_w=True):
         try:
             score, label, weight = _load_prediction(p)
             met = closure_metrics(score, label, weight, nbins, neff_min,
-                                  prior=prior, use_abs_w=use_abs_w)
+                                  prior=prior, use_abs_w=use_abs_w, norm=norm)
         except Exception as e:                    # noqa: BLE001
             print(f"  skip {p}: {e}")
             continue
@@ -233,8 +263,12 @@ def main():
                     help="writes <prefix>.json and <prefix>.png")
     ap.add_argument("--nbins", type=int, default=20)
     ap.add_argument("--neff-min", type=float, default=25.0)
-    ap.add_argument("--prior", choices=PRIORS, default="balanced",
-                    help="class prior the training loss used (measured: balanced)")
+    ap.add_argument("--prior", choices=PRIORS, default=None,
+                    help="ratio prior convention; defaults to 'trained' when "
+                         "--normalization is given, else 'balanced'")
+    ap.add_argument("--normalization", help="evenet-train/normalization.pt -> enables "
+                                            "prior='trained' (the convention EveNet's loss "
+                                            "implies) and signed-weight closure")
     ap.add_argument("--signed-weights", action="store_true",
                     help="use stored signed weights instead of |w| (default |w|)")
     ap.add_argument("--self-test", action="store_true")
@@ -246,10 +280,19 @@ def main():
     if not args.store_dir:
         ap.error("--store_dir required unless --self-test")
 
-    print(f"prior convention: {args.prior}   weights: "
-          f"{'|w|' if not args.signed_weights else 'signed'}")
+    norm = load_norm(args.normalization) if args.normalization else None
+    if args.prior is None:
+        args.prior = "trained" if norm is not None else "balanced"
+    # the trained convention is defined on the SIGNED weight densities the loss used
+    use_abs = not args.signed_weights if args.prior != "trained" else False
+    if args.prior == "trained":
+        cb, cc = norm
+        print(f"class_balance={cb}  class_counts={cc}")
+        print(f"prior factor  = (c0*W0)/(c1*W1) = "
+              f"{_prior_factor('trained', None, None, norm):.4f}")
+    print(f"prior convention: {args.prior}   weights: {'|w|' if use_abs else 'signed'}")
     results = collect(args.store_dir, args.nbins, args.neff_min,
-                      prior=args.prior, use_abs_w=not args.signed_weights)
+                      prior=args.prior, use_abs_w=use_abs, norm=norm)
     for cfg in CONFIGS:
         for size in sorted(results.get(cfg, {})):
             v = results[cfg][size]
