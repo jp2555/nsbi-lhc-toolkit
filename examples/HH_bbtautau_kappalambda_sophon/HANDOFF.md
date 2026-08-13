@@ -32,6 +32,28 @@ the **low-statistics** regime — especially systematic variations — for κ_λ
 - ⏭ **next: `convert`** (blocked ONLY on NTUPLES location — open item 1) → `preprocess` →
   `configs` → `train` (ACCOUNT=m5295_g) → `predict` → `eval` (prints the adoption verdict).
 
+## RESULT (2026-07-15): G0 passes on discrimination, G0.5 is a null
+Full write-up: **`EVENET_G0_RESULTS.pdf`** (8pp). Headline: *pre-training buys ordering,
+not calibration.*
+- **AUC**: finetune/frozen beat scratch by +0.014–0.017 at every fraction ≥0.01 (many σ);
+  ensemble AUC at 1.0 = 0.834/0.834 vs scratch 0.829, all above the ceiling's 0.817.
+  Equivalent-data multiplier **≈3–4.5×**. Frozen ≈ finetune everywhere ⇒ the value is in the
+  *representation*, not backbone adaptation. Only 0.003 inverts (optimiser-transient regime:
+  1 gradient step per "epoch", different LR recipes — treat as artefact pending ablation).
+- **Closure**: no arm passes the gates at any fraction ⇒ pre-registered left-shift metric
+  UNDEFINED; fallback (matched-fraction comparison) shows arms trading places, no ordering.
+  Ensembling cannot help: |IC|_ens ≡ |signed mean of per-seed IC| (linearity of E_ref), and
+  15/18 cells have all seeds same-sign ⇒ systematic +0.13…+0.29, not zero-centred noise.
+- **Ceiling contrast**: feature BDT reaches |IC|=0.018 at full stats where every EveNet arm
+  sits at 0.13–0.17 — *better calibrated despite worse AUC* ⇒ the problem is the training
+  objective, not the task.
+- **Leading mechanism (testable)**: EveNet's classification loss is diffusion-time weighted
+  (α²(t)·CE, noise_prob=1.0 per the authors' recipe) while predict runs at t=0 — a t-averaged
+  CE is not a proper scoring rule at t=0, so ranking transfers but logit scale need not.
+  **Decisive ablation: rerun fraction 1.0 (15 runs) with `noise_prob: [0.0, 0.0]`.**
+- Analysis corrections made before reading results: prior convention (measured balanced, not
+  W0/W1 — the earlier flat-in-N closure was this bug), |w| weights, predict-config fixes.
+
 ## New since 2026-06-27 (all verified locally where stated)
 | File | Role | Verified |
 |---|---|---|
