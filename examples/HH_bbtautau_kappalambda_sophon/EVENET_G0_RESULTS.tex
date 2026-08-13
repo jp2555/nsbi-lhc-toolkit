@@ -226,17 +226,73 @@ same $\sigma_b$ normalises the reported
 $\chi^2/\mathrm{ndf} = \langle (\mathrm{rel}_b/\sigma_b)^2 \rangle$, which is $\approx 1$
 when the residuals are pure noise and $\gg 1$ when they are not.
 
-\noindent We quote \SCn\ alongside $\mathrm{SC_{rms}}$: the same quantity after rescaling
-$\hat r$ by $1/\Eref[\hat r]$, i.e.\ the shape error with the global normalisation
-divided out. This matters because a constant scale error shifts \emph{every} bin equally
-and therefore contaminates $\mathrm{SC_{rms}}$ with the $\IC$ failure --- the two raw
-numbers are not independent.
+\subsection{$\mathrm{SC_{rms}}$ versus \SCn}
 
-\noindent The decomposition matters because the two failure modes have different
-consequences: a global scale error in $\hat r$ is degenerate with the rate term of an
-NSBI fit and removable by construction, whereas a shape error deforms the per-event
-likelihood and is not. \SCn\ is a \emph{post-hoc} diagnostic added during analysis and
-is reported alongside, never instead of, the pre-registered gates. Validation: on
+\paragraph{Mechanically.} $\mathrm{SC_{rms}}$ is computed from $\hat r$ as delivered;
+\SCn\ from $\hat r/\Eref[\hat r]$, i.e.\ after forcing the integral closure to zero. The
+difference is exactly the contamination of the shape metric by the normalisation error.
+Suppose $\hat r = c\,r_{\mathrm{true}}$ --- a \emph{pure} scale error with a perfect
+shape. Then in every bin $A_b/B_b = c$, so $\mathrm{rel}_b = c-1$ for all $b$ and
+$\mathrm{SC_{rms}} \simeq |c-1| \simeq |\IC|$, even though nothing about the shape is
+wrong. Dividing by $\Eref[\hat r] = c$ first gives $\SCn = 0$. The two raw numbers are
+therefore \emph{not} independent, and $\mathrm{SC_{rms}}$ alone cannot distinguish ``the
+ratio is the wrong size'' from ``the ratio is the wrong function''. Reading them together
+gives three clean signatures:
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}lcccl@{}}
+\toprule
+signature & $|\IC|$ & $\mathrm{SC_{rms}}$ & \SCn & diagnosis \\
+\midrule
+calibrated & $\approx 0$ & $\approx 0$ & $\approx 0$ & usable \\
+pure scale error & $|c-1|$ & $\approx |\IC|$ & $\approx 0$ & normalisation only --- removable \\
+shape distortion & any & large & large & deformed likelihood --- not removable \\
+\bottomrule
+\end{tabular}
+\caption{How to read the pair. Validated on synthetic data: a $\times1.4$ scale error
+gives $(0.399,\,0.399,\,0.000)$; a temperature-$1.5$ distortion gives
+$(0.450,\,0.694,\,0.503)$.}
+\label{tab:signatures}
+\end{table}
+
+\paragraph{Physically --- why the distinction is not cosmetic.} In an NSBI likelihood the
+contribution of process $p$ enters as $\nu_p\,p_p(x)$, with $\nu_p$ the expected yield
+(from cross section $\times$ luminosity $\times$ acceptance, determined independently of
+the classifier) and $p_p(x) = r_p(x)\,p_{\mathrm{ref}}(x)$. If $\hat r_p = c\,r_p$, then
+%
+\begin{equation}
+\nu_p\,\hat p_p(x) \;=\; \big(c\,\nu_p\big)\,\Big[\hat p_p(x)/c\Big],
+\end{equation}
+%
+i.e.\ the constant is algebraically indistinguishable from having mis-stated the
+\emph{yield} by the factor $c$ while leaving the normalised per-event shape untouched.
+Two consequences follow. First, it is \emph{removable by construction}: rescaling
+$\hat r_p \to \hat r_p/\Eref[\hat r_p]$ on held-out reference events restores
+$\Eref = 1$ exactly, at the cost only of the statistical error on that single number.
+Second, uncorrected, it propagates into the fit \emph{solely} through that process's
+normalisation, where it is degenerate with a rate nuisance parameter. For a coupling
+measurement this is emphatically not harmless --- $\sigma(\kl)$ is exactly what carries
+the physics, so an uncorrected $c$ biases \kl\ --- but it is a one-parameter defect with
+a one-parameter cure, and it does not touch the discriminant.
+
+A shape error is different in kind. There $\hat r(x)/r(x)$ varies with $x$, so events are
+mis-weighted \emph{relative to one another}: the per-event likelihood is deformed, no
+single constant repairs it, and no rate parameter absorbs it, so the induced bias on \kl\
+survives profiling. This is why we gate on both, and why \SCn\ --- reported alongside,
+never instead of, the pre-registered pair --- is the number that says whether a failure
+is repairable.
+
+\paragraph{Which signature our data shows.} At full statistics all three arms sit close
+to the ``pure scale'' row of Table~\ref{tab:signatures}: frozen
+$(|\IC|,\mathrm{SC_{rms}},\SCn) = (0.171,\,0.163,\,0.044)$, finetune
+$(0.133,\,0.115,\,0.074)$, scratch $(0.156,\,0.194,\,0.084)$. The residual is
+predominantly a normalisation error with a comparatively small shape component --- which
+is precisely the fingerprint of a mis-specified prior factor in the ratio conversion, and
+the reason the outstanding check of Sec.~\ref{sec:mechanism} targets exactly that.
+
+\noindent \SCn\ is a \emph{post-hoc} diagnostic added during analysis and is reported
+alongside, never instead of, the pre-registered gates. Validation: on
 synthetic data a pure $\times1.4$ scale error gives $\mathrm{SC_{rms}} = 0.399$ but
 $\SCn = 0.000$, while a genuine temperature distortion gives $0.694$ and $0.503$
 respectively.
