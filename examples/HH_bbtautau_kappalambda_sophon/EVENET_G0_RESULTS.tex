@@ -185,6 +185,47 @@ carries a statistical error and is ``consistent with 1'', never ``equal to 1''.
   show up there.
 \end{description}
 
+\paragraph{Why the per-bin error is $1/n_{\mathrm{eff}}$.} Both $A_b$ and $B_b$ are
+Monte Carlo sums over finite, \emph{weighted} samples, so both fluctuate. For a weighted
+sum $S = \sum_i v_i$ over events whose presence is independent (Poisson), the variance is
+$\mathrm{Var}(S) = \sum_i v_i^2$, and therefore the \emph{relative} variance is
+%
+\begin{equation}
+\frac{\mathrm{Var}(S)}{S^2} \;=\; \frac{\sum_i v_i^2}{\big(\sum_i v_i\big)^2}
+\;\equiv\; \frac{1}{n_{\mathrm{eff}}},
+\qquad
+n_{\mathrm{eff}} \;\equiv\; \frac{\big(\sum_i v_i\big)^2}{\sum_i v_i^2},
+\label{eq:neff}
+\end{equation}
+%
+which is precisely the definition of the effective sample size $n_{\mathrm{eff}}$ (Kish).
+For unweighted events ($v_i = 1$) it collapses to $n_{\mathrm{eff}} = N$ and to the
+familiar Poisson result $\sqrt{N}/N = 1/\sqrt{N}$; unequal weights always reduce it.
+Concretely, $v = (1,1,1,1)$ gives $n_{\mathrm{eff}} = 16/4 = 4$, whereas
+$v = (10,1,1,1)$ gives $169/103 = 1.6$: four events that behave statistically like $1.6$,
+because a single event carries most of the sum. In our bins $v_i = w_i \hat r_i$ on the
+reference side --- the reweighting inflates the weight spread, which is why bins at
+$\hat r \to \infty$ are dropped by the $n_{\mathrm{eff}}$ threshold rather than allowed to
+dominate --- and $v_i = w_i$ on the hypothesis side. Since $\mathrm{rel}_b = A_b/B_b - 1$
+is a ratio of estimates from two \emph{independent} samples, the relative variances add:
+$\sigma_b^2 = 1/n_{\mathrm{eff},0} + 1/n_{\mathrm{eff},1}$.
+
+\paragraph{Why the subtraction is in quadrature.} Write
+$\mathrm{rel}_b = \beta_b + \varepsilon_b$, with $\beta_b$ the genuine bias and
+$\varepsilon_b$ zero-mean noise of variance $\sigma_b^2$. Then
+$\mathbb{E}[\mathrm{rel}_b^2] = \beta_b^2 + \sigma_b^2$ --- the naive RMS is inflated by
+noise even for a perfectly calibrated model, and increasingly so at small statistics,
+exactly where the interesting comparisons live. Averaging over bins and subtracting the
+known $\sigma_b^2$ therefore estimates the bias RMS,
+$\mathrm{SC_{rms}} = \sqrt{\max\big(\langle \mathrm{rel}^2 - \sigma^2 \rangle,\, 0\big)}$.
+The clipping at zero is why exact $0.000$ entries appear in Table~\ref{tab:closure}: they
+mean ``no bias resolvable above the statistical floor'', not literal perfection. Without
+the subtraction the metric rejects correct models --- the first implementation did
+precisely that, failing an analytically calibrated toy in three seeds out of four. The
+same $\sigma_b$ normalises the reported
+$\chi^2/\mathrm{ndf} = \langle (\mathrm{rel}_b/\sigma_b)^2 \rangle$, which is $\approx 1$
+when the residuals are pure noise and $\gg 1$ when they are not.
+
 \noindent We quote \SCn\ alongside $\mathrm{SC_{rms}}$: the same quantity after rescaling
 $\hat r$ by $1/\Eref[\hat r]$, i.e.\ the shape error with the global normalisation
 divided out. This matters because a constant scale error shifts \emph{every} bin equally
