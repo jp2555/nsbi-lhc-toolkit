@@ -34,6 +34,11 @@
 #   IMAGE=avencast1994/evenet:1.5      shifter image
 #   INPUT_FORMAT=crown                 or nanoaod (convert stage input format)
 #   TAU_ENCODING=anonymous             or corner (G1 A/B: writes npz under npz-$TAU_ENCODING/)
+#   VARIANT=<none>|nonoise             nonoise = classification trained on CLEAN inputs
+#                                      (noise_prob [0,0]) at fraction 1.0 only; outputs go to
+#                                      $STORE/variant-nonoise/ and config_farm-*-nonoise/,
+#                                      reading the SHARED preprocessed data from $STORE
+#   SIZES_YAML=[1.0]                   override the workflow's dataset_size_choice
 #   KL_HYP=5                           hypothesis class vs the SM kl=1 reference (0 or 5)
 #   TASK=kl                            or syst (nominal-vs-jes_mhh, Money Plot 2)
 #   BTAG_BRANCH=Jet_btagUParTAK4B      NanoAOD b-tag discriminant branch
@@ -63,8 +68,21 @@ if [ -z "${FEATURES:-}" ]; then      # feature ntuple: repo-local copies first, 
     FEATURES="${FEATURES:-/pscratch/sd/j/jing/NSBI-irishep/dihiggs_bbtautau/dihiggs_powheg_data.root}"
 fi
 NPZ="$STORE/npz-$TAU_ENCODING"
-FARM="$HERE/config_farm-$TASK-$TAU_ENCODING"
 CEILING_JSON="$STORE/ceiling-kl$KL_HYP.json"
+# VARIANT: rerun a slice of the sweep with ONE config value changed, fully separated from
+# the baseline. Separation is mandatory, not cosmetic: the run-tag regex in
+# plot_data_efficiency.py uses re.search, so a suffixed tag would parse as a baseline run
+# and be silently merged into the baseline cells as an extra seed. Everything except the
+# flipped knob is shared -- notably the preprocessed data, read from the MAIN store.
+VARIANT="${VARIANT:-}"
+case "$VARIANT" in
+    "")        STORE_RUN="$STORE"; SFX="" ;;
+    nonoise)   STORE_RUN="$STORE/variant-nonoise"; SFX="-nonoise"
+               SIZES_YAML="${SIZES_YAML:-[1.0]}" ;;   # calibration-mechanism test @ full stats
+    *)         echo "ERROR: unknown VARIANT=$VARIANT (known: nonoise)" >&2; exit 1 ;;
+esac
+FARM="$HERE/config_farm-$TASK-$TAU_ENCODING$SFX"
+RESOLVED="resolved$SFX"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 note() { echo "== $*"; }
@@ -218,18 +236,23 @@ stage_configs() {
         -e "s|<PATH_TO>/Exotic-Higgs-Study/configs/resonance.yaml|$HERE/configs/resonance_klambda.yaml|" \
         -e "s|<PATH_TO>/EveNet-Full|$EVENET_SRC|" \
         -e "s|<NERSC_ACCOUNT>|${ACCOUNT:-m5295_g}|" \
-        -e "s|^predict_yaml: null.*|predict_yaml: $HERE/configs/predict_klambda.resolved.yaml|" \
-        -e "s|^train_yaml: train_klambda.yaml|train_yaml: train_klambda.resolved.yaml|" \
+        -e "s|^predict_yaml: null.*|predict_yaml: $HERE/configs/predict_klambda.$RESOLVED.yaml|" \
+        -e "s|^train_yaml: train_klambda.yaml|train_yaml: train_klambda.$RESOLVED.yaml|" \
         -e "s|<STORE>|$STORE|g" \
-        configs/workflow_klambda.yaml > configs/workflow_klambda.resolved.yaml
+        ${SIZES_YAML:+-e "s|^dataset_size_choice: .*|dataset_size_choice: $SIZES_YAML|"} \
+        configs/workflow_klambda.yaml > configs/workflow_klambda.$RESOLVED.yaml
+    # the ONLY knob the nonoise variant flips: classification trained on clean inputs, to
+    # match the t=0 endpoint used at predict time (see EVENET_G0_RESULTS sec 7)
     sed -e "s|<STORE>|$STORE|g" -e "s|<WANDB_ENTITY>|${WANDB_ENTITY:-$USER}|" \
-        configs/train_klambda.yaml > configs/train_klambda.resolved.yaml
+        ${VARIANT:+-e "s|noise_prob: *\[1.0, 1.0\]|noise_prob:     [0.0, 0.0]|"} \
+        configs/train_klambda.yaml > configs/train_klambda.$RESOLVED.yaml
     sed -e "s|<STORE>|$STORE|g" \
-        configs/predict_klambda.yaml > configs/predict_klambda.resolved.yaml
-    ! grep -qE "<(STORE|PATH_TO|NERSC|WANDB)" configs/*.resolved.yaml \
-        || die "unresolved <tokens> remain in configs/*.resolved.yaml"
-    $CONVERT_PY scripts/make_klambda_configs.py configs/workflow_klambda.resolved.yaml \
-        --farm "$FARM" --store_dir "$STORE" --ray_dir "${PSCRATCH:-/tmp}/ray-$USER"
+        configs/predict_klambda.yaml > configs/predict_klambda.$RESOLVED.yaml
+    ! grep -qE "<(STORE|PATH_TO|NERSC|WANDB)" configs/*.$RESOLVED.yaml \
+        || die "unresolved <tokens> remain in configs/*.$RESOLVED.yaml"
+    $CONVERT_PY scripts/make_klambda_configs.py configs/workflow_klambda.$RESOLVED.yaml \
+        --farm "$FARM" --store_dir "$STORE_RUN" --data_store_dir "$STORE" \
+        --ray_dir "${PSCRATCH:-/tmp}/ray-$USER"
     [ -f "$FARM/predict-evenet.sh" ] || die "predict-evenet.sh not emitted — check predict_yaml"
     note "LOAD-TEST one config inside the shifter image before submitting the array:"
     note "  shifter --image=$IMAGE python3 -c \"import yaml; yaml.safe_load(open('$FARM/\$(ls $FARM | head -1)'))\" && echo yaml-ok"
@@ -262,7 +285,7 @@ stage_predict() {
     [ -n "${ACCOUNT:-}" ] || die "set ACCOUNT=<mXXXX_g> for sbatch (or use: predict-local on a GPU node)"
     # pre-registered selection rule: predict loads the newest ckpt (mtime), so mark the
     # BEST-val checkpoint newest in every run dir (identical rule for all arms)
-    $CONVERT_PY scripts/select_best_ckpt.py --store "$STORE"
+    $CONVERT_PY scripts/select_best_ckpt.py --store "$STORE_RUN"
     local n; n=$(wc -l < "$FARM/predict-evenet.sh")
     cat > "$FARM/predict-array.sbatch" <<EOF
 #!/bin/bash
@@ -286,12 +309,12 @@ stage_eval() {
     cd "$HERE"
     [ -n "${CEILING:-}" ] || { [ -f "$CEILING_JSON" ] && CEILING="$CEILING_JSON"; }
     note "G0: AUC money plot (ceiling: ${CEILING:-none — run: ceiling})"
-    $CONVERT_PY scripts/plot_data_efficiency.py --store_dir "$STORE" \
-        --output "data_efficiency-$TASK-$TAU_ENCODING.png" \
+    $CONVERT_PY scripts/plot_data_efficiency.py --store_dir "$STORE_RUN" \
+        --output "data_efficiency-$TASK-$TAU_ENCODING$SFX.png" \
         ${CEILING:+--ceiling "$CEILING"}
     note "G0.5: ratio-closure gates (|IC| vs stat, SC_rms < 0.05, chi2/ndf ~ 1)"
-    $CONVERT_PY scripts/eval_closure.py --store_dir "$STORE" \
-        --output-prefix "closure-$TASK-$TAU_ENCODING"
+    $CONVERT_PY scripts/eval_closure.py --store_dir "$STORE_RUN" \
+        --output-prefix "closure-$TASK-$TAU_ENCODING$SFX"
 }
 
 case "${1:-}" in

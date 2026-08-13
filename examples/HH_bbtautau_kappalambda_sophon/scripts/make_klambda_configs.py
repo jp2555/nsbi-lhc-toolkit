@@ -44,6 +44,11 @@ def prepare(args):
     working_dir = _abs(wf["working_dir"])
     image = wf["image"]
     store = args.store_dir or wf["store_dir"]
+    # Outputs (checkpoints/, predictions/) go to `store`; the preprocessed inputs
+    # (evenet-train/normalization.pt, evenet-test/) live in `data_store`. They differ only
+    # for variant runs (see run_option_a.sh VARIANT), which write to their own output store
+    # while READING the baseline's data so the two runs differ by exactly one config value.
+    data_store = args.data_store_dir or store
     pretrain_choice = wf["pretrain_choice"]
     sizes = wf["dataset_size_choice"]
     seeds = wf.get("seeds", [0])
@@ -63,9 +68,9 @@ def prepare(args):
 
                 cfg["options"]["Dataset"]["dataset_limit"] = size
                 cfg["options"]["Dataset"]["normalization_file"] = os.path.join(
-                    store, "evenet-train", "normalization.pt")
-                cfg["platform"]["data_parquet_dir"] = wf.get("data_parquet_dir",
-                                                             os.path.join(store, "evenet-train"))
+                    data_store, "evenet-train", "normalization.pt")
+                cfg["platform"]["data_parquet_dir"] = wf.get(
+                    "data_parquet_dir", os.path.join(data_store, "evenet-train"))
 
                 cfg["options"]["Training"]["pretrain_model_load_path"] = spec["path"]
                 cfg["options"]["Training"]["seed"] = seed
@@ -100,12 +105,12 @@ def prepare(args):
                     # etc. OFF); copy the train combo's Components so they can never drift.
                     pc["options"]["Training"]["Components"] = deepcopy(
                         cfg["options"]["Training"]["Components"])
-                    pc["platform"]["data_parquet_dir"] = os.path.join(store, "evenet-test")
+                    pc["platform"]["data_parquet_dir"] = os.path.join(data_store, "evenet-test")
                     pc["options"]["prediction"]["output_dir"] = os.path.join(store, "predictions", tag)
                     pc["options"]["Training"]["model_checkpoint_load_path"] = os.path.join(
                         store, "checkpoints", tag)
                     pc["options"]["Dataset"]["normalization_file"] = os.path.join(
-                        store, "evenet-train", "normalization.pt")
+                        data_store, "evenet-train", "normalization.pt")
                     pc_path = os.path.join(farm, f"{tag}_predict.yaml")
                     with open(pc_path, "w") as fout:
                         yaml.safe_dump(pc, fout, sort_keys=False)
@@ -131,6 +136,9 @@ def main():
     ap.add_argument("config_workflow")
     ap.add_argument("--farm", default="config_farm")
     ap.add_argument("--store_dir", default=None, help="override workflow.store_dir")
+    ap.add_argument("--data_store_dir", default=None,
+                    help="store holding the SHARED evenet-train/ and evenet-test/ "
+                         "(default: --store_dir; differs only for VARIANT runs)")
     ap.add_argument("--ray_dir", default="ray_tmp")
     prepare(ap.parse_args())
 
