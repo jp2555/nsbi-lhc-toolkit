@@ -84,6 +84,12 @@ def bootstrap_cell(p_ens, y, w, nbins, neff_min, n_boot, tag, keep_bins):
     keep_bins (the point estimate's bins_kept) freezes the shape statistic's bin set:
     Poisson(1) halves each bin's Kish n_eff, so re-deriving the acceptance per replica
     would drop marginal bins and measure a different statistic than the one quoted.
+
+    tag seeds the rng and is the SIZE only, not cfg-size: all arms share the test
+    events, so common replica draws make the per-replica ICs (stored as boot_ic)
+    PAIRED across arms -- std over replicas of IC_A - IC_B cancels the common
+    test-sample fluctuation. Pairing is valid iff the arms share event order; compare
+    boot_w_checksum across cells before differencing.
     """
     rng = np.random.default_rng(zlib.crc32(tag.encode()))
     ics, shapes, aucs = [], [], []
@@ -98,7 +104,9 @@ def bootstrap_cell(p_ens, y, w, nbins, neff_min, n_boot, tag, keep_bins):
             "boot_ic_mean": float(np.mean(ics)),
             "boot_ic_std": float(np.std(ics)),
             "boot_shape_rms_std": float(np.std(shapes)),
-            "boot_auc_std": float(np.std(aucs))}
+            "boot_auc_std": float(np.std(aucs)),
+            "boot_ic": [round(float(v), 6) for v in ics],
+            "boot_w_checksum": round(float(np.sum(w)), 4)}
 
 
 def main():
@@ -145,7 +153,7 @@ def main():
               f"SC_norm={met['shape_rms_norm']:.4f}  chi2/ndf={met['shape_chi2ndf']:.2f}")
         if args.bootstrap:
             met.update(bootstrap_cell(p_ens, y, w, args.nbins, args.neff_min,
-                                      args.bootstrap, f"{cfg}-{size}",
+                                      args.bootstrap, f"size-{size}",
                                       met["bins_kept"]))
             seed_term = met["per_seed_ic_std"] / np.sqrt(len(ics))
             print(f"{'':9s} boot({args.bootstrap}): IC +-{met['boot_ic_std']:.4f} (test) "
