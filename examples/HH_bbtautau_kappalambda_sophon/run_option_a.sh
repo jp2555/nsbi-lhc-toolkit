@@ -53,6 +53,9 @@
 #   BTAG_BRANCH=Jet_btagUParTAK4B      NanoAOD b-tag discriminant branch
 #   CONVERT_PY=python3                 python with numpy+uproot for the adapter steps
 #   NGPU=1  TIME=04:00:00              per training task (sbatch array)
+#   QOS=regular                        train-array QOS; QOS=shared bills the used node
+#                                      FRACTION (1 GPU + 32c) instead of the whole
+#                                      4-GPU node -- use for small-fraction tiers
 #   FEATURES=.../dihiggs_powheg_data.root   prelim-result feature ntuple (ceiling stage)
 set -euo pipefail
 
@@ -300,7 +303,7 @@ stage_train() {
     fi
     cat > "$FARM/train-array.sbatch" <<EOF
 #!/bin/bash
-#SBATCH -A $ACCOUNT -C gpu -q regular -t ${TIME:-04:00:00}
+#SBATCH -A $ACCOUNT -C gpu -q ${QOS:-regular} -t ${TIME:-04:00:00}
 #SBATCH -N 1 --gpus-per-task=${NGPU:-1} --ntasks=1 -c 32
 #SBATCH --array=1-$n%16
 #SBATCH -o $FARM/slurm-%A_%a.out
