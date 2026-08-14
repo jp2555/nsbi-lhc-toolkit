@@ -25,10 +25,10 @@
 \newcommand{\Eref}{\ensuremath{\mathbb{E}_{\mathrm{ref}}}}
 
 \title{EveNet for \kl\ Density-Ratio Learning in $HH\to\bbtt$:\\
-Pre-training Improves Discrimination and Ratio Shape,\\
-but Not Data Efficiency}
+Pre-training Improves Discrimination and Ratio Shape;\\
+Calibration Data Efficiency Not Yet Resolved}
 \author{Working note --- \bbtt\ \kl\ NSBI project}
-\date{16 July 2026 \\[2pt]
+\date{16 July 2026 (rev.\ 14 August 2026: (P5), Sec.~\ref{sec:power}) \\[2pt]
 \small Gates G0 / G0.5 of \texttt{EVENET\_FEASIBILITY\_NOTE}; 90-run sweep, branch \texttt{fm}}
 
 \begin{document}
@@ -51,9 +51,14 @@ feature-level gradient-boosted decision tree (BDT) ceiling. \textbf{(ii)~Calibra
 quality: pre-training wins at full statistics} --- with five-model ensembling the
 frozen-backbone arm is the \emph{only} configuration in the study that passes both analysis
 gates, and both pre-trained arms show ${\approx}3$--$4\sigma$ less residual structure than
-from-scratch. \textbf{(iii)~Data efficiency: no advantage} --- the pre-registered adoption
-metric, the closure left-shift, is undefined because neither fine-tuned nor from-scratch
-reaches the gates at \emph{any} fraction, and the reduced-fraction ordering is mixed. In
+from-scratch. \textbf{(iii)~Calibration data efficiency: underpowered, not null} --- the pre-registered
+adoption metric, the closure left-shift, is undefined because neither fine-tuned nor
+from-scratch reaches the gates at \emph{any} fraction; and the reduced-fraction ordering is
+dominated by seed-to-seed training noise, which on these same 90 networks is
+$13$--$160\times$ the corresponding AUC seed noise and persists at full statistics
+(Sec.~\ref{sec:power}). A powered extension --- fifteen further seeds per cell at the five
+reduced fractions, a paired test-set bootstrap, and the decision rule fixed in advance ---
+is registered as (P5) in Sec.~\ref{sec:prereg}. In
 both (i) and (ii) the frozen arm matches or beats fine-tuning, locating the benefit in the
 pre-trained \emph{representation} rather than in backbone adaptation. Section~\ref{sec:corr}
 documents three conversion errors found and fixed during analysis, one of which had
@@ -112,9 +117,30 @@ Fixed before any sweep output existed, reproduced unchanged:
   checkpoint (EveNet's predictor otherwise loads the final, most overfit, epoch).
 \item \textbf{Fallback.} If no arm passes anywhere, leaving the left-shift undefined, the
   secondary reading is relative closure at matched fractions, reported as such.
+\item \textbf{Seed-extension decision rule} \emph{(added 14 August 2026; fixed before any
+  $K>5$ output existed).} The sweep is extended by seeds $5$--$19$ at fractions
+  $\{0.003, 0.01, 0.02, 0.05, 0.1\}$ --- 225 runs, identical data, recipe,
+  best-validation selection and test split --- giving $K{=}20$ ensembles per cell there.
+  For each pre-trained arm $a \in \{\text{finetune}, \text{frozen}\}$ define
+  \[ \Delta_a = \tfrac{1}{5}\sum_f \big( |\IC|^{\mathrm{scratch}}_f - |\IC|^{a}_f \big),
+     \qquad
+     \sigma_{\Delta}^2 = \tfrac{1}{25}\sum_f \Big[\,
+     \sigma^2_{\mathrm{boot},f} \;+\;
+     \tfrac{\hat\sigma^2_{a,f} + \hat\sigma^2_{\mathrm{scratch},f}}{20} \,\Big], \]
+  where $|\IC|_f$ are the $K{=}20$ ensemble values, $\sigma_{\mathrm{boot},f}$ is the
+  standard deviation over 200 Poisson($\mu{=}1$) test-set replicas of the \emph{paired}
+  arm difference (common draws across arms at each fraction), and $\hat\sigma$ are the
+  per-seed spreads. Verdicts: $\Delta_a > 2\sigma_\Delta$ --- pre-training improves ratio
+  calibration; $\Delta_a < -2\sigma_\Delta$ --- it harms it; otherwise any effect is
+  bounded and quoted as $|\Delta_a| \lesssim 2\sigma_\Delta$ (forecast ${\approx}0.05$).
+  The same statistic on \SCr\ is reported as secondary, not decisive. All three outcomes
+  are reportable; none will be reinterpreted after unblinding.
 \end{enumerate}
 
-\noindent (P4) is the branch that materialised for the finetune--scratch comparison.
+\noindent (P4) is the branch that materialised for the finetune--scratch comparison. (P5)
+was registered after the $K{=}5$ results below were known, but before any extension job
+was submitted; the $K{=}5$ data motivated the campaign and play no further role in the
+verdict.
 
 % =====================================================================
 \section{Metrics}
@@ -387,6 +413,99 @@ from it; that contrast was an artefact of converting the two estimators under di
 conventions (Sec.~\ref{sec:corr}) and does not survive.
 
 % =====================================================================
+\section{Why calibration is harder to power than discrimination}
+\label{sec:power}
+
+The split verdict of Secs.~\ref{sec:auc}--\ref{sec:closure} --- discrimination resolved
+decisively by the same 90 runs that leave the calibration ordering ambiguous --- is not an
+accident of this dataset. The two metric families admit structurally different amounts of
+noise, on both the training and the test side. This section records the mechanisms and the
+measurements behind that statement: they fix the design of (P5), and they generalise to
+any foundation-model claim about NSBI.
+
+\paragraph{(a) AUC is a rank statistic; \IC\ is exponentially sensitive to the coordinate
+AUC discards.} AUC is invariant under every monotone remapping of the score: it sees only
+the ordering of test events. Decompose the difference between two seeds' learnt logit
+functions into a monotone part --- a global offset $\delta$ and gain --- and an
+order-changing part. The monotone part moves \IC\ directly
+($r \propto e^{f}$, so $\IC \approx e^{\delta}-1 \approx \delta$) and moves AUC by exactly
+zero; the order-changing part, which is all AUC can see, is small, because two networks
+trained on the same data mostly disagree about \emph{how confident} to be, not about which
+event is more signal-like. Measured on the sweep's own 90 networks
+(Table~\ref{tab:seednoise}), the per-seed spread of \IC\ is $13$--$160\times$ that of AUC,
+the disparity \emph{growing} with training statistics.
+
+\begin{table}[h]\centering\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+fraction & seed s.d.\ of \IC\ (ft/fr/scr) & seed s.d.\ of AUC (ft/fr/scr) & ratio \\
+\midrule
+0.003 & 0.145 / 0.219 / 0.247 & 0.006 / 0.008 / 0.012 & $24\times$ \\
+0.01  & 0.098 / 0.252 / 0.256 & 0.011 / 0.008 / 0.030 & $13\times$ \\
+0.02  & 0.104 / 0.131 / 0.131 & 0.004 / 0.008 / 0.002 & $26\times$ \\
+0.05  & 0.094 / 0.081 / 0.152 & 0.005 / 0.002 / 0.001 & $39\times$ \\
+0.1   & 0.040 / 0.098 / 0.105 & 0.002 / 0.001 / 0.003 & $43\times$ \\
+1.0   & 0.068 / 0.044 / 0.066 & 0.0002 / 0.0005 / 0.0004 & $161\times$ \\
+\bottomrule
+\end{tabular}
+\caption{Per-seed spread of the single-model \IC\ versus AUC, per (arm, fraction) cell;
+the ratio column is the mean-over-arms ratio. Training data grows $330\times$ down to the
+last row: the AUC spread collapses ${\approx}30\times$, the \IC\ spread only
+${\approx}3\times$.}
+\label{tab:seednoise}
+\end{table}
+
+\paragraph{(b) The offset is weakly pinned by the loss, so training noise concentrates in
+it.} Expanding the weighted cross-entropy about its minimum, a global logit shift
+$\delta$ costs $\Delta L \approx \tfrac12\,\delta^2 \sum_i w_i c_{y_i}\, p_i(1-p_i)$: the
+curvature is carried only by events near the decision boundary, and for a classifier at
+AUC $0.83$ most events are confident, $p(1-p)\to 0$. Numerically, $\delta = 0.05$ (a $5\%$
+\IC\ error, the size of the full-statistics seed scatter) costs
+$\Delta L \sim 10^{-4}$ --- invisible to early stopping and to best-validation checkpoint
+selection, so the frozen-in offset is effectively a per-seed random draw from the
+training trajectory. Evaluation adds a further monotone jitter: EveNet predicts from an
+exponential moving average of the \emph{parameters}, while normalisation-layer running
+buffers are not averaged, an offset-and-gain perturbation by construction. The diagnostic
+that separates this from sampling noise is the last row of Table~\ref{tab:seednoise}:
+$330\times$ more training data shrinks the \IC\ seed spread only ${\approx}3\times$
+(pure sampling would give $\sqrt{330}\approx 18\times$). The residual is optimisation and
+selection stochasticity, which no single training removes --- and which ensembling
+\emph{does} remove, because the offsets are approximately zero-centred across seeds
+(Sec.~\ref{sec:closure}).
+
+\paragraph{(c) The test side compounds it.} AUC is an average of a bounded comparison over
+$N_0 N_1 \approx 1.7\times10^{9}$ pairs: test-statistical error ${\approx}0.002$. \IC\ is
+the weighted mean of the heavy-tailed $\hat r$ over $4.9\times10^{4}$ reference events:
+floor $0.012$--$0.019$. Per cell, the measured AUC effect ($0.015$) stands at
+${\approx}7\sigma$ of its total noise; a plausible calibration effect ($0.03$) stands at
+$<1\sigma$ of its. The same 90 runs power one axis and not the other by construction of
+the metrics, not by bad luck.
+
+\paragraph{(d) The regime matters: reweighting versus discrimination.} When the two
+samples are nearly identical --- OmniFold-style data-versus-simulation
+reweighting~\cite{Mikuni:2024omnilearn,H1:2025prelim}, or a nominal-versus-shifted
+systematic variation --- the classifier sits at $p \approx 0.5$ everywhere, exactly where
+the offset curvature of (b) is maximal: calibration is \emph{cheap} in that regime, and
+the H1 measurement indeed reports training and initialisation variance negligible against
+data statistics. Well-separated signal-versus-background, as here, is the opposite corner.
+The published foundation-model evidence (validation loss, discrimination, distances
+between normalised unfolded distributions) therefore does not --- and structurally cannot
+--- speak to absolute ratio calibration at low $N$, which is the axis NSBI uniquely
+needs. The corollary for this programme: the natural near-term calibration win for a
+pre-trained model is the systematic-variation task of N3, whose ratios are near unity,
+not the signal-extraction ratio.
+
+\paragraph{(e) The arithmetic behind $K{=}20$.} At $K{=}5$ the seed term exceeds the test
+floor by $4$--$7\times$ at reduced fractions. $K{=}20$ brings the per-cell error to
+$0.02$--$0.06$, which resolves a consistent arm offset of ${\gtrsim}0.05$ at $2\sigma$
+across the five fractions --- the scale suggested by the discrimination gains --- while
+the seed count at which the seed term would meet the test floor is
+$K^{*} = (\hat\sigma/\sigma_{\mathrm{test}})^2 \approx 40$--$400$: seeds beyond
+${\approx}50$ buy little without a larger test split. Pairing the bootstrap draws across
+arms removes the common test fluctuation from arm differences at zero cost. These three
+numbers fix the (P5) design.
+
+% =====================================================================
 \section{Corrections applied during analysis}
 \label{sec:corr}
 
@@ -447,10 +566,11 @@ checkpoint.
   upstream~\cite{Shyamsundar:2025}.
 \item \textbf{One channel, one hypothesis pair} (\kl$=1$ vs.\ $5$; $\mu\tau_h$, $e\tau_h$).
   The \kl$=0$ pair and the systematic-variation task are untouched.
-\item \textbf{Ensemble metrics have no error bar} beyond the statistical error on $|\IC|$:
-  each cell is a single ensemble. The $\chi^2/\mathrm{ndf}$ comparison in
-  Sec.~\ref{sec:closure}(b) is the one shape statement with a quantified significance; the
-  \SCr\ ordering would need a bootstrap to be equally firm.
+\item \textbf{Ensemble metrics at $K{=}5$ carry no seed error bar}: each cell is a single
+  ensemble. The paired Poisson test-set bootstrap (since implemented; see (P5)) supplies
+  the test component, and the $K{=}20$ extension the seed component. The
+  $\chi^2/\mathrm{ndf}$ comparison in Sec.~\ref{sec:closure}(b) remains the one $K{=}5$
+  shape statement with a quantified significance.
 \item \textbf{Frozen passes by a thin margin} ($|\IC| = 0.0527$ against a gate of $0.0536$).
   It should not be over-read as a robust pass.
 \item \textbf{Population mismatch vs.\ the ceiling only} (Sec.~\ref{sec:ceiling}); all
@@ -463,8 +583,10 @@ checkpoint.
 \label{sec:next}
 
 \begin{enumerate}[label=\textbf{N\arabic*}.,leftmargin=2.6em]
-\item \textbf{[P1, S]} Bootstrap the ensemble closure metrics (resample test events) so the
-  frozen-vs-scratch shape difference carries an error bar rather than a single number.
+\item \textbf{[P1, S --- done]} Bootstrap the ensemble closure metrics: implemented as a
+  Poisson($\mu{=}1$) test-set bootstrap with draws paired across arms
+  (\texttt{eval\_ensemble.py -{}-bootstrap}, run automatically by the \texttt{eval}
+  stage); the seed-extension campaign it feeds is pre-registered as (P5).
 \item \textbf{[P1, S]} G1 corner-encoding A/B (\tauh\ at the vacant flag corner
   $(0,0,\pm1)$): the NPZs already exist for both encodings.
 \item \textbf{[P1, M]} Money Plot 2 --- systematic-variation data efficiency, using the
@@ -497,6 +619,14 @@ arXiv:2601.17126 [hep-ex] (2026).
 Y. Elsharkawy, J. Birk, V. Mikuni, W. Bhimji, G. Kasieczka, B. Nachman,
 ``Pre-Training for Simulation-Based Science: A Study on Jet Foundation Model Training
 Objectives,'' arXiv:2606.14870 (2026).
+
+\bibitem{Mikuni:2024omnilearn}
+V. Mikuni, B. Nachman, ``OmniLearn: A Method to Simultaneously Facilitate All Jet Physics
+Tasks,'' arXiv:2404.16091 [hep-ph] (2024).
+
+\bibitem{H1:2025prelim}
+H1 Collaboration, ``Towards Unfolding All Particles in High $Q^2$ DIS Events,''
+H1prelim-25-031, DIS 2025 (2025).
 
 \bibitem{Shyamsundar:2025}
 P. Shyamsundar et al., critique of MC-statistical uncertainty estimation in NSBI,
