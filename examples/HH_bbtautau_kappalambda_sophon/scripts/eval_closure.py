@@ -92,9 +92,15 @@ def _prior_factor(prior, y, w, norm=None):
 
 
 def closure_metrics(p, y, w, nbins=20, neff_min=25.0, prior="balanced",
-                    use_abs_w=True, norm=None):
+                    use_abs_w=True, norm=None, keep_bins=None):
     """-> dict(integral, integral_err, shape_rms, shape_rms_norm, shape_chi2ndf,
-    shape_max, nbins_used). Pure numpy.
+    shape_max, nbins_used, bins_kept). Pure numpy.
+
+    keep_bins: freeze the accepted-bin set (indices) instead of re-deriving the
+    neff_min acceptance from the current weights. Bootstrap replicas MUST pass the
+    point estimate's bins_kept: Poisson(1) resampling doubles sum(w^2) per bin and so
+    HALVES the Kish n_eff, silently dropping marginal bins from the replicas -- the
+    spread would then belong to a different (fewer-bin, churning) statistic.
 
     integral        global normalisation error of r_hat (pre-registered gate)
     shape_rms       stat-debiased RMS bin deviation of r_hat as-is
@@ -106,7 +112,8 @@ def closure_metrics(p, y, w, nbins=20, neff_min=25.0, prior="balanced",
                     added 2026-07-15 after the prior-convention fix.
     """
     nan = dict(integral=np.nan, integral_err=np.nan, shape_rms=np.nan,
-               shape_rms_norm=np.nan, shape_chi2ndf=np.nan, shape_max=np.nan, nbins_used=0)
+               shape_rms_norm=np.nan, shape_chi2ndf=np.nan, shape_max=np.nan, nbins_used=0,
+               bins_kept=[])
     p = np.clip(np.asarray(p, float), _EPS, 1.0 - _EPS)
     y = (np.asarray(y) > 0.5)
     w = np.asarray(w, float)
@@ -126,28 +133,31 @@ def closure_metrics(p, y, w, nbins=20, neff_min=25.0, prior="balanced",
     edges = np.unique(edges)                     # ties in p can collapse bins
     idx = np.clip(np.digitize(p, edges) - 1, 0, len(edges) - 2)
 
+    keep = set(keep_bins) if keep_bins is not None else None
+
     def bin_devs(r):
-        rels, sigs = [], []
+        rels, sigs, kept = [], [], []
         for b in range(len(edges) - 1):
             in_b = idx == b
             wb1 = w[y & in_b]                              # hypothesis side
             wb0r = w[~y & in_b] * r[~y & in_b]             # reweighted reference side
             n1 = wb1.sum() ** 2 / max((wb1 ** 2).sum(), _EPS)
             n0 = wb0r.sum() ** 2 / max((wb0r ** 2).sum(), _EPS)
-            if min(n1, n0) < neff_min:                     # both sides must have stats:
+            if (min(n1, n0) < neff_min) if keep is None else (b not in keep):
                 continue                                   # ref bins at p->1 carry few, huge r
+            kept.append(b)
             rels.append(wb0r.sum() / W0 / (wb1.sum() / W1) - 1.0)
             sigs.append(np.sqrt(1.0 / n0 + 1.0 / n1))
-        return np.asarray(rels), np.asarray(sigs)
+        return np.asarray(rels), np.asarray(sigs), kept
 
     def debiased_rms(rels, sigs):
         return float(np.sqrt(max(np.mean(rels ** 2 - sigs ** 2), 0.0)))
 
-    rels, sigs = bin_devs(r_hat)
+    rels, sigs, kept = bin_devs(r_hat)
     if not len(rels):
         return dict(nan, integral=integral, integral_err=integral_err)
     # shape with the global normalisation divided out (post-hoc decomposition)
-    rels_n, sigs_n = bin_devs(r_hat / (1.0 + integral))
+    rels_n, sigs_n, _ = bin_devs(r_hat / (1.0 + integral))
     return dict(
         integral=integral,
         integral_err=integral_err,
@@ -156,6 +166,7 @@ def closure_metrics(p, y, w, nbins=20, neff_min=25.0, prior="balanced",
         shape_chi2ndf=float(np.mean((rels / sigs) ** 2)),
         shape_max=float(np.abs(rels).max()),
         nbins_used=int(len(rels)),
+        bins_kept=kept,
     )
 
 

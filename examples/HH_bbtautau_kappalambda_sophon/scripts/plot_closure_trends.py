@@ -89,7 +89,13 @@ def main():
 
     for r, (path, is_ens) in enumerate(sources):
         data = json.load(open(path))
-        label = "5-seed ensemble" if is_ens else "single model (mean $\\pm$ s.e.m.)"
+        if is_ens:                       # K can differ per cell after a seed extension
+            ks = sorted({m.get("n_members", 5)
+                         for cells in data.values() for m in cells.values()})
+            label = (f"{ks[0]}-seed ensemble" if len(ks) == 1
+                     else f"ensemble ($K$={ks[0]}\u2013{ks[-1]} seeds/cell)")
+        else:
+            label = "single model (mean $\\pm$ s.e.m.)"
         for c, (key, ylab, gate) in enumerate(panels):
             ax = axes[r][c]
             for cfg in CONFIGS:

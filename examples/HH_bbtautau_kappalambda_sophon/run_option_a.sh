@@ -39,6 +39,15 @@
 #                                      $STORE/variant-nonoise/ and config_farm-*-nonoise/,
 #                                      reading the SHARED preprocessed data from $STORE
 #   SIZES_YAML=[1.0]                   override the workflow's dataset_size_choice
+#   SEEDS_YAML=[5,6,...,19]            override the workflow's seeds. Seed extension: set
+#                                      this + SIZES_YAML + a fresh FARM, rerun configs/train/
+#                                      predict -- outputs join the same STORE, so eval
+#                                      ensembles automatically grow to every seed found
+#   FARM=<config_farm-$TASK-...>       config-farm dir (override for seed-extension batches)
+#   NBOOT=200                          Poisson test-set bootstrap replicas (eval stage)
+#   RETRAIN=1                          allow train to resubmit tags that already have
+#                                      checkpoints (guard against a stale/forgotten FARM)
+#   PREDICT_ANYWAY=1                   allow predict while a train-array is still queued
 #   KL_HYP=5                           hypothesis class vs the SM kl=1 reference (0 or 5)
 #   TASK=kl                            or syst (nominal-vs-jes_mhh, Money Plot 2)
 #   BTAG_BRANCH=Jet_btagUParTAK4B      NanoAOD b-tag discriminant branch
@@ -81,7 +90,7 @@ case "$VARIANT" in
                SIZES_YAML="${SIZES_YAML:-[1.0]}" ;;   # calibration-mechanism test @ full stats
     *)         echo "ERROR: unknown VARIANT=$VARIANT (known: nonoise)" >&2; exit 1 ;;
 esac
-FARM="$HERE/config_farm-$TASK-$TAU_ENCODING$SFX"
+FARM="${FARM:-$HERE/config_farm-$TASK-$TAU_ENCODING$SFX}"
 RESOLVED="resolved$SFX"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
@@ -240,6 +249,7 @@ stage_configs() {
         -e "s|^train_yaml: train_klambda.yaml|train_yaml: train_klambda.$RESOLVED.yaml|" \
         -e "s|<STORE>|$STORE|g" \
         ${SIZES_YAML:+-e "s|^dataset_size_choice: .*|dataset_size_choice: $SIZES_YAML|"} \
+        ${SEEDS_YAML:+-e "s|^seeds: .*|seeds: $SEEDS_YAML|"} \
         configs/workflow_klambda.yaml > configs/workflow_klambda.$RESOLVED.yaml
     # the ONLY knob the nonoise variant flips: classification trained on clean inputs, to
     # match the t=0 endpoint used at predict time (see EVENET_G0_RESULTS sec 7)
@@ -250,6 +260,9 @@ stage_configs() {
         configs/predict_klambda.yaml > configs/predict_klambda.$RESOLVED.yaml
     ! grep -qE "<(STORE|PATH_TO|NERSC|WANDB)" configs/*.$RESOLVED.yaml \
         || die "unresolved <tokens> remain in configs/*.$RESOLVED.yaml"
+    if [ -n "${SEEDS_YAML:-}" ] && [ "$FARM" = "$HERE/config_farm-$TASK-$TAU_ENCODING$SFX" ]; then
+        die "SEEDS_YAML is set but FARM is the baseline farm -- a seed extension must go to a fresh dir (e.g. FARM=$FARM-ext) or it overwrites the baseline run scripts"
+    fi
     $CONVERT_PY scripts/make_klambda_configs.py configs/workflow_klambda.$RESOLVED.yaml \
         --farm "$FARM" --store_dir "$STORE_RUN" --data_store_dir "$STORE" \
         --ray_dir "${PSCRATCH:-/tmp}/ray-$USER"
@@ -273,6 +286,18 @@ stage_train() {
     [ -f "$FARM/train-evenet.sh" ] || die "run: configs"
     [ -n "${ACCOUNT:-}" ] || die "set ACCOUNT=<mXXXX> for sbatch (or use: train-local)"
     local n; n=$(wc -l < "$FARM/train-evenet.sh")
+    # a run script whose tags already have checkpoints is almost always the WRONG farm
+    # (e.g. a seed extension submitted without FARM= pointing at the extension dir);
+    # resubmitting retrains into the same checkpoint dirs and contaminates the
+    # best-val selection of already-published runs
+    local n_exist=0 tag
+    while IFS= read -r line; do
+        tag=$(grep -o "evenet-klambda-[a-z]*-size[0-9.]*-seed[0-9]*" <<< "$line" | head -1)
+        [ -n "$tag" ] && [ -d "$STORE_RUN/checkpoints/$tag" ] && n_exist=$((n_exist + 1))
+    done < "$FARM/train-evenet.sh"
+    if [ "$n_exist" -gt 0 ] && [ -z "${RETRAIN:-}" ]; then
+        die "$n_exist of $n runs in $FARM already have checkpoints under $STORE_RUN/checkpoints -- wrong FARM? (a seed extension needs FARM=<extension dir> on EVERY stage). RETRAIN=1 to really retrain."
+    fi
     cat > "$FARM/train-array.sbatch" <<EOF
 #!/bin/bash
 #SBATCH -A $ACCOUNT -C gpu -q regular -t ${TIME:-04:00:00}
@@ -294,6 +319,10 @@ stage_train_local() {   # sequential, for an interactive GPU node (salloc)
 stage_predict() {
     [ -f "$FARM/predict-evenet.sh" ] || die "no predict-evenet.sh (run: configs)"
     [ -n "${ACCOUNT:-}" ] || die "set ACCOUNT=<mXXXX_g> for sbatch (or use: predict-local on a GPU node)"
+    if [ -z "${PREDICT_ANYWAY:-}" ] && command -v squeue >/dev/null 2>&1 \
+       && squeue --me -h -o %j 2>/dev/null | grep -q "train-array"; then
+        die "a train-array job is still queued/running -- best-val selection would snapshot partial runs (PREDICT_ANYWAY=1 to override)"
+    fi
     # pre-registered selection rule: predict loads the newest ckpt (mtime), so mark the
     # BEST-val checkpoint newest in every run dir (identical rule for all arms)
     $CONVERT_PY scripts/select_best_ckpt.py --store "$STORE_RUN"
@@ -323,9 +352,25 @@ stage_eval() {
     $CONVERT_PY scripts/plot_data_efficiency.py --store_dir "$STORE_RUN" \
         --output "data_efficiency-$TASK-$TAU_ENCODING$SFX.png" \
         ${CEILING:+--ceiling "$CEILING"}
+    if [ -n "${NORM_PT:-}" ]; then
+        [ -f "$NORM_PT" ] || die "NORM_PT=$NORM_PT not found"
+    elif [ -f "$STORE/evenet-train/normalization.pt" ]; then
+        NORM_PT="$STORE/evenet-train/normalization.pt"
+    else
+        NORM_PT=""                      # balanced-prior fallback if preprocess absent
+    fi
     note "G0.5: ratio-closure gates (|IC| vs stat, SC_rms < 0.05, chi2/ndf ~ 1)"
     $CONVERT_PY scripts/eval_closure.py --store_dir "$STORE_RUN" \
-        --output-prefix "closure-$TASK-$TAU_ENCODING$SFX"
+        --output-prefix "closure-$TASK-$TAU_ENCODING$SFX" \
+        ${NORM_PT:+--normalization "$NORM_PT"}
+    if [ -n "$NORM_PT" ]; then
+        note "G0.5 ensemble: trained-prior closure + Poisson(1) test-set bootstrap"
+        $CONVERT_PY scripts/eval_ensemble.py --store_dir "$STORE_RUN" \
+            --normalization "$NORM_PT" --bootstrap "${NBOOT:-200}" \
+            --output-prefix "ensemble-$TASK-$TAU_ENCODING$SFX"
+    else
+        note "no normalization.pt under $STORE/evenet-train -- skipped ensemble eval"
+    fi
 }
 
 case "${1:-}" in

@@ -19,14 +19,20 @@ Alignment: seeds must share the event ordering of the fixed test split, which is
 per (arm, fraction) by comparing the label and weight vectors before averaging; misaligned
 cells are skipped loudly rather than silently averaged.
 
+--bootstrap N adds an H1-style Poisson(mu=1) test-set bootstrap per cell: the ensemble
+score is FIXED (no retraining) and only the test sample fluctuates, so boot_*_std is the
+pure test-statistical component -- the complement of per_seed_ic_std, which is training
+stochasticity at fixed test set. The two add in quadrature to the full error bar.
+
 Usage:
-  python eval_ensemble.py --store_dir <store> [--output-prefix ensemble]
+  python eval_ensemble.py --store_dir <store> [--output-prefix ensemble] [--bootstrap 200]
 """
 import argparse
 import glob
 import json
 import os
 import sys
+import zlib
 
 import numpy as np
 
@@ -53,7 +59,11 @@ def ensemble_cell(paths, use_abs_w=True, prior="balanced", norm=None):
     ref_y = ref_w = None
     ratios, ics = [], []
     for p in paths:
-        score, y, w = _load_prediction(p)
+        try:
+            score, y, w = _load_prediction(p)
+        except Exception as e:                    # noqa: BLE001
+            print(f"  skip member {p}: {e}")
+            continue
         y = np.asarray(y) > 0.5
         w = np.abs(np.asarray(w, float)) if use_abs_w else np.asarray(w, float)
         if ref_y is None:
@@ -68,6 +78,29 @@ def ensemble_cell(paths, use_abs_w=True, prior="balanced", norm=None):
     return np.mean(ratios, axis=0), ref_y, ref_w, np.asarray(ics)
 
 
+def bootstrap_cell(p_ens, y, w, nbins, neff_min, n_boot, tag, keep_bins):
+    """Poisson(mu=1) resampling of the test set at fixed ensemble score -> test-stat spread.
+
+    keep_bins (the point estimate's bins_kept) freezes the shape statistic's bin set:
+    Poisson(1) halves each bin's Kish n_eff, so re-deriving the acceptance per replica
+    would drop marginal bins and measure a different statistic than the one quoted.
+    """
+    rng = np.random.default_rng(zlib.crc32(tag.encode()))
+    ics, shapes, aucs = [], [], []
+    for _ in range(n_boot):
+        wb = w * rng.poisson(1.0, size=len(w))
+        m = closure_metrics(p_ens, y, wb, nbins, neff_min, prior="balanced",
+                            use_abs_w=False, keep_bins=keep_bins)
+        ics.append(m["integral"])
+        shapes.append(m["shape_rms"])
+        aucs.append(weighted_auc(p_ens, y.astype(float), wb))
+    return {"n_boot": n_boot,
+            "boot_ic_mean": float(np.mean(ics)),
+            "boot_ic_std": float(np.std(ics)),
+            "boot_shape_rms_std": float(np.std(shapes)),
+            "boot_auc_std": float(np.std(aucs))}
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -78,6 +111,8 @@ def main():
     ap.add_argument("--normalization", help="evenet-train/normalization.pt -> use the "
                                             "'trained' prior + signed weights (matches "
                                             "eval_closure.py --normalization)")
+    ap.add_argument("--bootstrap", type=int, default=0,
+                    help="Poisson(1) test-set bootstrap replicas (e.g. 200)")
     args = ap.parse_args()
     norm = load_norm(args.normalization) if args.normalization else None
     prior = "trained" if norm is not None else "balanced"
@@ -98,16 +133,25 @@ def main():
         met = closure_metrics(p_ens, y, w, args.nbins, args.neff_min,
                               prior="balanced", use_abs_w=False)   # prior already in r_ens
         auc = weighted_auc(p_ens, y.astype(float), w)
-        met.update(auc=auc, n_members=len(paths),
+        met.update(auc=auc, n_members=len(ics),
                    per_seed_ic_mean=float(np.mean(ics)),
                    per_seed_ic_absmean=float(np.mean(np.abs(ics))),
                    per_seed_ic_std=float(np.std(ics)))
         results.setdefault(cfg, {})[str(size)] = met
-        print(f"{cfg:9s} size={size:<5} n={len(paths)}  AUC={auc:.4f}  "
+        print(f"{cfg:9s} size={size:<5} n={len(ics)}  AUC={auc:.4f}  "
               f"|IC|_ens={abs(met['integral']):.4f} (stat {met['integral_err']:.4f}) "
               f"vs per-seed |IC|={met['per_seed_ic_absmean']:.4f}"
               f"+-{met['per_seed_ic_std']:.4f} (signed mean {met['per_seed_ic_mean']:+.4f})  "
               f"SC_norm={met['shape_rms_norm']:.4f}  chi2/ndf={met['shape_chi2ndf']:.2f}")
+        if args.bootstrap:
+            met.update(bootstrap_cell(p_ens, y, w, args.nbins, args.neff_min,
+                                      args.bootstrap, f"{cfg}-{size}",
+                                      met["bins_kept"]))
+            seed_term = met["per_seed_ic_std"] / np.sqrt(len(ics))
+            print(f"{'':9s} boot({args.bootstrap}): IC +-{met['boot_ic_std']:.4f} (test) "
+                  f"(+) +-{seed_term:.4f} (seed/sqrtK) = "
+                  f"+-{float(np.hypot(met['boot_ic_std'], seed_term)):.4f} total   "
+                  f"SC_rms +-{met['boot_shape_rms_std']:.4f}   AUC +-{met['boot_auc_std']:.4f}")
 
     with open(f"{args.output_prefix}.json", "w") as f:
         json.dump(results, f, indent=1)
