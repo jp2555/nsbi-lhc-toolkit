@@ -53,9 +53,13 @@
 #   BTAG_BRANCH=Jet_btagUParTAK4B      NanoAOD b-tag discriminant branch
 #   CONVERT_PY=python3                 python with numpy+uproot for the adapter steps
 #   NGPU=1  TIME=04:00:00              per training task (sbatch array)
-#   QOS=regular                        train-array QOS; QOS=shared bills the used node
-#                                      FRACTION (1 GPU + 32c) instead of the whole
-#                                      4-GPU node -- use for small-fraction tiers
+#   QOS=regular                        train-array QOS. Do NOT use QOS=shared for train:
+#                                      Ray sizes its workers from the NODE (128 CPUs), so a
+#                                      32-CPU shared cgroup oversubscribes 4x -> ~60x
+#                                      slowdown; 2026-08-15 all 38 shared tasks TIMED OUT
+#                                      at 4h (~45 node-hours, zero output). regular is
+#                                      node-exclusive and proven. shared is fine for the
+#                                      predict array (single lightweight pass).
 #   FEATURES=.../dihiggs_powheg_data.root   prelim-result feature ntuple (ceiling stage)
 set -euo pipefail
 
