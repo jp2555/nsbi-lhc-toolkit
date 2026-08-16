@@ -185,13 +185,35 @@ def first_passing(results_cfg, int_gate=0.01, shape_gate=0.05):
 
 
 def _load_prediction(path):
+    """-> (score, label, weight), cached as an npz sidecar after the first read.
+
+    prediction.pt is a list of per-batch dicts (many small tensors): one torch.load per
+    read, and the eval tools collectively read every file several times -- on degraded
+    Lustre (2026-08-15, ~30 s/file) that made eval I/O-bound and non-restartable. The
+    sidecar holds just the three arrays and is invalidated by mtime when a prediction is
+    regenerated; interrupted runs resume from whatever was already cached.
+    """
+    cache = os.path.join(os.path.dirname(path), "scores-cache.npz")
+    try:
+        if os.path.getmtime(cache) >= os.path.getmtime(path):
+            z = np.load(cache)
+            return z["score"], z["label"], z["weight"]
+    except OSError:
+        pass
     import torch
     df = torch.load(path, map_location="cpu")
     logits = np.concatenate(
         [d["classification"]["classification/klambda"].numpy() for d in df], axis=0)
     label = np.concatenate([np.asarray(d["subprocess_id"]).reshape(-1) for d in df], axis=0)
     weight = np.concatenate([np.asarray(d["event_weight"]).reshape(-1) for d in df], axis=0)
-    return _softmax_signal(logits), label, weight
+    score = _softmax_signal(logits)
+    try:                                   # best-effort: eval must work read-only too
+        with open(cache + ".tmp", "wb") as f:
+            np.savez_compressed(f, score=score, label=label, weight=weight)
+        os.replace(cache + ".tmp", cache)
+    except OSError:
+        pass
+    return score, label, weight
 
 
 def collect(store, nbins, neff_min, prior="balanced", use_abs_w=True, norm=None):

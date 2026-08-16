@@ -57,13 +57,9 @@ def _softmax_signal(logits):
 
 
 def auc_from_prediction(path):
-    import torch
-    df = torch.load(path, map_location="cpu")
-    logits = np.concatenate(
-        [d["classification"]["classification/klambda"].numpy() for d in df], axis=0)
-    label = np.concatenate([np.asarray(d["subprocess_id"]).reshape(-1) for d in df], axis=0)
-    weight = np.concatenate([np.asarray(d["event_weight"]).reshape(-1) for d in df], axis=0)
-    return weighted_auc(_softmax_signal(logits), label, weight)
+    from eval_closure import _load_prediction    # shared npz-sidecar cache
+    score, label, weight = _load_prediction(path)
+    return weighted_auc(score, label, weight)
 
 
 def collect(store):
