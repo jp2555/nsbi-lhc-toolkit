@@ -201,6 +201,7 @@ def collect(store, nbins, neff_min, prior="balanced", use_abs_w=True, norm=None)
         m = _TAG.search(os.path.basename(os.path.dirname(p)))
         if not m or m["cfg"] not in out:
             continue
+        print(f"  closure <- {os.path.basename(os.path.dirname(p))}", flush=True)
         try:
             score, label, weight = _load_prediction(p)
             met = closure_metrics(score, label, weight, nbins, neff_min,

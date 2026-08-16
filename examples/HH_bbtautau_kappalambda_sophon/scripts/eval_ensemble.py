@@ -131,6 +131,7 @@ def main():
 
     results = {}
     for (cfg, size), paths in sorted(cells(args.store_dir).items()):
+        print(f"cell {cfg} size={size}: loading {len(paths)} members ...", flush=True)
         got = ensemble_cell(paths, use_abs_w=use_abs, prior=prior, norm=norm)
         if got is None:
             print(f"SKIP {cfg} size={size}: seeds not aligned on the test split")

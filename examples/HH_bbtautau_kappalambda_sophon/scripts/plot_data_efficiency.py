@@ -74,6 +74,7 @@ def collect(store):
         if not m or m["cfg"] not in out:
             continue
         size = float(m["size"])
+        print(f"  auc <- {os.path.basename(os.path.dirname(p))}", flush=True)
         try:
             a = auc_from_prediction(p)
         except Exception as e:                       # noqa: BLE001
