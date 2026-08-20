@@ -25,10 +25,11 @@
 \newcommand{\Eref}{\ensuremath{\mathbb{E}_{\mathrm{ref}}}}
 
 \title{EveNet for \kl\ Density-Ratio Learning in $HH\to\bbtt$:\\
-Pre-training Improves Discrimination and Ratio Shape;\\
-Calibration Data Efficiency Not Yet Resolved}
+Pre-training Improves Discrimination\\
+but Degrades Low-Statistics Ratio Calibration}
 \author{Working note --- \bbtt\ \kl\ NSBI project}
-\date{16 July 2026 (rev.\ 14 August 2026: (P5), Sec.~\ref{sec:power}) \\[2pt]
+\date{16 July 2026 (rev.\ 14 August: (P5), Sec.~\ref{sec:power};
+20 August 2026: verdict, Sec.~\ref{sec:p5}) \\[2pt]
 \small Gates G0 / G0.5 of \texttt{EVENET\_FEASIBILITY\_NOTE}; 90-run sweep, branch \texttt{fm}}
 
 \begin{document}
@@ -51,14 +52,17 @@ feature-level gradient-boosted decision tree (BDT) ceiling. \textbf{(ii)~Calibra
 quality: pre-training wins at full statistics} --- with five-model ensembling the
 frozen-backbone arm is the \emph{only} configuration in the study that passes both analysis
 gates, and both pre-trained arms show ${\approx}3$--$4\sigma$ less residual structure than
-from-scratch. \textbf{(iii)~Calibration data efficiency: underpowered, not null} --- the pre-registered
-adoption metric, the closure left-shift, is undefined because neither fine-tuned nor
-from-scratch reaches the gates at \emph{any} fraction; and the reduced-fraction ordering is
-dominated by seed-to-seed training noise, which on these same 90 networks is
-$13$--$160\times$ the corresponding AUC seed noise and persists at full statistics
-(Sec.~\ref{sec:power}). A powered extension --- fifteen further seeds per cell at the five
-reduced fractions, a paired test-set bootstrap, and the decision rule fixed in advance ---
-is registered as (P5) in Sec.~\ref{sec:prereg}. In
+from-scratch. \textbf{(iii)~Calibration data efficiency: resolved --- no improvement, and measurable harm
+for the frozen arm} --- the (P5) $K{=}20$ campaign (225 further trainings, paired
+test-set bootstrap; Sec.~\ref{sec:p5}) gives
+$\Delta_{\rm finetune} = -0.022 \pm 0.026$ (bounded: $|\Delta| \lesssim 0.05$) and
+$\Delta_{\rm frozen} = -0.079 \pm 0.031$ ($z = -2.6$, crossing the pre-registered harm
+threshold), with the secondary shape statistic agreeing ($z = -2.0$ and $-3.2$). On the
+same ensembles the AUC advantage persists, so pre-training buys event ordering while
+\emph{costing} low-$N$ calibration --- consistent with an initialisation bias in the
+weakly-pinned normalisation direction (Sec.~\ref{sec:power}) that ensembling cannot
+remove and that full statistics eventually repins: at fraction 1.0 the frozen ensemble
+remains the study's only gate pass. In
 both (i) and (ii) the frozen arm matches or beats fine-tuning, locating the benefit in the
 pre-trained \emph{representation} rather than in backbone adaptation. Section~\ref{sec:corr}
 documents three conversion errors found and fixed during analysis, one of which had
@@ -135,6 +139,7 @@ Fixed before any sweep output existed, reproduced unchanged:
   bounded and quoted as $|\Delta_a| \lesssim 2\sigma_\Delta$ (forecast ${\approx}0.05$).
   The same statistic on \SCr\ is reported as secondary, not decisive. All three outcomes
   are reportable; none will be reinterpreted after unblinding.
+  \emph{[Executed 20 August 2026; verdict in Sec.~\ref{sec:p5}.]}
 \end{enumerate}
 
 \noindent (P4) is the branch that materialised for the finetune--scratch comparison. (P5)
@@ -503,7 +508,97 @@ the seed count at which the seed term would meet the test floor is
 $K^{*} = (\hat\sigma/\sigma_{\mathrm{test}})^2 \approx 40$--$400$: seeds beyond
 ${\approx}50$ buy little without a larger test split. Pairing the bootstrap draws across
 arms removes the common test fluctuation from arm differences at zero cost. These three
-numbers fix the (P5) design.
+numbers fix the (P5) design; Sec.~\ref{sec:p5} reports the executed campaign.
+
+% =====================================================================
+\section{Result 3 --- the (P5) verdict: no calibration gain at low statistics}
+\label{sec:p5}
+
+\paragraph{Execution.} Seeds $5$--$19$ were trained at fractions
+$\{0.003, 0.01, 0.02, 0.05, 0.1\}$ (225 runs, identical data, recipe,
+best-validation selection and test split; $\approx 13$ GPU-node-hours). One training
+diverged --- finetune, fraction $0.05$, seed $12$: the validation loss went NaN near
+epoch 12, \emph{displayed as $0.000$}, and early stopping retained the diverged state as
+the best checkpoint; its predictions were $100\%$ non-finite. Members with non-finite
+outputs or unreadable predictions are excluded by an objective rule applied identically
+to all arms; three cells run at $K{=}19$ (one member lost in each of finetune-$0.05$,
+frozen-$0.003$, scratch-$0.1$ --- one per arm, favouring none). All error propagation
+uses each cell's actual $K$.
+
+\paragraph{Verdict.} Applying (P5) exactly as registered
+(Table~\ref{tab:p5verdict}): fine-tuning shows \emph{no} calibration data-efficiency
+gain --- any effect is bounded at $|\Delta| \lesssim 0.05$, with a negative central
+value --- and the frozen arm \emph{crosses the pre-registered harm threshold}: its
+ensemble normalisation error at reduced fractions is worse than from-scratch by
+$0.079 \pm 0.031$, negative in four of the five fractions. The secondary \SCr\ statistic
+agrees in sign for both arms and is individually significant for frozen: the pre-trained
+arms' ratio \emph{shapes} are also worse than scratch at low $N$
+(Table~\ref{tab:p5cells}). An independent re-implementation of the verdict arithmetic
+and a cross-check of every ensemble value against the per-seed closure outputs
+(linearity, agreement $\sim 10^{-7}$) confirm the numbers.
+
+\begin{table}[h]\centering\small
+\begin{tabular}{@{}lccl|cc@{}}
+\toprule
+ & $\Delta_{|\IC|} \pm \sigma_\Delta$ & $z$ & verdict (as registered)
+ & $\Delta_{\SCr} \pm \sigma$ & $z$ \\
+\midrule
+finetune & $-0.022 \pm 0.026$ & $-0.9$ & bounded: $|\Delta| \lesssim 0.05$
+         & $-0.038 \pm 0.019$ & $-2.0$ \\
+frozen   & $-0.079 \pm 0.031$ & $-2.6$ & \textbf{harms calibration}
+         & $-0.069 \pm 0.021$ & $-3.2$ \\
+\bottomrule
+\end{tabular}
+\caption{The (P5) statistics ($\Delta > 0$ would mean the pre-trained arm is better
+calibrated than scratch). Primary $|\IC|$ column: paired-bootstrap $\oplus$ per-seed
+terms, as registered. Secondary \SCr: unpaired bootstrap $\oplus$ single-model seed-spread
+proxy at each cell's $K$; reported, not decisive.}
+\label{tab:p5verdict}
+\end{table}
+
+\begin{table}[h]\centering\small
+\begin{tabular}{@{}lccc|ccc@{}}
+\toprule
+ & \multicolumn{3}{c|}{$|\IC|$ (ensemble $\pm$ boot $\oplus$ seed$/\sqrt{K}$)}
+ & \multicolumn{3}{c}{\SCr} \\
+fraction & finetune & frozen & scratch & finetune & frozen & scratch \\
+\midrule
+0.003 & $0.022 \pm 0.066$ & $0.200 \pm 0.085$ & $0.073 \pm 0.061$ & 0.209 & 0.237 & 0.212 \\
+0.01  & $0.169 \pm 0.042$ & $0.195 \pm 0.043$ & $0.001 \pm 0.047$ & 0.231 & 0.305 & 0.119 \\
+0.02  & $0.111 \pm 0.024$ & $0.114 \pm 0.036$ & $0.110 \pm 0.037$ & 0.188 & 0.178 & 0.123 \\
+0.05  & $0.050 \pm 0.029$ & $0.132 \pm 0.065$ & $0.035 \pm 0.027$ & 0.087 & 0.147 & 0.043 \\
+0.1   & $0.109 \pm 0.024$ & $0.102 \pm 0.028$ & $0.130 \pm 0.032$ & 0.104 & 0.107 & 0.129 \\
+\bottomrule
+\end{tabular}
+\caption{$K{=}20$ ensemble closure per cell. The ensemble AUC ordering on the same cells
+is unchanged from Sec.~\ref{sec:auc}: pre-trained arms $+0.013$ to $+0.021$ above scratch
+at every fraction $\ge 0.01$ (and $-0.009$ to $-0.014$ at the optimiser-transient
+$0.003$ tier).}
+\label{tab:p5cells}
+\end{table}
+
+\paragraph{Interpretation.} The two axes of Sec.~\ref{sec:power} now carry opposite
+signs on the same networks and the same test events: pre-training improves event
+\emph{ordering} at every usable fraction while degrading the absolute ratio
+normalisation and shape at low $N$. The mechanism follows Sec.~\ref{sec:power}(b): the
+calibration offset is weakly pinned by the loss, so the offset the \emph{initialisation}
+carries survives small-$N$ training --- a from-scratch network starts unbiased and
+settles near its own data's cross-entropy balance, while the pre-trained backbone imports
+a normalisation prior from a different corpus that $2$k--$66$k events cannot repin.
+Crucially this is an arm-level \emph{bias}, not zero-centred seed noise: ensembling ---
+which resolved everything at $K{=}5$ --- cannot remove it, and it became visible
+precisely when $K{=}20$ beat the seed noise below its size. It is a low-$N$ phenomenon:
+at full statistics the ordering inverts and frozen is the best-calibrated configuration
+(Sec.~\ref{sec:closure}).
+
+\paragraph{Post-hoc annotations} (labelled as such; the verdict is mechanical):
+(a)~the finetune average is dominated by the $0.01$ cell and the $0.1$ cell is positive
+--- the finetune deficit is fraction-heterogeneous, the frozen deficit is not
+(negative in $4/5$); (b)~the scratch $0.01$ value $|\IC| = 0.0007$ is a folded
+$|\cdot|$ statistic sitting on zero with a seed error of $0.045$ --- its point value
+should not be over-read, and the (P5) error propagation carries its full uncertainty;
+(c)~at fraction $0.1$ both differences turn mildly positive, consistent with the
+full-statistics inversion.
 
 % =====================================================================
 \section{Corrections applied during analysis}
@@ -566,11 +661,13 @@ checkpoint.
   upstream~\cite{Shyamsundar:2025}.
 \item \textbf{One channel, one hypothesis pair} (\kl$=1$ vs.\ $5$; $\mu\tau_h$, $e\tau_h$).
   The \kl$=0$ pair and the systematic-variation task are untouched.
-\item \textbf{Ensemble metrics at $K{=}5$ carry no seed error bar}: each cell is a single
-  ensemble. The paired Poisson test-set bootstrap (since implemented; see (P5)) supplies
-  the test component, and the $K{=}20$ extension the seed component. The
-  $\chi^2/\mathrm{ndf}$ comparison in Sec.~\ref{sec:closure}(b) remains the one $K{=}5$
-  shape statement with a quantified significance.
+\item \textbf{Fraction-1.0 cells remain $K{=}5$} (the extension covered reduced
+  fractions only); full-statistics comparisons carry the original seed-noise floor.
+\item \textbf{The (P5) verdict is recipe- and task-conditional}: it is measured for this
+  fine-tuning recipe, this hypothesis pair, and this test-set size; a calibration-aware
+  fine-tuning objective (e.g.\ re-pinning the output layer's normalisation before
+  training) could change it --- that is a constructive question for the authors, not an
+  assumption.
 \item \textbf{Frozen passes by a thin margin} ($|\IC| = 0.0527$ against a gate of $0.0536$).
   It should not be over-read as a robust pass.
 \item \textbf{Population mismatch vs.\ the ceiling only} (Sec.~\ref{sec:ceiling}); all
@@ -607,6 +704,14 @@ pre-training (\tauh, $\gamma$) --- would they endorse this as the zero-surgery i
 (iii)~Would they consider retrofitting an explicit type-embedding table, initialised from
 the current flag patterns so it is function-preserving on day one, making future object
 types an append-a-row operation rather than schema surgery?
+(iv)~Bug report from the (P5) campaign: a diverged training's NaN validation loss
+displays as $0.000$, which early stopping and best-checkpoint selection then treat as
+the best score --- the diverged state wins checkpoint selection silently. A NaN guard in
+the trainer (terminate, and never checkpoint a non-finite loss) would fix it.
+(v)~The Sec.~\ref{sec:p5} result suggests any FM claim aimed at likelihood-ratio use
+should be powered and reported on the calibration axis, not only on discrimination
+metrics --- and that the near-unity systematic-variation regime, not signal extraction,
+is where pre-trained calibration gains are most plausible.
 
 % =====================================================================
 \begin{thebibliography}{9}\small
