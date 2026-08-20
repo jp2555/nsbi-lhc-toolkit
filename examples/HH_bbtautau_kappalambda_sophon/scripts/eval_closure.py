@@ -226,6 +226,9 @@ def collect(store, nbins, neff_min, prior="balanced", use_abs_w=True, norm=None)
         print(f"  closure <- {os.path.basename(os.path.dirname(p))}", flush=True)
         try:
             score, label, weight = _load_prediction(p)
+            if not np.all(np.isfinite(np.asarray(score, float))):
+                print(f"  skip {p}: non-finite scores")
+                continue
             met = closure_metrics(score, label, weight, nbins, neff_min,
                                   prior=prior, use_abs_w=use_abs_w, norm=norm)
         except Exception as e:                    # noqa: BLE001

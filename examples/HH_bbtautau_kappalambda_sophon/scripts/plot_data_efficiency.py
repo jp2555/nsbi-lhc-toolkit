@@ -29,6 +29,10 @@ def weighted_auc(score, label, weight):
     score = np.asarray(score, float)
     label = (np.asarray(label) > 0.5).astype(float)
     weight = np.asarray(weight, float)
+    bad = ~np.isfinite(score)
+    if bad.any():                     # a NaN score would spin the tie loop forever
+        print(f"  WARNING: dropping {bad.sum()} non-finite scores from AUC", flush=True)
+        score, label, weight = score[~bad], label[~bad], weight[~bad]
     P = (weight * label).sum()
     N = (weight * (1.0 - label)).sum()
     if P <= 0 or N <= 0:
@@ -38,7 +42,7 @@ def weighted_auc(score, label, weight):
     tp = fp = prev_tpr = prev_fpr = auc = 0.0
     i, n = 0, len(s)
     while i < n:
-        j = i
+        j = i + 1                     # group always contains s[i]; guarantees progress
         while j < n and s[j] == s[i]:
             j += 1
         tp += (w[i:j] * y[i:j]).sum()

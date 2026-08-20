@@ -64,6 +64,11 @@ def ensemble_cell(paths, use_abs_w=True, prior="balanced", norm=None):
         except Exception as e:                    # noqa: BLE001
             print(f"  skip member {p}: {e}")
             continue
+        if not np.all(np.isfinite(np.asarray(score, float))):
+            n_bad = int((~np.isfinite(np.asarray(score, float))).sum())
+            print(f"  EXCLUDING member {p}: {n_bad} non-finite scores "
+                  f"(diverged run? check its training log) -- K reduced for this cell")
+            continue
         y = np.asarray(y) > 0.5
         w = np.abs(np.asarray(w, float)) if use_abs_w else np.asarray(w, float)
         if ref_y is None:
