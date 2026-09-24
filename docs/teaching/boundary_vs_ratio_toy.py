@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 
 CREAM, INK, SOFT = "#FAF7F1", "#3A3430", "#6E645C"
 RED, REDBAND = "#8B1F1F", "#8B1F1F"
-GRAY, TAN = "#55504B", "#B0977B"
+GRAY, BLUE = "#55504B", "#7C9CB2"
 plt.rcParams.update({
     "font.family": "serif", "mathtext.fontset": "stix",
     "figure.facecolor": CREAM, "axes.facecolor": CREAM, "savefig.facecolor": CREAM,
@@ -42,8 +42,8 @@ rng = np.random.default_rng(11)
 # ---- left: two processes in a 2-feature plane + the optimal boundary ----
 MU_S, COV_S = [118.0, 1.55], [[620.0, -2.0], [-2.0, 0.22]]   # equal covariances ->
 MU_B, COV_B = [172.0, 0.70], [[620.0, -2.0], [-2.0, 0.22]]   # the boundary is one line
-xs = rng.multivariate_normal(MU_S, COV_S, 320)
-xb = rng.multivariate_normal(MU_B, COV_B, 320)
+xs = rng.multivariate_normal(MU_S, COV_S, 190)
+xb = rng.multivariate_normal(MU_B, COV_B, 190)
 
 
 def _gauss2(g, mu, cov):
@@ -72,8 +72,9 @@ axA = fig.add_subplot(gs[:, 0])
 axB = fig.add_subplot(gs[0, 1])
 axC = fig.add_subplot(gs[1, 1], sharex=axB)
 
-axA.scatter(*xs.T, s=11, alpha=0.55, color=RED, lw=0, label=r"$HH$ signal")
-axA.scatter(*xb.T, s=11, alpha=0.55, color=TAN, lw=0, label=r"$t\bar t$-like background")
+axA.scatter(*xs.T, s=34, color=RED, edgecolor=CREAM, lw=0.5, label=r"$HH$ signal")
+axA.scatter(*xb.T, s=34, color=BLUE, edgecolor=CREAM, lw=0.5,
+            label=r"$t\bar t$-like background")
 g1, g2 = np.meshgrid(np.linspace(45, 255, 250), np.linspace(-1.1, 3.3, 250))
 G = np.stack([g1, g2], axis=-1)
 bnd = axA.contour(g1, g2, _gauss2(G, MU_S, COV_S) / _gauss2(G, MU_B, COV_B), levels=[1.0],
